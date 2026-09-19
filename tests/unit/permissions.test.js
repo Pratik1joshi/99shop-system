@@ -16,8 +16,6 @@ import {
 } from '../../lib/permissions.js';
 import {
   CASHIER_PERMISSION_PATHS,
-  OPERATIONAL_PERMISSION_PATHS,
-  permissionForOperationalPath,
   permissionForStaffPath,
 } from '../../lib/staff-access-policy.js';
 
@@ -37,9 +35,6 @@ test.after(() => {
 test('defaults reproduce today\'s hardcoded behavior before any admin edit', async () => {
   await ensurePermissionCache(db);
   assert.equal(hasPermission('cashier', 'orders.cancel'), true);
-  assert.equal(hasPermission('waiter', 'orders.cancel'), true);
-  assert.equal(hasPermission('kitchen', 'orders.cancel'), false);
-  assert.equal(hasPermission('waiter', 'bills.void'), false);
   assert.equal(hasPermission('cashier', 'bills.void'), true);
   assert.equal(hasPermission('admin', 'bills.void'), true); // admin always allowed
   // Commit 317b991 deliberately widened the cashier catalog — "all defaulted on
@@ -53,9 +48,7 @@ test('defaults reproduce today\'s hardcoded behavior before any admin edit', asy
   assert.equal(hasPermission('cashier', 'payroll.view'), true);
   assert.equal(hasPermission('cashier', 'payroll.advances.create'), true);
   // Still withheld from every non-admin role, whatever else was granted.
-  assert.equal(hasPermission('waiter', 'purchases.view'), false);
-  assert.equal(hasPermission('kitchen', 'purchases.view'), false);
-  assert.equal(hasPermission('waiter', 'payroll.view'), false);
+  assert.equal(hasPermission('cashier', 'payroll.payments.create'), false);
 });
 
 test('every curated key has a default for every managed role', async () => {
@@ -71,11 +64,11 @@ test('every curated key has a default for every managed role', async () => {
 
 test('admin can grant a role a previously-blocked action, and it takes effect immediately', async () => {
   invalidatePermissionCache();
-  assert.equal(hasPermission('waiter', 'bills.void'), false); // cold-cache fallback matches default
+  assert.equal(hasPermission('cashier', 'business_days.force_close'), false); // cold-cache fallback matches default
 
-  await setRolePermissions(db, [{ role: 'waiter', key: 'bills.void', allowed: true }], admin);
+  await setRolePermissions(db, [{ role: 'cashier', key: 'business_days.force_close', allowed: true }], admin);
   await ensurePermissionCache(db);
-  assert.equal(hasPermission('waiter', 'bills.void'), true);
+  assert.equal(hasPermission('cashier', 'business_days.force_close'), true);
 });
 
 test('admin can grant purchase access to a cashier without granting destructive actions', async () => {
@@ -102,10 +95,10 @@ test('admin can grant purchase access to a cashier without granting destructive 
 });
 
 test('admin can revoke a role\'s default access', async () => {
-  await setRolePermissions(db, [{ role: 'cashier', key: 'kots.cancel', allowed: false }], admin);
+  await setRolePermissions(db, [{ role: 'cashier', key: 'bills.reopen', allowed: false }], admin);
   invalidatePermissionCache();
   await ensurePermissionCache(db);
-  assert.equal(hasPermission('cashier', 'kots.cancel'), false);
+  assert.equal(hasPermission('cashier', 'bills.reopen'), false);
 });
 
 test('payroll actions are independently configurable', async () => {
@@ -123,13 +116,13 @@ test('payroll actions are independently configurable', async () => {
 
 test('every permission change writes an audit row with before/after values', async () => {
   const rows = await permissionAuditHistory(db);
-  const grant = rows.find((r) => r.role === 'waiter' && r.permission_key === 'bills.void');
+  const grant = rows.find((r) => r.role === 'cashier' && r.permission_key === 'business_days.force_close');
   assert.ok(grant);
   assert.equal(grant.previous_value, 0);
   assert.equal(grant.new_value, 1);
   assert.equal(grant.actor_name, admin.full_name);
 
-  const revoke = rows.find((r) => r.role === 'cashier' && r.permission_key === 'kots.cancel');
+  const revoke = rows.find((r) => r.role === 'cashier' && r.permission_key === 'bills.reopen');
   assert.ok(revoke);
   assert.equal(revoke.previous_value, 1); // default was true, no row existed yet
   assert.equal(revoke.new_value, 0);
@@ -137,7 +130,7 @@ test('every permission change writes an audit row with before/after values', asy
 
 test('saving the same value again does not write a duplicate audit row', async () => {
   const before = (await permissionAuditHistory(db)).length;
-  await setRolePermissions(db, [{ role: 'waiter', key: 'bills.void', allowed: true }], admin); // already true
+  await setRolePermissions(db, [{ role: 'cashier', key: 'business_days.force_close', allowed: true }], admin); // already true
   const after = (await permissionAuditHistory(db)).length;
   assert.equal(after, before);
 });
@@ -145,20 +138,18 @@ test('saving the same value again does not write a duplicate audit row', async (
 test('invalid role/key updates are silently ignored, valid ones in the same batch still apply', async () => {
   await setRolePermissions(db, [
     { role: 'not_a_role', key: 'bills.void', allowed: true },
-    { role: 'waiter', key: 'not_a_key', allowed: true },
-    { role: 'waiter', key: 'purchases.view', allowed: true },
-    { role: 'kitchen', key: 'kots.cancel', allowed: true },
+    { role: 'cashier', key: 'not_a_key', allowed: true },
+    { role: 'cashier', key: 'purchases.void', allowed: true },
   ], admin);
   invalidatePermissionCache();
   await ensurePermissionCache(db);
-  assert.equal(hasPermission('kitchen', 'kots.cancel'), true);
-  assert.equal(hasPermission('waiter', 'purchases.view'), false);
+  assert.equal(hasPermission('cashier', 'purchases.void'), true);
+  assert.equal(hasPermission('not_a_role', 'bills.void'), false);
 });
 
 test('non-curated permission keys are unaffected by this system (static map still governs them)', async () => {
   assert.equal(hasPermission('cashier', 'business_days.open'), true);
-  assert.equal(hasPermission('cashier', 'business_days.force_close'), false);
-  assert.equal(hasPermission('kitchen', 'orders.view'), true); // kitchen's static 'orders.view'
+  assert.equal(hasPermission('admin', 'anything.not_curated'), true); // admin bypasses the catalog
 });
 
 test('individual cashier reports are independently configurable', async () => {
@@ -229,25 +220,3 @@ test('every cashier workspace page is registered in the page-access policy', () 
   }
 });
 
-test('every waiter and kitchen page is registered in the operational page policy', () => {
-  const catalogKeys = new Set(PERMISSION_CATALOG.map((entry) => entry.key));
-  for (const { path: routePath, permission } of OPERATIONAL_PERMISSION_PATHS) {
-    assert.ok(catalogKeys.has(permission), `${routePath} uses missing permission ${permission}`);
-  }
-  for (const area of ['waiter', 'kitchen']) {
-    const pageFiles = [];
-    const visit = (entry) => {
-      for (const child of fs.readdirSync(entry, { withFileTypes: true })) {
-        const full = path.join(entry, child.name);
-        if (child.isDirectory()) visit(full);
-        else if (child.name === 'page.jsx' || child.name === 'page.js') pageFiles.push(full);
-      }
-    };
-    visit(path.join('app', area));
-    for (const file of pageFiles) {
-      const relative = path.relative('app', path.dirname(file)).replaceAll(path.sep, '/');
-      const samplePath = `/${relative.replace(/\[[^\]]+\]/g, '1')}`;
-      assert.ok(permissionForOperationalPath(samplePath), `${file} has no operational page permission`);
-    }
-  }
-});

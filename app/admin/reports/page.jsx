@@ -38,9 +38,7 @@ const TAB_FILTERS = {
   categories: ALL_FILTERS,
   customers: ALL_FILTERS,
   employees: ALL_FILTERS,
-  tables: ALL_FILTERS,
   inventory: ['businessDayId', 'employeeId', 'search'],
-  reservations: ['businessDayId', 'search'],
   suppliers: ['businessDayId', 'paymentMethod', 'search'],
   changes: ['businessDayId'],
 };
@@ -55,20 +53,16 @@ const controlClass = 'h-10 rounded-lg border border-gray-300 bg-white px-3 text-
 // Keep the on-screen reports glanceable. The complete columns remain available
 // in CSV exports and the row detail view.
 const TABLE_COLUMNS = {
-  'sales:transactions': ['created_at', 'bill_number', 'table_number', 'customer_name', 'payment', 'grand_total'],
+  'sales:transactions': ['created_at', 'bill_number', 'customer_name', 'payment', 'grand_total'],
   'finance:ledger': ['spent_on', 'description', 'category', 'supplier', 'payment_method', 'amount'],
   'expenses:ledger': ['spent_on', 'description', 'category', 'supplier', 'payment_method', 'amount'],
-  'orders:orders': ['created_at', 'order_number', 'status', 'table_number', 'sitting_minutes', 'order_value'],
-  'orders:cancelled-kots': ['printed_at', 'kot_number', 'order_number', 'quantity', 'issued_by_name', 'reason'],
+  'orders:orders': ['created_at', 'order_number', 'status', 'order_type', 'order_value'],
   'orders:voided-bills': ['voided_at', 'bill_number', 'status', 'payment_method', 'reason', 'grand_total'],
   'menu:detail': ['name', 'category_name', 'quantity', 'revenue', 'profit', 'margin'],
   'categories:category-summary': ['category', 'master_category', 'quantity', 'revenue', 'profit', 'share'],
   'categories:master-category-summary': ['master_category', 'quantity', 'revenue', 'profit', 'share'],
   'inventory:inventory': ['item_name', 'quantity', 'unit', 'min_level', 'value', 'stock_status'],
   'customers:detail': ['name', 'phone', 'is_vip', 'orders', 'spending', 'last_visit'],
-  'tables:table-performance': ['table_number', 'section', 'current_status', 'orders', 'revenue', 'avg_minutes'],
-  'tables:served-orders': ['created_at', 'paid_at', 'table_number', 'order_number', 'sitting_minutes', 'grand_total'],
-  'reservations:detail': ['date', 'time', 'name', 'party_size', 'status', 'table_number'],
   'suppliers:supplier-ledger': ['supplier', 'purchases', 'amount', 'share', 'stock_value', 'last_purchase'],
   'changes:cancelled-orders': ['cancelled_at', 'order_number', 'order_type', 'value', 'cancelled_by', 'reason'],
   'changes:item-changes': ['created_at', 'order_number', 'item', 'action', 'value_difference', 'reason'],

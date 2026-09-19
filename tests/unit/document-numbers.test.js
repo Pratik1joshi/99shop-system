@@ -24,27 +24,23 @@ function memoryDb() {
   };
 }
 
-const DINE_IN = { order_type: 'dine_in', table_id: 4, table_number: 'T-04' };
-const TAKEAWAY = { order_type: 'takeaway', table_id: null, table_number: null };
+const COUNTER = { order_type: 'counter', table_id: null, table_number: null };
 const DELIVERY = { order_type: 'delivery', table_id: null, table_number: null };
+// Written while this was a restaurant; it must number as an ordinary sale.
+const LEGACY_DINE_IN = { order_type: 'dine_in', table_id: 4, table_number: 'T-04' };
 
-test('each channel prints its own prefix for order, bill and KOT', () => {
-  assert.equal(documentPrefix('bill', DINE_IN), 'T');
-  assert.equal(documentPrefix('bill', TAKEAWAY), 'TW');
+test('each channel prints its own prefix for order and bill', () => {
+  assert.equal(documentPrefix('bill', COUNTER), 'T');
   assert.equal(documentPrefix('bill', DELIVERY), 'D');
-  assert.equal(documentPrefix('kot', DINE_IN), 'K');
-  assert.equal(documentPrefix('kot', TAKEAWAY), 'K-TW');
-  assert.equal(documentPrefix('kot', DELIVERY), 'K-D');
-  assert.equal(documentPrefix('order', DINE_IN), 'O');
-  assert.equal(documentPrefix('order', TAKEAWAY), 'O-TW');
+  assert.equal(documentPrefix('order', COUNTER), 'O');
   assert.equal(documentPrefix('order', DELIVERY), 'O-D');
 });
 
-test('an order with a table is dine-in even when order_type says otherwise', () => {
-  // normalizedOrderType() treats a table-linked order as dine-in; the number
-  // must agree with the classifier every report groups by.
-  assert.equal(documentPrefix('bill', { order_type: 'counter', table_id: 7 }), 'T');
-  assert.equal(documentPrefix('kot', { order_type: '', table_number: 'T-02' }), 'K');
+test('a legacy dine-in row numbers as a counter sale', () => {
+  // normalizedOrderType() folds every non-delivery type into `counter`; the
+  // number must agree with the classifier every report groups by.
+  assert.equal(documentPrefix('bill', LEGACY_DINE_IN), 'T');
+  assert.equal(documentPrefix('order', { order_type: 'takeaway' }), 'O');
 });
 
 test('an unknown order falls back to the caller prefix rather than mis-labelling', () => {
@@ -59,28 +55,28 @@ test('numbers are zero-padded to three digits behind the prefix', () => {
   assert.equal(formatDocumentNumber('K-TW', 1234), 'K-TW-1234');
 });
 
-test('the bill serial keeps running across channels — one book, three prefixes', async () => {
+test('the bill serial keeps running across channels — one book, two prefixes', async () => {
   const db = memoryDb();
   const numbers = [];
-  for (const order of [DINE_IN, TAKEAWAY, DINE_IN, DELIVERY, TAKEAWAY]) {
+  for (const order of [COUNTER, DELIVERY, COUNTER, DELIVERY, LEGACY_DINE_IN]) {
     numbers.push(await nextDocumentNumber(db, { type: 'bill', prefix: 'BILL', order }));
   }
-  assert.deepEqual(numbers, ['T-001', 'TW-002', 'T-003', 'D-004', 'TW-005']);
+  assert.deepEqual(numbers, ['T-001', 'D-002', 'T-003', 'D-004', 'T-005']);
 
-  // The serial is per document type, so KOTs count independently of bills but
+  // The serial is per document type, so orders count independently of bills but
   // still continuously among themselves.
-  const kots = [];
-  for (const order of [DELIVERY, DINE_IN, TAKEAWAY]) {
-    kots.push(await nextDocumentNumber(db, { type: 'kot', prefix: 'KOT', order }));
+  const orders = [];
+  for (const order of [DELIVERY, COUNTER, COUNTER]) {
+    orders.push(await nextDocumentNumber(db, { type: 'order', prefix: 'ORD', order }));
   }
-  assert.deepEqual(kots, ['K-D-001', 'K-002', 'K-TW-003']);
+  assert.deepEqual(orders, ['O-D-001', 'O-002', 'O-003']);
 });
 
 test('a channel never gets its own counter, so no two bills share a serial', async () => {
   const db = memoryDb();
   const seen = new Set();
   for (let i = 0; i < 30; i += 1) {
-    const order = [DINE_IN, TAKEAWAY, DELIVERY][i % 3];
+    const order = [COUNTER, LEGACY_DINE_IN, DELIVERY][i % 3];
     const number = await nextDocumentNumber(db, { type: 'bill', prefix: 'BILL', order });
     const serial = number.replace(/^[A-Z-]+-/, '');
     assert.equal(seen.has(serial), false, `serial ${serial} was issued twice (${number})`);
@@ -100,13 +96,13 @@ test('caller-supplied bill numbers are recognised in every format ever issued', 
 
 test('every channel has a prefix for every document type', () => {
   for (const type of ['order', 'bill', 'kot']) {
-    for (const channel of ['dine_in', 'takeaway', 'delivery']) {
+    for (const channel of ['counter', 'delivery']) {
       assert.equal(typeof CHANNEL_PREFIX[type][channel], 'string');
       assert.notEqual(CHANNEL_PREFIX[type][channel], '');
     }
   }
-  // Order, bill and KOT must stay tellable apart within a channel.
-  for (const channel of ['dine_in', 'takeaway', 'delivery']) {
+  // Order, bill and ticket must stay tellable apart within a channel.
+  for (const channel of ['counter', 'delivery']) {
     const prefixes = ['order', 'bill', 'kot'].map((type) => CHANNEL_PREFIX[type][channel]);
     assert.equal(new Set(prefixes).size, 3, `prefixes collide for ${channel}: ${prefixes.join()}`);
   }

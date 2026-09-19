@@ -195,11 +195,14 @@ test('reopen supplement settlement no longer imports deductStockForItems', () =>
   assert.match(source, /Reopen stock is owned by the POS items API/);
 });
 
-test('reopened checkout cannot silently mark unsent food as sent', () => {
+test('settlement marks every live line as handed over', () => {
+  // A counter has no kitchen ticket step, so payment is the moment a line is
+  // handed to the customer. Downstream code still reads sent_quantity, so it
+  // has to be synced here rather than left at zero.
   const here = path.dirname(fileURLToPath(import.meta.url));
   const source = fs.readFileSync(path.join(here, '../../app/api/admin/pos/orders/[id]/pay/route.js'), 'utf8');
-  assert.equal(source.includes('UPDATE order_items SET sent_quantity = quantity'), false);
-  assert.match(source, /Send the new items to the kitchen \(KOT\) before taking payment/);
+  assert.match(source, /SET sent_quantity = quantity/);
+  assert.match(source, /NOT IN \('voided','cancelled'\)/);
 });
 
 test('table replace and orphan cancel both restore via restoreOrderStockIfNeeded', () => {
