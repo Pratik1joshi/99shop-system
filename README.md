@@ -16,6 +16,7 @@ is the single place that records the deployment profile.
 | Storefront | `/`, `/shop/<category>`, `/about` | Public catalogue, reads live products; orders go to WhatsApp |
 | Till | `/admin/pos`, `/cashier/pos` | Scan or search, cart, discounts, split payment, receipt |
 | Products | `/admin/products` | Add by camera scan, USB scanner or by hand; variants and barcodes |
+| Website | `/admin/website` | Edit every word of the storefront: hero, order steps, About, footer, shop identity |
 | Back office | `/admin/*` | Inventory, purchases, suppliers, expenses, payroll, HRM |
 | Accounting | `/admin/general-ledger` and friends | Double-entry journal; every figure is derived, none stored |
 | Reports | `/admin/reports`, `/admin/analytics` | Sales, finance, inventory, staff, cancellations |
@@ -56,6 +57,13 @@ so a product added at the till appears on the website on the next request. A
 category page exists for every active category that has something in stock;
 empty categories 404 rather than showing a bare page. Product photos come from
 `image_url`, falling back to the shipped images in `public/storefront/`.
+
+Everything the site says that is *not* a product — hero, the three order
+steps, category invitations, the About story, footer, and the shop's name,
+phone, WhatsApp number and socials — is edited at **`/admin/website`** and
+stored in `site_content`. `lib/site-content.js` holds the shipped wording as
+defaults, so an empty table renders the original site and clearing a field
+restores it instead of leaving a gap.
 
 ## Scripts
 
