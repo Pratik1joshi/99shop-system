@@ -3,7 +3,7 @@ import Database from '@/lib/db/index';
 import { resolvePeriodRange } from '@/lib/report-dates.js';
 import { requireAuth, handleRouteError } from '@/lib/api-guard.js';
 import { ensureColumn } from '@/lib/db/schema-helpers.js';
-import { DEFAULT_FOOD_GROUP } from '@/lib/food-groups.js';
+import { DEFAULT_MASTER_CATEGORY } from '@/lib/master-categories.js';
 import { composeAnalytics, transactionReport } from '@/lib/analytics.js';
 import { currentBusinessDay, businessDaySummary } from '@/lib/business-days.js';
 
@@ -48,7 +48,7 @@ export async function GET(request) {
       range.label = `${scopedDay.status === 'open' ? 'Current ' : ''}Business Day · ${scopedDay.business_date}`;
       range.businessDayId = scopedDay.id;
     }
-    await ensureColumn(db, 'menu_categories', 'food_group', `TEXT DEFAULT '${DEFAULT_FOOD_GROUP}'`);
+    await ensureColumn(db, 'menu_categories', 'food_group', `TEXT DEFAULT '${DEFAULT_MASTER_CATEGORY}'`);
     if (searchParams.get('export') === 'transactions') {
       const transactions = await transactionReport(db, range, { exportAll: true, businessDayId });
       return NextResponse.json({ range, businessDay: scopedDay, transactions });

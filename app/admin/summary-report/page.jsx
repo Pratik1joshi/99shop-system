@@ -40,7 +40,7 @@ export default function SummaryReportPage(){
         <ReportGroup title="Money In" note="Everything the restaurant earned and collected in this period." tint="emerald">
         <div className="grid gap-5 lg:grid-cols-2 xl:grid-cols-3">
           <Section highlight tint="emerald" title="Restaurant Revenue" note="Menu value less discounts plus charges gives the finalized bill total. The ledger total is shown separately so any posting difference is visible rather than hidden." rows={[
-            line('Menu Item Value',d.revenue.subtotal),
+            line('Product Value',d.revenue.subtotal),
             line('Discounts',d.revenue.discounts,'-'),
             line('Tax / VAT',d.revenue.tax,d.revenue.tax?'+':''),
             line('Service / Extra Charges',d.revenue.service_charge,d.revenue.service_charge?'+':''),

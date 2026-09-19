@@ -732,7 +732,7 @@ export default function WalkInBilling({ variant = 'admin' }) {
             {filteredProducts.length === 0 ? (
               <div className="text-center text-slate-500 py-16">
                 <ShoppingCart className="w-12 h-12 mx-auto mb-3 opacity-30" />
-                <p className="font-medium">No menu items found</p>
+                <p className="font-medium">No products found</p>
               </div>
             ) : (
               <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-2.5 sm:gap-4">

@@ -161,7 +161,7 @@ export default function BillsPage() {
     return () => clearTimeout(t);
   }, [load, search]);
 
-  // Auto-refresh Active tab so open table orders stay visible.
+  // Auto-refresh Active tab so open sales stay visible.
   useEffect(() => {
     if (tab !== 'active' && tab !== 'all') return undefined;
     const id = setInterval(load, 15000);
@@ -214,7 +214,7 @@ export default function BillsPage() {
         <div className="flex flex-wrap items-end justify-between gap-3">
           <div>
             <h1 className="text-2xl font-bold text-gray-900 sm:text-3xl">Bills</h1>
-            <p className="mt-1 text-sm text-gray-500">Open table orders, pending payments and invoice history (times in Nepal / Kathmandu).</p>
+            <p className="mt-1 text-sm text-gray-500">Open sales, pending payments and invoice history (times in Nepal / Kathmandu).</p>
           </div>
           <button type="button" onClick={load} className="inline-flex items-center gap-2 rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50">
             <RotateCcw className="h-4 w-4" /> Refresh
@@ -312,7 +312,7 @@ export default function BillsPage() {
                 <h2 className="text-lg font-semibold text-gray-900">Cancel active order</h2>
                 <p className="mt-1 text-sm text-gray-500">
                   {deleteTarget.orderNumber ? shortOrderNumber(deleteTarget.orderNumber) : `Order #${deleteTarget.orderId}`}
-                  {deleteTarget.tableNumber ? ` - Table ${deleteTarget.tableNumber}` : ''}
+                  
                 </p>
               </div>
               <button type="button" onClick={() => setDeleteTarget(null)} className="rounded-lg p-1.5 text-gray-400 hover:bg-gray-100">
@@ -359,7 +359,7 @@ function BillTable({ bills, onSelect, onOpenOrder, onCancelActive, canCancel = f
               <th className="px-4 py-3">Bill / Order</th>
               <th className="px-4 py-3">Channel</th>
               <th className="px-4 py-3">Customer</th>
-              <th className="px-4 py-3">At table</th>
+              
               <th className="px-4 py-3 text-right">Total</th>
               <th className="px-4 py-3 text-right">Paid</th>
               <th className="px-4 py-3 text-right">Balance</th>
@@ -435,7 +435,7 @@ function BillTable({ bills, onSelect, onOpenOrder, onCancelActive, canCancel = f
               <span className="font-medium text-gray-900">{b.billNumber ? shortBillNumber(b.billNumber) : 'Open order'}</span>
               <span className={`rounded-full px-2 py-0.5 text-xs capitalize ${BILL_BADGE[b.billStatus] || 'bg-gray-100 text-gray-700'}`}>{prettyStatus(b.billStatus)}</span>
             </div>
-            <div className="mt-1 flex items-center gap-1 text-xs text-gray-400">{b.orderNumber ? <button type="button" onClick={(event) => { event.stopPropagation(); onOpenOrder?.(b); }} className="rounded-md bg-blue-50 px-2 py-0.5 font-bold text-blue-700 ring-1 ring-blue-200">{shortOrderNumber(b.orderNumber)}</button> : '—'} · <ChannelBadge channel={b.channel} />{b.tableNumber ? ` · Table ${b.tableNumber}` : ''}{b.reopened && ' · reopened'}</div>
+            <div className="mt-1 flex items-center gap-1 text-xs text-gray-400">{b.orderNumber ? <button type="button" onClick={(event) => { event.stopPropagation(); onOpenOrder?.(b); }} className="rounded-md bg-blue-50 px-2 py-0.5 font-bold text-blue-700 ring-1 ring-blue-200">{shortOrderNumber(b.orderNumber)}</button> : '—'} · <ChannelBadge channel={b.channel} />{b.reopened && ' · reopened'}</div>
             <div className="mt-2 flex items-center justify-between text-sm">
               <span className="text-gray-500">{b.customerName || '—'}</span>
               <span className="font-semibold tabular-nums">{formatValue(b.total, 'currency')}</span>
@@ -595,7 +595,6 @@ function BillDetailPanel({ id, onClose, onChanged }) {
             {bill.customer && <p className="text-sm text-gray-600">Customer: <span className="font-medium">{bill.customer.name}</span>{bill.customer.phone ? ` · ${bill.customer.phone}` : ''}</p>}
             {(bill.legacy.tableNumber || bill.legacy.cashierName) && (
               <p className="text-xs text-gray-400">
-                {bill.legacy.tableNumber ? `Table ${bill.legacy.tableNumber}` : ''}
                 {bill.legacy.cashierName ? ` · ${bill.legacy.cashierName}` : ''}
                 {bill.openedAt || bill.paidAt ? (
                   <>

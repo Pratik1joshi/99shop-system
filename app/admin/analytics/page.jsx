@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import {
   AlertCircle, CalendarDays, ClipboardList, Download, PackageSearch, Plus,
-  RefreshCw, UtensilsCrossed,
+  RefreshCw, Package,
 } from 'lucide-react';
 import AdminLayout from '@/components/admin/admin-layout';
 import { analyticsReportHref } from '@/lib/analytics-links';
@@ -98,17 +98,16 @@ export default function AnalyticsPage() {
                   <h1 className="text-2xl font-bold text-gray-950">Restaurant Analytics</h1>
                   <span className="inline-flex items-center rounded bg-emerald-50 px-2 py-1 text-[11px] font-semibold text-emerald-700">LIVE</span>
                 </div>
-                <p className="mt-1 text-sm text-gray-500">Sales, collections, orders, kitchen performance, inventory and restaurant health for the selected period.</p>
+                <p className="mt-1 text-sm text-gray-500">Sales, collections, inventory and shop health for the selected period.</p>
                 <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-gray-500">
                   <span className="inline-flex items-center gap-1.5"><CalendarDays className="h-3.5 w-3.5" /> {data?.range ? formatCalendarRangeLabel(data.range) : 'Select a reporting period'}</span>
                   {data?.generatedAt && <span>Updated {formatNepalDateTime(data.generatedAt)} NPT</span>}
                 </div>
               </div>
               <div className="flex flex-wrap gap-2">
-                <Link href={`${panelPrefix}/pos`} className="inline-flex h-9 items-center gap-1.5 rounded-md bg-gray-950 px-3 text-sm font-medium text-white active:scale-[0.98]"><Plus className="h-4 w-4" /> New Order</Link>
+                <Link href={`${panelPrefix}/pos`} className="inline-flex h-9 items-center gap-1.5 rounded-md bg-gray-950 px-3 text-sm font-medium text-white active:scale-[0.98]"><Plus className="h-4 w-4" /> New Sale</Link>
                 <Link href={`${panelPrefix}/billing`} className="inline-flex h-9 items-center gap-1.5 rounded-md border border-gray-300 bg-white px-3 text-sm font-medium text-gray-700 active:scale-[0.98]"><ClipboardList className="h-4 w-4" /> New Bill</Link>
-                <Link href={`${panelPrefix}/leads`} className="inline-flex h-9 items-center gap-1.5 rounded-md border border-gray-300 bg-white px-3 text-sm font-medium text-gray-700 active:scale-[0.98]"><UtensilsCrossed className="h-4 w-4" /> Reservations</Link>
-                <Link href={analyticsReportHref('Table / bill duration', data?.range, panelPrefix)} className="inline-flex h-9 items-center rounded-md border border-gray-300 bg-white px-3 text-sm">Table / bill duration</Link>
+                <Link href={`${panelPrefix}/products`} className="inline-flex h-9 items-center gap-1.5 rounded-md border border-gray-300 bg-white px-3 text-sm font-medium text-gray-700 active:scale-[0.98]"><Package className="h-4 w-4" /> Products</Link>
                 <Link href={`${panelPrefix}/inventory`} title="Inventory" className="inline-flex h-9 w-9 items-center justify-center rounded-md border border-gray-300 bg-white text-gray-700 active:scale-[0.98]"><PackageSearch className="h-4 w-4" /></Link>
                 <button type="button" onClick={exportTransactions} disabled={!data} className="inline-flex h-9 items-center gap-1.5 rounded-md border border-gray-300 bg-white px-3 text-sm font-medium text-gray-700 active:scale-[0.98] disabled:opacity-40"><Download className="h-4 w-4" /> Export</button>
                 <button type="button" onClick={loadOverview} title="Refresh analytics" className="inline-flex h-9 w-9 items-center justify-center rounded-md border border-gray-300 bg-white text-gray-700 active:scale-[0.98]"><RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} /></button>
@@ -172,23 +171,21 @@ function downloadTransactionWorkbook(range, rows) {
     cash: sum.cash + number(row.cash_amount),
     qr: sum.qr + number(row.qr_amount),
     credit: sum.credit + number(row.credit_amount),
-    food: sum.food + number(row.food_amount),
-    beverage: sum.beverage + number(row.beverage_amount),
-    tobacco: sum.tobacco + number(row.tobacco_amount),
+    accessories: sum.accessories + number(row.accessories_amount),
+    cosmetics: sum.cosmetics + number(row.cosmetics_amount),
     other: sum.other + number(row.other_amount),
     final: sum.final + number(row.final_total),
-  }), { subtotal: 0, discount: 0, cash: 0, qr: 0, credit: 0, food: 0, beverage: 0, tobacco: 0, other: 0, final: 0 });
-  const headers = ['Date', 'Bill', 'Order', 'Table / Channel', 'Customer', 'Cashier', 'Payment', 'Subtotal', 'Discount', 'Cash', 'Online', 'Credit', 'Food', 'Beverage', 'Tobacco', 'Other', 'Final Total'];
+  }), { subtotal: 0, discount: 0, cash: 0, qr: 0, credit: 0, accessories: 0, cosmetics: 0, other: 0, final: 0 });
+  const headers = ['Date', 'Bill', 'Sale', 'Channel', 'Customer', 'Cashier', 'Payment', 'Subtotal', 'Discount', 'Cash', 'Online', 'Credit', 'Accessories', 'Cosmetics', 'Other', 'Final Total'];
   const bodyRows = rows.map((row) => [
-    dateLabel(row.created_at), row.bill_number, row.order_number, row.table_number ? `Table ${row.table_number}` : orderTypeLabel(row), row.customer_name || 'Walk-in',
+    dateLabel(row.created_at), row.bill_number, row.order_number, orderTypeLabel(row), row.customer_name || 'Walk-in',
     row.cashier, row.payment, row.subtotal, row.discount_amount, row.cash_amount, row.qr_amount, row.credit_amount,
-    row.food_amount, row.beverage_amount, row.tobacco_amount, row.other_amount, row.final_total,
+    row.accessories_amount, row.cosmetics_amount, row.other_amount, row.final_total,
   ]);
-  bodyRows.push(['', '', '', '', '', 'TOTAL', '', totals.subtotal, totals.discount, totals.cash, totals.qr, totals.credit, totals.food, totals.beverage, totals.tobacco, totals.other, totals.final]);
+  bodyRows.push(['', '', '', '', '', 'TOTAL', '', totals.subtotal, totals.discount, totals.cash, totals.qr, totals.credit, totals.accessories, totals.cosmetics, totals.other, totals.final]);
   const categoryRows = [
-    ['Food', totals.food],
-    ['Beverage', totals.beverage],
-    ['Tobacco', totals.tobacco],
+    ['Accessories', totals.accessories],
+    ['Cosmetics', totals.cosmetics],
     ['Other', totals.other],
   ];
   const paymentRows = [

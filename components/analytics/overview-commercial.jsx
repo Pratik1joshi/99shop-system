@@ -35,7 +35,7 @@ export function SalesPerformance({ data }) {
         action={<Link href="/admin/reports?tab=sales" className="inline-flex items-center gap-1 text-sm font-medium text-gray-700 hover:text-gray-950">Sales analytics <ArrowRight className="h-4 w-4" /></Link>}
       />
       <ChartGrid>
-        <ChartCard title="Net Item Sales Trend" hint="Menu item sales after discounts; before tax, service and refunds" isEmpty={!trend.length} empty="No settled sales in this period.">
+        <ChartCard title="Net Item Sales Trend" hint="Product sales after discounts; before tax, service and refunds" isEmpty={!trend.length} empty="No settled sales in this period.">
           <TrendChart data={trend} color="blue" format="currency" height={230} />
         </ChartCard>
         <ChartCard title="Collections by Hour" hint="Actual payment rows, Nepal time" isEmpty={!hourly.length} empty="No collections in this period.">
@@ -108,7 +108,7 @@ export function PaymentFinance({ data }) {
 
 
       <div className="mt-5 grid gap-5 xl:grid-cols-2">
-        <ChartCard title="Net Item Sales Trend" hint="Menu item sales after discounts; before tax, service and refunds" isEmpty={!sales.trend?.length} empty="No settled sales in this period.">
+        <ChartCard title="Net Item Sales Trend" hint="Product sales after discounts; before tax, service and refunds" isEmpty={!sales.trend?.length} empty="No settled sales in this period.">
           <TrendChart data={sales.trend || []} color="blue" format="currency" height={230} />
         </ChartCard>
         <ChartCard title="By Hour" hint="Settled bill value by Nepal hour" isEmpty={!sales.hourly?.length} empty="No hourly sales in this period.">
@@ -296,12 +296,12 @@ export function MenuPerformance({ data }) {
     tab: 'menu',
     tableId: 'sold-items',
     row: { id: row.id, name: row.item, category: row.category },
-    title: 'Menu item bills',
+    title: 'Product bills',
   });
   return (
     <DashboardSection>
       <SectionHeading icon={ShoppingBasket} tone="amber" eyebrow="Menu intelligence" title="What guests are ordering" description="Item and category revenue are pre-discount menu mix figures; recipe margin is shown only when recipe coverage is complete." action={<Link href="/admin/reports?tab=menu" className="inline-flex items-center gap-1 text-sm font-medium text-gray-700">Menu analytics <ArrowRight className="h-4 w-4" /></Link>} />
-      {!menu.recipeCoverage.reliable && <div className="mb-4 rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-800">Margin ranking is hidden: {menu.recipeCoverage.recipes} of {menu.recipeCoverage.menuItems} menu items have recipes.</div>}
+      {!menu.recipeCoverage.reliable && <div className="mb-4 rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-800">Margin ranking is hidden: {menu.recipeCoverage.recipes} of {menu.recipeCoverage.menuItems} products have recipes.</div>}
       <div className="grid min-w-0 gap-5 xl:grid-cols-[1.25fr_0.75fr] [&>*]:min-w-0">
         <div className="min-w-0 overflow-hidden rounded-xl border border-gray-100 bg-white">
           <div className="flex flex-col gap-2 border-b border-gray-100 p-3 sm:flex-row sm:items-center">

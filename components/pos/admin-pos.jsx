@@ -124,7 +124,7 @@ export default function AdminPos() {
   const [promotion, setPromotion] = useState(null);
   const [couponCode, setCouponCode] = useState('');
   const [couponBusy, setCouponBusy] = useState(false);
-  // Active auto offers — used to badge menu items that currently have a discount.
+  // Active auto offers — used to badge products that currently have a discount.
   const [activeOffers, setActiveOffers] = useState([]);
 
   const [paymentMethod, setPaymentMethod] = useState('cash');
@@ -1049,7 +1049,7 @@ export default function AdminPos() {
                 {!categoriesExpanded && (
                   <span className="block truncate text-xs text-slate-500">
                     {selectedCategory === 'all'
-                      ? `Showing all ${products.length} menu items`
+                      ? `Showing all ${products.length} products`
                       : `Showing ${categories.find((cat) => String(cat.id) === String(selectedCategory))?.name || 'selected category'}`}
                   </span>
                 )}
@@ -1129,7 +1129,7 @@ export default function AdminPos() {
           {filteredProducts.length === 0 ? (
             <div className="text-center text-slate-500 py-16">
               <ShoppingCart className="w-12 h-12 mx-auto mb-3 opacity-30" />
-              <p className="font-medium">No menu items found</p>
+              <p className="font-medium">No products found</p>
             </div>
           ) : (
             <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-2.5 sm:gap-4">

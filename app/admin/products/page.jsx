@@ -164,7 +164,7 @@ export default function ProductsPage() {
         setFormData({ ...emptyForm });
         setFormErrors({});
         addToast(friendlyMessage('save_success', {
-          description: editingProduct ? 'Menu item was updated.' : 'Menu item was added.',
+          description: editingProduct ? 'Product was updated.' : 'Product was added.',
         }));
       } else {
         const data = await response.json().catch(() => ({}));
@@ -337,8 +337,8 @@ export default function ProductsPage() {
 
   const handleDelete = async (id) => {
     const ok = await confirm({
-      title: 'Delete menu item?',
-      message: 'Are you sure you want to delete this menu item?',
+      title: 'Delete product?',
+      message: 'Are you sure you want to delete this product?',
       tone: 'delete',
     });
     if (!ok) return;
@@ -352,7 +352,7 @@ export default function ProductsPage() {
 
       if (response.ok) {
         fetchProducts();
-        addToast(friendlyMessage('save_success', { description: 'Menu item deleted.' }));
+        addToast(friendlyMessage('save_success', { description: 'Product deleted.' }));
       } else {
         const data = await response.json().catch(() => ({}));
         addToast(friendlyFromError(data, 'save_failed'));
@@ -468,7 +468,7 @@ export default function ProductsPage() {
 
         {/* Search */}
         <div className="bg-white rounded-lg border border-gray-200 p-4 mb-6">
-          <div className="mb-4 flex gap-2 border-b border-gray-200" role="tablist" aria-label="Menu item availability">
+          <div className="mb-4 flex gap-2 border-b border-gray-200" role="tablist" aria-label="Product availability">
             <button
               type="button"
               role="tab"
@@ -500,7 +500,7 @@ export default function ProductsPage() {
             <Search className="absolute left-3 top-3 text-gray-700 w-5 h-5" />
             <input
               type="text"
-              placeholder="Search menu items..."
+              placeholder="Search products..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-gray-400 focus:border-transparent placeholder:text-gray-700 text-gray-900"
@@ -543,9 +543,9 @@ export default function ProductsPage() {
             <div className="bg-white rounded-2xl max-w-3xl w-full max-h-[92vh] overflow-y-auto shadow-2xl">
               <div className="p-6 border-b border-gray-200">
                 <h2 className="text-2xl font-bold text-gray-800">
-                  {editingProduct ? 'Edit Menu Item' : 'Add New Menu Item'}
+                  {editingProduct ? 'Edit Product' : 'Add New Product'}
                 </h2>
-                <p className="mt-1 text-sm text-gray-500">Set the selling details, availability and—when appropriate—the stock item that this menu item consumes.</p>
+                <p className="mt-1 text-sm text-gray-500">Set the selling details, availability and—when appropriate—the stock item that this product consumes.</p>
               </div>
               
               <form onSubmit={handleSubmit} className="p-6 sm:p-8 space-y-5" noValidate>
@@ -996,7 +996,7 @@ export default function ProductsPage() {
               </div>
             ))
           ) : (
-            <div className="bg-white rounded-xl p-10 text-center text-gray-500">No menu items found</div>
+            <div className="bg-white rounded-xl p-10 text-center text-gray-500">No products found</div>
           )}
         </div>
 
@@ -1046,7 +1046,7 @@ export default function ProductsPage() {
                       onClick={() => toggleStockVisibility(product)}
                       disabled={quickSaving[`${product.id}-pos_stock_visible`]}
                       aria-pressed={stockVisibilityState(product).visible}
-                      title={stockVisibilityState(product).linked ? 'Toggle live stock visibility in POS' : 'Link this menu item to inventory first'}
+                      title={stockVisibilityState(product).linked ? 'Toggle live stock visibility in POS' : 'Link this product to inventory first'}
                       className={`inline-flex items-center gap-2 rounded-lg border px-2.5 py-1.5 text-xs font-semibold ${
                         stockVisibilityState(product).linked
                           ? stockVisibilityState(product).visible

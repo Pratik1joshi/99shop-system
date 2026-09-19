@@ -246,7 +246,7 @@ export default function ItemFormModal({ item, suppliers = [], categories = [], m
               />
             </AdminField>
             <AdminField
-              label="Linked menu item"
+              label="Linked product"
               hint="For one-for-one packaged stock such as bottled drinks or tobacco. Leave blank when a recipe deducts ingredients."
             >
               <Combobox

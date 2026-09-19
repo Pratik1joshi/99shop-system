@@ -6,7 +6,7 @@ import { Plus, Edit, Trash2, Save, X, FolderOpen, GripVertical } from 'lucide-re
 import { useToast } from '@/components/ui/toast';
 import { useConfirm } from '@/components/ui/confirm';
 import { friendlyMessage, friendlyFromError } from '@/lib/friendly-message';
-import { FOOD_GROUPS, DEFAULT_FOOD_GROUP, foodGroupLabel } from '@/lib/food-groups.js';
+import { MASTER_CATEGORIES, DEFAULT_MASTER_CATEGORY, masterCategoryLabel } from '@/lib/master-categories.js';
 
 export default function CategoriesPage() {
   const { addToast } = useToast();
@@ -19,7 +19,7 @@ export default function CategoriesPage() {
     name: '',
     icon: '',
     display_order: 0,
-    food_group: DEFAULT_FOOD_GROUP
+    food_group: DEFAULT_MASTER_CATEGORY
   });
 
   /*
@@ -97,7 +97,7 @@ export default function CategoriesPage() {
       name: category.name,
       icon: category.icon || '',
       display_order: category.display_order || 0,
-      food_group: category.food_group || DEFAULT_FOOD_GROUP
+      food_group: category.food_group || DEFAULT_MASTER_CATEGORY
     });
     setShowForm(true);
   };
@@ -138,7 +138,7 @@ export default function CategoriesPage() {
       name: '',
       icon: '',
       display_order: 0,
-      food_group: DEFAULT_FOOD_GROUP
+      food_group: DEFAULT_MASTER_CATEGORY
     });
   };
 
@@ -160,7 +160,7 @@ export default function CategoriesPage() {
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-6 sm:mb-8">
             <div>
               <h1 className="text-3xl font-bold text-gray-800">Menu Categories</h1>
-              <p className="text-gray-700 mt-1">Organize your menu items into categories</p>
+              <p className="text-gray-700 mt-1">Organize your products into categories</p>
             </div>
             <button
               onClick={() => setShowForm(true)}
@@ -201,7 +201,7 @@ export default function CategoriesPage() {
                       onChange={(e) => setFormData({ ...formData, food_group: e.target.value })}
                       className="h-11 sm:h-12 w-full rounded-xl border border-gray-300 px-4 text-base focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
                     >
-                      {FOOD_GROUPS.map((g) => (
+                      {MASTER_CATEGORIES.map((g) => (
                         <option key={g.id} value={g.id}>{g.label}</option>
                       ))}
                     </select>
@@ -283,7 +283,7 @@ export default function CategoriesPage() {
                           <p className="text-xs text-gray-500">
                             Order: {category.display_order}
                             <span className="ml-2 inline-flex items-center rounded-full bg-indigo-50 px-2 py-0.5 text-[11px] font-semibold text-indigo-700">
-                              {foodGroupLabel(category.food_group)}
+                              {masterCategoryLabel(category.food_group)}
                             </span>
                           </p>
                         </div>
@@ -336,7 +336,7 @@ export default function CategoriesPage() {
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap">
                           <span className="inline-flex items-center rounded-full bg-indigo-50 px-2.5 py-1 text-xs font-semibold text-indigo-700">
-                            {foodGroupLabel(category.food_group)}
+                            {masterCategoryLabel(category.food_group)}
                           </span>
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap">

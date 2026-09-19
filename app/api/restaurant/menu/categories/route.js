@@ -2,12 +2,12 @@ import { NextResponse } from 'next/server';
 import Database from '@/lib/db/index';
 import { requireAuth, handleRouteError } from '@/lib/api-guard.js';
 import { ensureColumn } from '@/lib/db/schema-helpers.js';
-import { normalizeFoodGroup, DEFAULT_FOOD_GROUP } from '@/lib/food-groups.js';
+import { normalizeMasterCategory, DEFAULT_MASTER_CATEGORY } from '@/lib/master-categories.js';
 
 /** Ensure the master-category ("food group") column exists before we read/write it. */
 async function ensureFoodGroup(db) {
   try {
-    await ensureColumn(db, 'menu_categories', 'food_group', `TEXT DEFAULT '${DEFAULT_FOOD_GROUP}'`);
+    await ensureColumn(db, 'menu_categories', 'food_group', `TEXT DEFAULT '${DEFAULT_MASTER_CATEGORY}'`);
   } catch (e) {
     console.warn('ensureFoodGroup:', e?.message || e);
   }
@@ -26,7 +26,7 @@ export async function GET(request) {
     try {
       categories = await db.all(`
         SELECT id, name, display_order, icon, is_active, created_at,
-               COALESCE(food_group, '${DEFAULT_FOOD_GROUP}') AS food_group
+               COALESCE(food_group, '${DEFAULT_MASTER_CATEGORY}') AS food_group
         FROM menu_categories
         WHERE is_active = 1
         ORDER BY display_order ASC, name ASC
@@ -40,7 +40,7 @@ export async function GET(request) {
         WHERE is_active = 1
         ORDER BY display_order ASC, name ASC
       `);
-      categories = (categories || []).map((c) => ({ ...c, food_group: DEFAULT_FOOD_GROUP }));
+      categories = (categories || []).map((c) => ({ ...c, food_group: DEFAULT_MASTER_CATEGORY }));
     }
 
     return NextResponse.json({ categories });
@@ -96,7 +96,7 @@ export async function POST(request) {
         UPDATE menu_categories
         SET icon = ?, display_order = ?, is_active = 1, food_group = ?
         WHERE id = ?
-      `, [icon || null, order, normalizeFoodGroup(food_group), existing.id]);
+      `, [icon || null, order, normalizeMasterCategory(food_group), existing.id]);
 
       const category = await db.get(
         'SELECT * FROM menu_categories WHERE id = ?',
@@ -113,7 +113,7 @@ export async function POST(request) {
     const result = await db.run(`
       INSERT INTO menu_categories (name, icon, display_order, is_active, food_group)
       VALUES (?, ?, ?, 1, ?)
-    `, [name.trim(), icon || null, order, normalizeFoodGroup(food_group)]);
+    `, [name.trim(), icon || null, order, normalizeMasterCategory(food_group)]);
 
     const category = await db.get(
       'SELECT * FROM menu_categories WHERE id = ?',
@@ -182,7 +182,7 @@ export async function PUT(request) {
       UPDATE menu_categories
       SET name = ?, icon = ?, display_order = ?, food_group = ?
       WHERE id = ?
-    `, [name.trim(), icon || null, display_order || 0, normalizeFoodGroup(food_group), id]);
+    `, [name.trim(), icon || null, display_order || 0, normalizeMasterCategory(food_group), id]);
 
     const category = await db.get(
       'SELECT * FROM menu_categories WHERE id = ?',

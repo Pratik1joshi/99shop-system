@@ -172,20 +172,20 @@ export default function PromotionsPage() {
             <Field label="Maximum discount (Rs)"><input type="number" min="0" step="0.01" value={form.maximum_discount_amount} onChange={(e) => set({ maximum_discount_amount: e.target.value })} className={input} placeholder="No maximum" /></Field>
           </div> : <div className="grid gap-4 sm:grid-cols-3"><Field label="Customer buys"><input required type="number" min="1" max="99" value={form.buy_quantity} onChange={(e) => set({ buy_quantity: e.target.value })} className={input} /></Field><Field label="Customer gets"><input required type="number" min="1" max="99" value={form.reward_quantity} onChange={(e) => set({ reward_quantity: e.target.value })} className={input} /></Field><Field label="Reward discount (%)"><input required type="number" min="1" max="100" value={form.reward_discount_percent} onChange={(e) => set({ reward_discount_percent: e.target.value })} className={input} /><span className="mt-1 block text-xs text-gray-400">Use 100 for free.</span></Field></div>}
           <div className="grid gap-4 sm:grid-cols-2">
-            <Field label="Applies to"><select value={form.scope} onChange={(e) => set({ scope: e.target.value, target_ids: [] })} className={input}>{form.offer_type === 'discount' && <option value="order">Entire order</option>}<option value="category">Selected categories</option><option value="item">Selected menu items</option></select></Field>
+            <Field label="Applies to"><select value={form.scope} onChange={(e) => set({ scope: e.target.value, target_ids: [] })} className={input}>{form.offer_type === 'discount' && <option value="order">Entire order</option>}<option value="category">Selected categories</option><option value="item">Selected products</option></select></Field>
             <Field label="Minimum order (Rs)"><input type="number" min="0" step="0.01" value={form.minimum_order_amount} onChange={(e) => set({ minimum_order_amount: e.target.value })} className={input} placeholder="0" /></Field>
           </div>
           {form.scope !== 'order' && (
             <div>
               <span className="mb-1.5 block text-sm font-semibold text-gray-700">
-                {form.scope === 'category' ? 'Eligible categories' : 'Eligible menu items'}
+                {form.scope === 'category' ? 'Eligible categories' : 'Eligible products'}
               </span>
               <SearchableMultiPicker
                 options={targets}
                 value={form.target_ids}
                 onChange={(target_ids) => set({ target_ids })}
-                placeholder={form.scope === 'category' ? 'Search categories…' : 'Search menu items…'}
-                emptyLabel={form.scope === 'category' ? 'No matching categories.' : 'No matching menu items.'}
+                placeholder={form.scope === 'category' ? 'Search categories…' : 'Search products…'}
+                emptyLabel={form.scope === 'category' ? 'No matching categories.' : 'No matching products.'}
               />
             </div>
           )}
