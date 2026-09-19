@@ -19,7 +19,6 @@ import DateRangeFilter from '@/components/ui/date-range-filter';
 import { compactBillNumber, compactOrderNumber } from '@/lib/document-display.js';
 import { printFinalBill } from '@/lib/pos-print.js';
 import { receiptFromBillDetail } from '@/lib/bill-receipt.js';
-import { SittingTime } from '@/components/tables/table-open-duration.jsx';
 import { billPaymentHistory } from '@/lib/bill-payment-history.js';
 
 /**
@@ -389,15 +388,6 @@ function BillTable({ bills, onSelect, onOpenOrder, onCancelActive, canCancel = f
                 <td className="px-4 py-3"><ChannelBadge channel={b.channel} /></td>
                 <td className="px-4 py-3 text-gray-700">
                   {b.customerName || '—'}
-                  {b.tableNumber ? <span className="block text-xs text-gray-400">Table {b.tableNumber}</span> : null}
-                </td>
-                <td className="px-4 py-3 text-sm text-gray-700">
-                  <SittingTime
-                    openedAt={b.openedAt || b.createdAt}
-                    closedAt={b.paidAt}
-                    status={b.orderStatus || b.billStatus}
-                    dineIn={Boolean(b.tableNumber)}
-                  />
                 </td>
                 <td className="px-4 py-3 text-right tabular-nums">{formatValue(b.total, 'currency')}</td>
                 <td className="px-4 py-3 text-right tabular-nums text-gray-600">{formatValue(b.paid, 'currency')}</td>
@@ -452,17 +442,6 @@ function BillTable({ bills, onSelect, onOpenOrder, onCancelActive, canCancel = f
             </div>
             <div className="mt-1 text-[11px] text-gray-400">
               {formatNepalDateTime(b.updatedAt)}
-              {b.tableNumber ? (
-                <>
-                  {' · '}
-                  <SittingTime
-                    openedAt={b.openedAt || b.createdAt}
-                    closedAt={b.paidAt}
-                    status={b.orderStatus || b.billStatus}
-                    dineIn
-                  />
-                </>
-              ) : null}
             </div>
             </div>
             {canCancelActive(b) && (
@@ -618,16 +597,9 @@ function BillDetailPanel({ id, onClose, onChanged }) {
               <p className="text-xs text-gray-400">
                 {bill.legacy.tableNumber ? `Table ${bill.legacy.tableNumber}` : ''}
                 {bill.legacy.cashierName ? ` · ${bill.legacy.cashierName}` : ''}
-                {bill.legacy.tableNumber ? (
+                {bill.openedAt || bill.paidAt ? (
                   <>
-                    {' · '}
-                    <SittingTime
-                      openedAt={bill.openedAt || bill.createdAt}
-                      closedAt={bill.paidAt}
-                      status={bill.orderStatus || bill.billStatus}
-                      dineIn
-                    />
-                    {bill.openedAt ? ` seated ${formatNepalDateTime(bill.openedAt)}` : ''}
+                    {bill.openedAt ? ` · opened ${formatNepalDateTime(bill.openedAt)}` : ''}
                     {bill.paidAt ? ` · paid ${formatNepalDateTime(bill.paidAt)}` : ''}
                   </>
                 ) : null}

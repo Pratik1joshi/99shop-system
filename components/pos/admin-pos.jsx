@@ -4,7 +4,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   Search, Plus, Minus, Trash2, ChefHat, Loader2, RefreshCw, X, Ban,
   LayoutGrid, FileText, ShoppingCart, Sparkles, ReceiptText, Clock,
-  ArrowLeftRight, Users, Printer, CreditCard, Utensils, ShoppingBag,
+  ArrowLeftRight, Users, Printer, CreditCard, ShoppingBag,
   Truck, ChevronDown, ChevronUp, ScanLine,
 } from 'lucide-react';
 import dynamic from 'next/dynamic';
@@ -13,7 +13,7 @@ import { useToast } from '@/components/ui/toast';
 import { useConfirm } from '@/components/ui/confirm';
 import MenuItemImage from '@/components/menu-item-image';
 import { formatCurrency } from '@/lib/currency';
-import { printKot, printFinalBill, printProforma } from '@/lib/pos-print.js';
+import { printFinalBill, printProforma } from '@/lib/pos-print.js';
 import { calculateBillTotals, parseSettingsRates, resolveServiceCharge } from '@/lib/billing-totals';
 import { emptyServiceCharge, serviceChargePayload } from '@/components/billing/service-charge-field';
 import {
@@ -54,15 +54,10 @@ async function api(url, options = {}) {
 }
 
 const STATUS_BADGE = {
-  available: 'bg-emerald-100 text-emerald-800',
-  occupied: 'bg-blue-100 text-blue-800',
-  cooking: 'bg-blue-100 text-blue-800',
-  ready: 'bg-blue-100 text-blue-800',
-  dining: 'bg-blue-100 text-blue-800',
+  open: 'bg-emerald-100 text-emerald-800',
   awaiting_payment: 'bg-blue-100 text-blue-900',
-  cleaning: 'bg-slate-100 text-slate-700',
-  reserved: 'bg-red-100 text-red-900',
-  reserved_arrived: 'bg-red-100 text-red-900',
+  completed: 'bg-slate-100 text-slate-700',
+  cancelled: 'bg-red-100 text-red-900',
 };
 
 export default function AdminPos() {
@@ -77,7 +72,7 @@ export default function AdminPos() {
     });
   }, [addToast]);
 
-  const [flash, setFlash] = useState(null); // { title, detail } shown 2.5s after KOT/pay
+  const [flash, setFlash] = useState(null); // { title, detail } shown 2.5s after a payment
   const flashTimerRef = useRef(null);
 
   const showSuccessFlash = useCallback((title, detail) => {
@@ -108,26 +103,21 @@ export default function AdminPos() {
     delivery_fixed_fee: 0,
   });
 
-  const [tables, setTables] = useState([]);
   const [workspace, setWorkspace] = useState(null);
-  const [loadingTables, setLoadingTables] = useState(false);
   const [booting, setBooting] = useState(true);
   const [busy, setBusy] = useState(false);
 
-  const [showTablePicker, setShowTablePicker] = useState(false);
   const [showBillsPicker, setShowBillsPicker] = useState(false);
   const [showPayment, setShowPayment] = useState(false);
-  const [changeTableMode, setChangeTableMode] = useState(false);
-  const [partyChooser, setPartyChooser] = useState(null); // { table, parties }
   const [mobileCartOpen, setMobileCartOpen] = useState(false);
   const [cancelTarget, setCancelTarget] = useState(null);
   const [clearAllOpen, setClearAllOpen] = useState(false); // custom clear-cart confirm
   const [showCustom, setShowCustom] = useState(false);
   const [customItem, setCustomItem] = useState({ name: '', price: '', quantity: 1 });
   const [variantPicker, setVariantPicker] = useState(null); // product with variants, awaiting a pick
-  // Local cart before first KOT — no DB order/bill until kitchen ticket is cut.
+  // Local cart. Nothing is written to the database until the sale is committed
+  // at checkout, so an abandoned basket leaves no order behind.
   const [draftLines, setDraftLines] = useState([]);
-  const [draftDest, setDraftDest] = useState(null); // { type, table_id?, table_number?, new_party? }
 
   const [discount, setDiscount] = useState(0);
   const [discountMode, setDiscountMode] = useState('percent'); // percent | amount
@@ -149,7 +139,6 @@ export default function AdminPos() {
   const [deliveryExecutiveId, setDeliveryExecutiveId] = useState(null);
   const [deliveryExecutives, setDeliveryExecutives] = useState([]);
 
-  const kotKeyRef = useRef(null);
   const payKeyRef = useRef(null);
   const bootstrappedRef = useRef(false);
 
@@ -174,45 +163,17 @@ export default function AdminPos() {
   }, []);
 
   const clearToIdle = useCallback(() => {
-    kotKeyRef.current = null;
-    setShowTablePicker(false);
     setShowBillsPicker(false);
     setShowPayment(false);
-    setChangeTableMode(false);
-    setPartyChooser(null);
     setMobileCartOpen(false);
     setDraftLines([]);
-    setDraftDest(null);
-    setKotNotes('');
     resetPaymentState();
     setWorkspace(null);
   }, [resetPaymentState]);
 
   const resetToNewSale = useCallback(async () => {
-    // Idle counter — no order until KOT is cut.
     clearToIdle();
   }, [clearToIdle]);
-
-  const bindDraftTable = useCallback((table, { newParty = false } = {}) => {
-    setDraftDest({
-      type: 'dine_in',
-      table_id: table.id,
-      table_number: table.table_number,
-      new_party: newParty,
-    });
-    setWorkspace(null);
-    kotKeyRef.current = null;
-    resetPaymentState();
-  }, [resetPaymentState]);
-
-  const loadTables = useCallback(async () => {
-    setLoadingTables(true);
-    try {
-      const data = await api('/api/admin/pos/tables');
-      setTables(data.tables || []);
-    } catch (e) { notify(e.message, 'error'); }
-    finally { setLoadingTables(false); }
-  }, [notify]);
 
   const fetchProducts = useCallback(async () => {
     try {
@@ -271,7 +232,6 @@ export default function AdminPos() {
     fetchCategories();
     fetchActiveOffers();
     fetchSettings();
-    loadTables();
     const onFocus = () => {
       fetchSettings();
       fetchActiveOffers();
@@ -283,7 +243,7 @@ export default function AdminPos() {
       window.removeEventListener('focus', onFocus);
       window.clearInterval(tick);
     };
-  }, [fetchProducts, fetchCategories, fetchActiveOffers, fetchSettings, loadTables]);
+  }, [fetchProducts, fetchCategories, fetchActiveOffers, fetchSettings]);
 
   const refreshWorkspace = useCallback(async (id) => {
     const data = await api(`/api/admin/pos/orders/${id}`);
@@ -291,25 +251,11 @@ export default function AdminPos() {
     return data.workspace;
   }, []);
 
-  const openTarget = useCallback(async (payload) => {
-    setBusy(true);
-    try {
-      const data = await api('/api/admin/pos/orders', { method: 'POST', body: JSON.stringify(payload) });
-      setWorkspace(data.workspace);
-      kotKeyRef.current = null;
-      resetPaymentState();
-      return data.workspace;
-    } catch (e) { notify(e.message, 'error'); return null; }
-    finally { setBusy(false); }
-  }, [notify, resetPaymentState]);
-
   const openExisting = useCallback(async (id) => {
     setBusy(true);
     try {
       setDraftLines([]);
-      setDraftDest(null);
       const ws = await refreshWorkspace(id);
-      kotKeyRef.current = null;
       resetPaymentState();
       if (ws?.reopened) {
         const original = ws.reopen_original || ws.bill || {};
@@ -343,7 +289,6 @@ export default function AdminPos() {
         );
       }
       setShowBillsPicker(false);
-      setShowTablePicker(false);
       return ws;
     } catch (e) { notify(e.message, 'error'); return null; }
     finally { setBusy(false); }
@@ -355,9 +300,6 @@ export default function AdminPos() {
 
     const params = typeof window !== 'undefined' ? new URLSearchParams(window.location.search) : null;
     const resumeId = params?.get('order');
-    const tableId = params?.get('table');
-    const newParty = params?.get('new_party') === '1';
-    const changeTable = params?.get('change') === '1';
     const openPay = params?.get('pay') === '1';
 
     (async () => {
@@ -365,38 +307,9 @@ export default function AdminPos() {
       try {
         if (resumeId) {
           await openExisting(Number(resumeId));
-          if (changeTable) {
-            setChangeTableMode(true);
-            await loadTables();
-            setShowTablePicker(true);
-          }
           if (openPay) setShowPayment(true);
-        } else if (tableId) {
-          const data = await api('/api/admin/pos/tables');
-          const board = data.tables || [];
-          setTables(board);
-          const table = board.find((t) => Number(t.id) === Number(tableId));
-          if (newParty && table) {
-            // Add-person must create the party order immediately so it shows on the table board.
-            await openTarget({ table_id: table.id, new_party: true });
-          } else if (!newParty && table?.current_order_id) {
-            await openExisting(table.current_order_id);
-          } else if (table) {
-            bindDraftTable(table, { newParty: false });
-          } else {
-            setWorkspace(null);
-          }
-          if (changeTable) {
-            setChangeTableMode(true);
-            setShowTablePicker(true);
-          }
         } else {
           setWorkspace(null);
-          if (changeTable) {
-            setChangeTableMode(true);
-            await loadTables();
-            setShowTablePicker(true);
-          }
         }
         const base = window.location.pathname.startsWith('/cashier') ? '/cashier/pos' : '/admin/pos';
         window.history.replaceState({}, '', base);
@@ -404,7 +317,7 @@ export default function AdminPos() {
         setBooting(false);
       }
     })();
-  }, [openExisting, openTarget, bindDraftTable, loadTables]);
+  }, [openExisting]);
 
   const filteredProducts = useMemo(() => {
     return sortCombosFirst(
@@ -471,7 +384,7 @@ export default function AdminPos() {
     return match?.eligible ? Number(match.line_discount || 0) : 0;
   }, [promotion]);
 
-  // A delivery is still a table-less POS order, but is intentionally marked at
+  // A delivery is still an ordinary counter sale, but is intentionally marked at
   // checkout because that is when the cashier knows whether it is being picked
   // up or sent out and what fee to charge.
   useEffect(() => {
@@ -497,7 +410,7 @@ export default function AdminPos() {
         setDeliveryExecutives(data.executives || []);
       } catch { /* non-critical */ }
     })();
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  }, []);
 
   const calculateSubtotal = useCallback(
     () => allLines.reduce((sum, item) => sum + Number(item.subtotal || 0), 0),
@@ -824,8 +737,8 @@ export default function AdminPos() {
   }, [orderId, notify, workspace?.reopened]);
 
   /**
-   * Persist the scanned cart as a sale. A retail counter has no kitchen
-   * ticket, so this is the only commit step between cart and payment.
+   * Persist the scanned cart as a sale. This is the only commit step between
+   * the cart and payment.
    */
   const commitCart = useCallback(async () => {
     if (orderId) return orderId;
@@ -878,7 +791,7 @@ export default function AdminPos() {
 
   const printBillOnly = useCallback(async () => {
     if (!orderId || busy) {
-      if (!orderId) notify('Send a KOT first — no bill until kitchen ticket is cut.', 'warning');
+      if (!orderId) notify('Add items and start the sale first — there is no bill yet.', 'warning');
       return;
     }
     if (!allLines.length) { notify('Add items to the cart first.', 'warning'); return; }
@@ -899,7 +812,7 @@ export default function AdminPos() {
       if (!skipConfirm) {
         const ok = await confirm({
           title: 'Clear the draft cart?',
-          message: 'This removes every item from the draft. Nothing has been sent to the kitchen yet.',
+          message: 'This removes every item from the draft. Nothing has been saved yet.',
           confirmLabel: 'Clear everything',
           tone: 'delete',
         });
@@ -922,7 +835,7 @@ export default function AdminPos() {
         title: workspace?.reopened ? 'Clear this reopened bill?' : 'Clear unsent items?',
         message: workspace?.reopened
           ? 'This removes every item from the cart. The customer may be owed a refund on Complete Sale.'
-          : 'This clears unsent items only. Items already sent to the kitchen stay on the order.',
+          : 'This clears items that are not yet saved. Items already on the sale stay.',
         confirmLabel: 'Clear everything',
         tone: 'delete',
       });
@@ -997,115 +910,9 @@ export default function AdminPos() {
       showSuccessFlash('Payment recorded', data.message || 'Bill paid and receipt printed.');
       setShowPayment(false);
       await resetToNewSale();
-      await loadTables();
     } catch (e) { notify(e.message, 'error'); }
     finally { setBusy(false); }
-  }, [orderId, busy, allLines.length, unsentLines.length, notify, customerSelection, resetToNewSale, paperSize, workspace, loadTables, showSuccessFlash, buildAllocations, getTotals, deliveryAtCheckout, deliveryExecutiveId, promotion, couponCode, paymentMethod, serviceCharge, settings]);
-
-  const selectTable = useCallback(async (table) => {
-    if (changeTableMode && orderId) {
-      setBusy(true);
-      try {
-        const data = await api(`/api/admin/pos/orders/${orderId}`, {
-          method: 'PATCH',
-          body: JSON.stringify({ table_id: table.id }),
-        });
-        setWorkspace(data.workspace);
-        setChangeTableMode(false);
-        setShowTablePicker(false);
-        notify(`Moved to table ${table.table_number}.`, 'success');
-        await loadTables();
-      } catch (e) { notify(e.message, 'error'); }
-      finally { setBusy(false); }
-      return;
-    }
-
-    const parties = table.parties || [];
-    if (parties.length > 1) {
-      setPartyChooser({ table, parties });
-      return;
-    }
-
-    setShowTablePicker(false);
-    if (table.current_order_id && parties.length === 1) {
-      setBusy(true);
-      try { await openExisting(table.current_order_id); }
-      finally { setBusy(false); }
-      return;
-    }
-
-    // Empty table (or free) — bind destination only; order is created on first KOT.
-    bindDraftTable(table, { newParty: false });
-    notify(`Table ${table.table_number} selected. Add items, then cut KOT.`, 'success');
-  }, [changeTableMode, orderId, openExisting, notify, loadTables, bindDraftTable]);
-
-  const addAnotherPerson = useCallback(async (table) => {
-    if (!table?.id && !table?.table_id) {
-      notify('Pick a table first.', 'warning');
-      return;
-    }
-    const tableId = table.id || table.table_id;
-    const tableNumber = table.table_number;
-    const partyCount = Number(table.party_count || table.parties?.length || 0);
-    const ok = await confirm({
-      title: `Add another person on table ${tableNumber}?`,
-      message: partyCount > 0
-        ? `This opens a new separate tab on table ${tableNumber} (alongside the ${partyCount} already seated). They order and pay independently.`
-        : `This opens a new separate tab on table ${tableNumber}. They order and pay independently.`,
-      confirmLabel: 'Add person',
-      cancelLabel: 'Cancel',
-      tone: 'default',
-    });
-    if (!ok) return;
-    setShowTablePicker(false);
-    setPartyChooser(null);
-    setChangeTableMode(false);
-    setDraftLines([]);
-    setDraftDest(null);
-    const ws = await openTarget({ table_id: tableId, new_party: true });
-    if (!ws) return;
-    notify(`New party opened on table ${tableNumber}. Add items, then cut KOT.`, 'success');
-    await loadTables();
-  }, [openTarget, notify, loadTables, confirm]);
-
-  const removeParty = useCallback(async (party, table) => {
-    const label = party.party_label || party.order_number || `order #${party.order_id}`;
-    const tableLabel = table?.table_number ? ` from table ${table.table_number}` : '';
-    const ok = await confirm({
-      title: `Remove ${label}?`,
-      message: `This cancels that person's order${tableLabel}. This cannot be undone.`,
-      confirmLabel: 'Remove party',
-      tone: 'danger',
-    });
-    if (!ok) return;
-    setBusy(true);
-    try {
-      await api(`/api/admin/orders/${party.order_id}`, {
-        method: 'POST',
-        body: JSON.stringify({ action: 'void', reason: 'Removed party from table' }),
-      });
-      notify(`${label} removed.`, 'success');
-      if (Number(orderId) === Number(party.order_id)) clearToIdle();
-      setPartyChooser(null);
-      await loadTables();
-    } catch (e) { notify(e.message, 'error'); }
-    finally { setBusy(false); }
-  }, [orderId, clearToIdle, notify, loadTables, confirm]);
-
-  const movePartyToTable = useCallback(async (partyOrderId, targetTableId, targetTableNumber) => {
-    if (!partyOrderId || !targetTableId) return;
-    setBusy(true);
-    try {
-      const data = await api(`/api/admin/pos/orders/${partyOrderId}`, {
-        method: 'PATCH',
-        body: JSON.stringify({ table_id: targetTableId }),
-      });
-      if (Number(orderId) === Number(partyOrderId)) setWorkspace(data.workspace);
-      notify(`Moved to table ${targetTableNumber}.`, 'success');
-      await loadTables();
-    } catch (e) { notify(e.message, 'error'); }
-    finally { setBusy(false); }
-  }, [orderId, notify, loadTables]);
+  }, [orderId, busy, allLines.length, notify, customerSelection, resetToNewSale, paperSize, workspace, showSuccessFlash, buildAllocations, getTotals, deliveryAtCheckout, deliveryExecutiveId, promotion, couponCode, paymentMethod, serviceCharge, settings]);
 
   const confirmCancelSent = useCallback(async (reason, prepared, quantity) => {
     if (!cancelTarget || !orderId) return;
@@ -1116,12 +923,11 @@ export default function AdminPos() {
         body: JSON.stringify({ order_item_id: cancelTarget.order_item_id, reason, prepared, quantity }),
       });
       setWorkspace(data.workspace);
-      if (data.cancellation_kot) printKot(data.cancellation_kot, { size: paperSize, settings });
       notify(quantity < cancelTarget.quantity ? `${quantity} cancelled.` : 'Item cancelled.', 'success');
       setCancelTarget(null);
     } catch (e) { notify(e.message, 'error'); }
     finally { setBusy(false); }
-  }, [cancelTarget, orderId, paperSize, notify]);
+  }, [cancelTarget, orderId, notify]);
 
   if (booting) {
     return (
@@ -1299,19 +1105,19 @@ export default function AdminPos() {
           )}
           {canEdit && orderStatus === 'awaiting_payment' && (
             <div className="mb-3 rounded-xl bg-sky-50 border border-sky-200 p-3 text-sm text-sky-900">
-              Ready to pay — you can still add items and send another KOT, or complete payment in the cart.
+              Ready to pay — you can still add items, or complete payment in the cart.
             </div>
           )}
           {!orderId && draftLines.length > 0 && (
             <div className="mb-3 rounded-xl bg-amber-50 border border-amber-200 p-3 text-sm text-amber-900">
-              Draft cart only — order and bill are created when you cut the first KOT.
+              Draft cart only — the sale and its bill are created when you take payment.
             </div>
           )}
           {isReopened && canEdit && (
             <div className="mb-3 rounded-xl bg-violet-50 border border-violet-300 p-3 text-sm text-violet-950 shadow-sm">
-              <p className="font-bold">Reopened bill — edit, send KOT, then settle</p>
+              <p className="font-bold">Reopened bill — edit, then settle</p>
               <p className="text-xs mt-0.5">
-                Previous payment: {formatCurrency(alreadyPaid)}. New quantities remain unsent until a KOT is issued.
+                Previous payment: {formatCurrency(alreadyPaid)}.
                 {amountDue > 0.009
                   ? ` Collect ${formatCurrency(amountDue)} more.`
                   : amountDue < -0.009
@@ -1616,7 +1422,7 @@ export default function AdminPos() {
                             <h4 className="font-bold text-slate-900 text-sm leading-tight line-clamp-2">{line.item_name}</h4>
                             <p className="text-[11px] text-slate-500 mt-0.5 truncate">
                               {line.category || (line.menu_item_id ? 'Item' : 'Custom')}
-                              {!orderId ? ' · Draft' : isUnsent ? ' · Not sent' : workspace?.reopened ? ' · Reopened' : ' · In kitchen'}
+                              {!orderId ? ' · Draft' : isUnsent ? ' · Not saved' : workspace?.reopened ? ' · Reopened' : ' · On the sale'}
                             </p>
                             <p className="text-xs text-blue-600 font-semibold mt-0.5">
                               {formatCurrency(line.price || 0)} each
@@ -1801,7 +1607,7 @@ export default function AdminPos() {
               {isReopened ? ' reopened bill' : ' order'}.
               {isReopened
                 ? ' The customer may be owed a refund on Complete Sale.'
-                : ' Sent kitchen items stay on the order — cancel those individually.'}
+                : ' Items already saved to the sale stay — cancel those individually.'}
               {' '}This can’t be undone.
             </p>
             <div className="flex flex-col-reverse gap-2 sm:flex-row">
@@ -1857,7 +1663,7 @@ export default function AdminPos() {
         onSplitPaymentChange={setSplitPayment}
         serviceCharge={serviceCharge}
         onServiceChargeChange={setServiceCharge}
-        canSetDelivery={!workspace?.order?.table_id}
+        canSetDelivery
         deliveryEnabled={deliveryAtCheckout}
         onDeliveryEnabledChange={(enabled) => {
           setDeliveryAtCheckout(enabled);
@@ -1899,7 +1705,7 @@ function ActiveBillsModal({ busy, onClose, onSelect }) {
     const q = search.trim().toLowerCase();
     if (!q) return bills;
     return bills.filter((b) =>
-      [b.tableNumber, b.customerName, b.customerPhone, b.orderNumber, b.billNumber, b.channel]
+      [b.customerName, b.customerPhone, b.orderNumber, b.billNumber, b.channel]
         .some((v) => String(v || '').toLowerCase().includes(q))
     );
   }, [bills, search]);
@@ -1916,26 +1722,18 @@ function ActiveBillsModal({ busy, onClose, onSelect }) {
       {
         id: 'pay',
         title: 'Ready to pay',
-        hint: 'Food served — open and collect payment',
+        hint: 'Open and collect payment',
         icon: ReceiptText,
         tone: 'border-amber-200 bg-amber-50/60',
         bills: pick(filtered.filter((b) => b.orderStatus === 'awaiting_payment')),
       },
       {
-        id: 'table',
-        title: 'Table orders',
-        hint: 'Dining in — add items, print KOT, or pay',
-        icon: Utensils,
-        tone: 'border-blue-200 bg-blue-50/40',
-        bills: pick(filtered.filter((b) => b.tableNumber && b.orderStatus !== 'awaiting_payment')),
-      },
-      {
         id: 'counter',
-        title: 'Takeaway',
-        hint: 'Orders not linked to a table',
+        title: 'Open sales',
+        hint: 'Add items, print a bill, or pay',
         icon: ShoppingBag,
         tone: 'border-slate-200 bg-slate-50/60',
-        bills: pick(filtered.filter((b) => !b.tableNumber && b.orderStatus !== 'awaiting_payment')),
+        bills: pick(filtered.filter((b) => b.orderStatus !== 'awaiting_payment')),
       },
     ].filter((g) => g.bills.length > 0);
   }, [filtered]);
@@ -1963,7 +1761,7 @@ function ActiveBillsModal({ busy, onClose, onSelect }) {
             <input
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              placeholder="Search table, customer, order #…"
+              placeholder="Search customer, order #…"
               className="w-full pl-9 pr-3 py-2.5 border-2 border-blue-200 rounded-xl text-sm text-slate-900 placeholder:text-slate-400"
             />
           </div>
@@ -1982,7 +1780,7 @@ function ActiveBillsModal({ busy, onClose, onSelect }) {
               <p className="text-sm font-medium text-slate-600">
                 {search ? 'No orders match your search.' : 'No open orders right now.'}
               </p>
-              {!search && <p className="text-xs text-slate-400 mt-1">New orders appear here after you print a KOT.</p>}
+              {!search && <p className="text-xs text-slate-400 mt-1">Sales appear here once they are started at the counter.</p>}
             </div>
           )}
           {!loading && groups.map((group) => (
@@ -2015,22 +1813,18 @@ function ActiveBillsModal({ busy, onClose, onSelect }) {
 const ORDER_STATUS = {
   pending: { label: 'New', badge: 'bg-slate-100 text-slate-700', action: 'Add items' },
   confirmed: { label: 'Confirmed', badge: 'bg-slate-100 text-slate-700', action: 'Add items' },
-  preparing: { label: 'Preparing', badge: 'bg-orange-100 text-orange-800', action: 'Kitchen working' },
-  cooking: { label: 'Cooking', badge: 'bg-orange-100 text-orange-800', action: 'Kitchen working' },
-  ready: { label: 'Ready', badge: 'bg-violet-100 text-violet-800', action: 'Serve customer' },
-  dining: { label: 'Dining', badge: 'bg-blue-100 text-blue-800', action: 'Add items or pay' },
-  served: { label: 'Served', badge: 'bg-blue-100 text-blue-800', action: 'Add items or pay' },
+  preparing: { label: 'In progress', badge: 'bg-orange-100 text-orange-800', action: 'Continue sale' },
+  ready: { label: 'Ready', badge: 'bg-violet-100 text-violet-800', action: 'Hand to customer' },
+  served: { label: 'Handed over', badge: 'bg-blue-100 text-blue-800', action: 'Add items or pay' },
   awaiting_payment: { label: 'Pay now', badge: 'bg-amber-100 text-amber-900', action: 'Collect payment' },
   open: { label: 'Open', badge: 'bg-sky-100 text-sky-800', action: 'Continue order' },
   unpaid: { label: 'Unpaid', badge: 'bg-amber-100 text-amber-900', action: 'Collect payment' },
 };
 
 function billDisplayTitle(b) {
-  if (b.tableNumber) return `Table ${b.tableNumber}`;
   if (b.customerName) return b.customerName;
-  if (b.channel === 'takeaway') return 'Takeaway';
   if (b.channel === 'online') return 'Online order';
-  return 'Takeaway';
+  return 'Counter sale';
 }
 
 function billTimeLabel(iso) {
@@ -2061,15 +1855,15 @@ function ActiveBillCard({ bill, busy, onSelect }) {
   const hasUnsent = Number(bill.unsentCount) > 0;
   const itemCount = Number(bill.itemCount) || 0;
 
-  let kitchenHint = '';
+  let progressHint = '';
   if (bill.orderStatus === 'awaiting_payment') {
-    kitchenHint = 'Bill ready — complete payment in POS';
+    progressHint = 'Bill ready — complete payment at the till';
   } else if (hasUnsent) {
-    kitchenHint = `${bill.unsentCount} item${bill.unsentCount === 1 ? '' : 's'} not sent to kitchen yet`;
+    progressHint = `${bill.unsentCount} item${bill.unsentCount === 1 ? '' : 's'} not saved yet`;
   } else if (itemCount > 0) {
-    kitchenHint = `${itemCount} item${itemCount === 1 ? '' : 's'} · sent to kitchen`;
+    progressHint = `${itemCount} item${itemCount === 1 ? '' : 's'} on the sale`;
   } else {
-    kitchenHint = 'No items yet';
+    progressHint = 'No items yet';
   }
 
   return (
@@ -2098,14 +1892,14 @@ function ActiveBillCard({ bill, busy, onSelect }) {
             {bill.orderNumber ? ` · ${bill.orderNumber}` : ''}
           </p>
 
-          {bill.customerName && bill.tableNumber && (
+          {bill.customerName && (
             <p className="mt-0.5 text-xs text-slate-600 truncate">{bill.customerName}{bill.customerPhone ? ` · ${bill.customerPhone}` : ''}</p>
           )}
 
           <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px]">
             <span className={`inline-flex items-center gap-1 font-medium ${hasUnsent ? 'text-amber-700' : 'text-emerald-700'}`}>
               {hasUnsent ? <ChefHat className="w-3 h-3" /> : <ChefHat className="w-3 h-3" />}
-              {kitchenHint}
+              {progressHint}
             </span>
             <span className="inline-flex items-center gap-1 text-slate-400">
               <Clock className="w-3 h-3" />
@@ -2138,10 +1932,10 @@ function CancelReasonModal({ item, busy, onClose, onConfirm }) {
     <Overlay onClose={onClose}>
       <div className="w-full max-w-md rounded-xl bg-white p-5 shadow-2xl">
         <div className="mb-3 flex items-center justify-between">
-          <h3 className="text-lg font-bold text-slate-900">Cancel sent item</h3>
+          <h3 className="text-lg font-bold text-slate-900">Cancel saved item</h3>
           <button type="button" onClick={onClose} className="text-slate-400 hover:text-slate-600"><X className="w-5 h-5" /></button>
         </div>
-        <p className="mb-3 text-sm text-slate-600">{item.quantity}× <b>{item.item_name}</b> was sent to the kitchen.</p>
+        <p className="mb-3 text-sm text-slate-600">{item.quantity}× <b>{item.item_name}</b> is already saved on this sale.</p>
         {maxQty > 1 && (
           <div className="mb-3">
             <p className="mb-1.5 text-sm font-medium text-slate-700">How many to cancel?</p>
@@ -2156,7 +1950,7 @@ function CancelReasonModal({ item, busy, onClose, onConfirm }) {
         <textarea value={reason} onChange={(e) => setReason(e.target.value)} rows={2} placeholder="Reason (required)" className="mb-3 w-full rounded-lg border-2 border-blue-200 p-2 text-sm focus:border-blue-500 focus:outline-none" />
         <label className="mb-4 flex items-center gap-2 text-sm">
           <input type="checkbox" checked={prepared} onChange={(e) => setPrepared(e.target.checked)} className="h-4 w-4" />
-          Already prepared (wastage)
+          Item is damaged or opened — write it off as wastage
         </label>
         <div className="flex justify-end gap-2">
           <Button variant="outline" onClick={onClose} disabled={busy}>Keep</Button>

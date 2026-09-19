@@ -9,7 +9,6 @@ import { formatNepalDateTime } from '@/lib/report-dates.js';
 import { compactBillNumber, compactOrderNumber } from '@/lib/document-display.js';
 import { latestReopenChanges, buildChangeIndex } from '@/lib/reopen-diff.js';
 import KotPopup from '@/components/admin/kot-popup.jsx';
-import { SittingTime } from '@/components/tables/table-open-duration.jsx';
 import { billPaymentHistory } from '@/lib/bill-payment-history.js';
 
 const KOT_BADGE = {
@@ -118,15 +117,9 @@ export default function BillInvoiceModal({ billId, onClose }) {
             {bill.voided?.reason && <div className="rounded-xl border border-red-100 bg-red-50 px-3 py-2 text-sm text-red-700"><span className="font-semibold">Void reason:</span> {bill.voided.reason}{bill.voided.at && <span className="block text-xs text-red-600/80">Voided {formatNepalDateTime(bill.voided.at)}</span>}</div>}
             {bill.customer && <p className="text-sm text-gray-600">Customer: <span className="font-medium">{bill.customer.name}</span>{bill.customer.phone ? ` · ${bill.customer.phone}` : ''}</p>}
             {(bill.legacy.tableNumber || bill.legacy.cashierName) && <p className="text-xs text-gray-400">Legacy: {bill.legacy.tableNumber ? `Table ${bill.legacy.tableNumber}` : ''} {bill.legacy.cashierName ? `· ${bill.legacy.cashierName}` : ''}</p>}
-            {bill.legacy.tableNumber && (
+            {(bill.openedAt || bill.paidAt) && (
               <p className="text-xs text-gray-500">
-                Sitting time: <SittingTime
-                  openedAt={bill.openedAt || bill.createdAt}
-                  closedAt={bill.paidAt}
-                  status={bill.orderStatus || bill.billStatus}
-                  dineIn
-                />
-                {bill.openedAt ? ` · opened ${formatNepalDateTime(bill.openedAt)}` : ''}
+                {bill.openedAt ? `Opened ${formatNepalDateTime(bill.openedAt)}` : ''}
                 {bill.paidAt ? ` · paid ${formatNepalDateTime(bill.paidAt)}` : ''}
               </p>
             )}

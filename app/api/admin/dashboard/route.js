@@ -10,7 +10,6 @@ import {
 import { countedBillSql, openBillSql, paymentBucketSql, settledPaymentSql } from '@/lib/report-scope.js';
 import { requireAuth } from '@/lib/api-guard.js';
 import { dateKey } from '@/lib/reports.js';
-import { FEATURES } from '@/lib/deployment.js';
 import { currentBusinessDay, businessDaySummary } from '@/lib/business-days.js';
 import { orderTypeLabel } from '@/lib/order-types.js';
 
@@ -62,8 +61,6 @@ export async function GET(request) {
     const orderDayO = dayScope('o.created_at', 'o.business_day_id');
     const billDay = dayScope('created_at', 'business_day_id');
     const paymentDay = dayScope('created_at', 'business_day_id');
-    const kotPrintedDay = dayScope('k.printed_at', 'k.business_day_id');
-    const kotCompletedDay = dayScope('k.completed_at', 'k.business_day_id');
     const refundDay = dayScope('created_at', 'business_day_id');
 
     const [
@@ -76,24 +73,15 @@ export async function GET(request) {
       openBillsRow,
       reopenedBillsRow,
       creditOutstandingRow,
-      occupiedRow,
-      diningRow,
-      totalTablesRow,
-      floorOpenRow,
+      openCartValueRow,
       lowStockItems,
-      pendingTickets,
       unpaidBills,
-      soonReservations,
       recentOrders,
       liveOrders,
-      recentKots,
-      completedTickets,
-      checkedInReservations,
       recentMovements,
       dailyBills,
       topItemsToday,
       bestEmployeeToday,
-      busiestTableToday,
       paymentMixRows,
       hourlyRows,
       refundsTodayRow,
@@ -117,9 +105,6 @@ export async function GET(request) {
         `SELECT COALESCE(SUM(outstanding_amount), 0) as total FROM bills WHERE COALESCE(outstanding_amount,0) > 0 AND ${billDay.sql}`,
         billDay.params
       ).catch(() => ({ total: 0 })),
-      db.get(`SELECT COUNT(*) as c FROM tables WHERE status IN ('occupied','dining') AND COALESCE(is_active, 1) = 1`).catch(() => ({ c: 0 })),
-      db.get(`SELECT COUNT(*) as c FROM tables WHERE status = 'dining' AND COALESCE(is_active, 1) = 1`).catch(() => ({ c: 0 })),
-      db.get(`SELECT COUNT(*) as c FROM tables WHERE COALESCE(is_active, 1) = 1`).catch(() => ({ c: 0 })),
       db.get(`
         SELECT COALESCE(SUM(oi.subtotal), 0) as total
         FROM order_items oi
@@ -135,28 +120,14 @@ export async function GET(request) {
         LIMIT 8
       `).catch(() => []),
       db.all(`
-        SELECT k.id, k.status, k.printed_at, k.started_at, o.table_number, o.order_number
-        FROM kots k
-        JOIN orders o ON k.order_id = o.id
-        WHERE k.status IN ('pending', 'preparing')
-      `).catch(() => []),
-      db.all(`
-        SELECT b.id, b.bill_number, b.created_at, b.grand_total, o.table_number
+        SELECT b.id, b.bill_number, b.created_at, b.grand_total
         FROM bills b
-        LEFT JOIN orders o ON b.order_id = o.id
         WHERE ${openBillSql('b')}
         ORDER BY b.created_at ASC
         LIMIT 8
       `).catch(() => []),
-      FEATURES.reservations
-        ? db.all(`
-            SELECT id, name, phone, date, time, party_size, guests, status
-            FROM reservations
-            WHERE date = ? AND status IN ('new', 'confirmed')
-          `, [today]).catch(() => [])
-        : Promise.resolve([]),
       db.all(`
-        SELECT id, order_number, table_number, order_type, status, created_at
+        SELECT id, order_number, order_type, status, created_at
         FROM orders
         WHERE ${orderDay.sql}
         ORDER BY created_at DESC
@@ -164,7 +135,7 @@ export async function GET(request) {
       `, orderDay.params).catch(() => []),
       // Live open carts — always surface these so the board isn't empty overnight.
       db.all(`
-        SELECT id, order_number, table_number, order_type, status, created_at, updated_at,
+        SELECT id, order_number, order_type, status, created_at, updated_at,
                (SELECT COALESCE(SUM(subtotal),0) FROM order_items oi
                 WHERE oi.order_id = orders.id AND COALESCE(oi.status,'') NOT IN ('voided','cancelled')) AS amount
         FROM orders
@@ -172,32 +143,6 @@ export async function GET(request) {
         ORDER BY COALESCE(updated_at, created_at) DESC
         LIMIT 15
       `).catch(() => []),
-      db.all(`
-        SELECT k.id, k.kot_number, k.printed_at, o.table_number, o.order_number
-        FROM kots k
-        JOIN orders o ON k.order_id = o.id
-        WHERE ${kotPrintedDay.sql}
-          AND COALESCE(k.kot_type,'') != 'cancellation'
-        ORDER BY k.printed_at DESC
-        LIMIT 15
-      `, kotPrintedDay.params).catch(() => []),
-      db.all(`
-        SELECT k.id, k.completed_at, o.table_number
-        FROM kots k
-        JOIN orders o ON k.order_id = o.id
-        WHERE k.status = 'completed' AND ${kotCompletedDay.sql}
-        ORDER BY k.completed_at DESC
-        LIMIT 20
-      `, kotCompletedDay.params).catch(() => []),
-      FEATURES.reservations
-        ? db.all(`
-            SELECT id, name, checked_in_at
-            FROM reservations
-            WHERE checked_in_at IS NOT NULL AND ${inDay('checked_in_at')}
-            ORDER BY checked_in_at DESC
-            LIMIT 20
-          `, [tB.startUtc, tB.endUtcExclusive]).catch(() => [])
-        : Promise.resolve([]),
       db.all(`
         SELECT m.id, m.change_type, m.quantity_changed, m.created_at, im.item_name
         FROM stock_movements m
@@ -235,14 +180,6 @@ export async function GET(request) {
         ORDER BY c DESC
         LIMIT 1
       `, orderDayO.params).catch(() => null),
-      db.get(`
-        SELECT table_number, COUNT(*) as c
-        FROM orders
-        WHERE ${orderDay.sql} AND table_number IS NOT NULL
-        GROUP BY table_number
-        ORDER BY c DESC
-        LIMIT 1
-      `, orderDay.params).catch(() => null),
       db.all(`
         SELECT ${paymentBucketSql("COALESCE(payment_method, 'other')")} as method, COALESCE(SUM(amount), 0) as total, COUNT(*) as c
         FROM bill_payments
@@ -294,8 +231,7 @@ export async function GET(request) {
     }
     const profit = sales - sales * COST_RATIO;
     const prevProfit = prevSales - prevSales * COST_RATIO;
-    const occupiedTables = Math.max(n(occupiedRow?.c), n(diningRow?.c));
-    const floorOpen = n(floorOpenRow?.total);
+    const openCartValue = n(openCartValueRow?.total);
 
     const needsAttention = [];
     for (const item of lowStockItems || []) {
@@ -309,24 +245,11 @@ export async function GET(request) {
       });
     }
     const now = Date.now();
-    if (FEATURES.kitchenDisplay) {
-      for (const t of pendingTickets || []) {
-        const started = new Date(t.printed_at || t.started_at).getTime();
-        if (!Number.isFinite(started)) continue;
-        const minutes = Math.round((now - started) / 60000);
-        if (minutes >= 15) {
-          needsAttention.push({
-            type: 'kitchen_delay',
-            text: `Table ${t.table_number || t.order_number} has been waiting ${minutes} min on food`,
-          });
-        }
-      }
-    }
     for (const b of unpaidBills || []) {
       const minutes = Math.round((now - new Date(b.created_at).getTime()) / 60000);
       needsAttention.push({
         type: 'unpaid_bill',
-        text: `Bill ${b.bill_number}${b.table_number ? ` (Table ${b.table_number})` : ''} is unpaid${minutes > 0 ? ` — ${minutes} min` : ''}`,
+        text: `Bill ${b.bill_number} is unpaid${minutes > 0 ? ` — ${minutes} min` : ''}`,
         href: '/admin/bills',
       });
     }
@@ -344,22 +267,6 @@ export async function GET(request) {
         href: '/admin/bills',
       });
     }
-    if (FEATURES.reservations) {
-      for (const r of soonReservations || []) {
-        const when = r.date && r.time ? new Date(`${r.date}T${r.time.length === 5 ? r.time + ':00' : r.time}`) : null;
-        if (!when || Number.isNaN(when.getTime())) continue;
-        const diffMin = Math.round((when.getTime() - now) / 60000);
-        if (diffMin >= -5 && diffMin <= 30) {
-          needsAttention.push({
-            type: 'reservation_soon',
-            text: diffMin <= 0
-              ? `${r.name} (party of ${r.party_size || r.guests || '—'}) has arrived for their reservation`
-              : `${r.name} (party of ${r.party_size || r.guests || '—'}) arrives in ${diffMin} min`,
-          });
-        }
-      }
-    }
-
     const activity = [];
     const seenOrderIds = new Set();
     for (const o of liveOrders || []) {
@@ -367,7 +274,7 @@ export async function GET(request) {
       const amt = n(o.amount);
       activity.push({
         type: 'order_created',
-        text: `${o.table_number ? 'Open' : orderTypeLabel(o)} · ${o.order_number}${o.table_number ? ` · Table ${o.table_number}` : ''} · ${String(o.status || '').replace(/_/g, ' ')}${amt ? ` · Rs ${amt.toFixed(0)}` : ''}`,
+        text: `${orderTypeLabel(o)} · ${o.order_number} · ${String(o.status || '').replace(/_/g, ' ')}${amt ? ` · Rs ${amt.toFixed(0)}` : ''}`,
         at: o.updated_at || o.created_at,
       });
     }
@@ -375,22 +282,9 @@ export async function GET(request) {
       if (seenOrderIds.has(o.id)) continue;
       activity.push({
         type: 'order_created',
-        text: `Order ${o.order_number} ${o.status === 'completed' ? 'completed' : 'created'} · ${o.table_number ? `Table ${o.table_number}` : orderTypeLabel(o)}`,
+        text: `Sale ${o.order_number} ${o.status === 'completed' ? 'completed' : 'created'} · ${orderTypeLabel(o)}`,
         at: o.created_at,
       });
-    }
-    for (const k of recentKots || []) {
-      activity.push({
-        type: 'kitchen_ready',
-        text: `KOT ${k.kot_number || k.id} sent · ${k.table_number ? `Table ${k.table_number}` : 'Takeaway'}`,
-        at: k.printed_at || k.created_at,
-      });
-    }
-    for (const k of completedTickets || []) {
-      activity.push({ type: 'kitchen_ready', text: `Kitchen ticket ready for ${k.table_number ? `Table ${k.table_number}` : 'Takeaway'}`, at: k.completed_at });
-    }
-    for (const r of checkedInReservations || []) {
-      activity.push({ type: 'reservation_checked_in', text: `${r.name} checked in`, at: r.checked_in_at });
     }
     for (const m of recentMovements || []) {
       const label =
@@ -434,20 +328,6 @@ export async function GET(request) {
       return { hour, label: `${String(hour).padStart(2, '0')}:00`, value: n(row?.total), orders: n(row?.c) };
     }).filter((h) => h.hour >= 7 && h.hour <= 22);
 
-    let reservationSnapshot = null;
-    if (FEATURES.reservations) {
-      try {
-        const [upcoming, waiting, cancelled] = await Promise.all([
-          db.get(`SELECT COUNT(*) as c FROM reservations WHERE date = ? AND status IN ('new', 'confirmed')`, [today]),
-          db.get(`SELECT COUNT(*) as c FROM reservations WHERE date = ? AND status = 'arrived'`, [today]),
-          db.get(`SELECT COUNT(*) as c FROM reservations WHERE date = ? AND status = 'cancelled'`, [today]),
-        ]);
-        reservationSnapshot = { upcoming: n(upcoming?.c), waiting: n(waiting?.c), cancelled: n(cancelled?.c) };
-      } catch {
-        reservationSnapshot = null;
-      }
-    }
-
     let topItems = (topItemsToday || []).map((r) => ({
       name: r.name,
       qty: n(r.qty),
@@ -470,12 +350,11 @@ export async function GET(request) {
           orders: { value: orders, prev: prevOrders },
           profit: { value: profit, prev: prevProfit, note: 'Estimated (60% cost ratio)' },
           avgTicket: { value: avgTicket, paidBills: paidCount },
-          occupiedTables: { value: occupiedTables, total: n(totalTablesRow?.c) },
+          openCartValue: { value: openCartValue },
           activeOrders: { value: n(activeOrdersRow?.c) },
           openBills: { value: n(openBillsRow?.c) },
           reopenedBills: { value: n(reopenedBillsRow?.c) },
           creditOutstanding: { value: n(creditOutstandingRow?.total) },
-          floorOpen: { value: floorOpen },
           refundsToday: { value: activeDaySummary ? n(activeDaySummary.sales?.refunds) : n(refundsTodayRow?.total), count: activeDaySummary ? 0 : n(refundsTodayRow?.c) },
           discountsToday: { value: activeDaySummary ? n(activeDaySummary.sales?.discounts) : n(discountsTodayRow?.total) },
         },
@@ -489,7 +368,6 @@ export async function GET(request) {
         performance: {
           topItem: topItems[0] ? { name: topItems[0].name, qty: topItems[0].qty } : null,
           bestEmployee: bestEmployeeToday ? { name: bestEmployeeToday.name, orders: n(bestEmployeeToday.c) } : null,
-          busiestTable: busiestTableToday ? { table: busiestTableToday.table_number, orders: n(busiestTableToday.c) } : null,
         },
         inventorySnapshot: (lowStockItems || []).map((i) => ({
           name: i.name,
@@ -497,7 +375,6 @@ export async function GET(request) {
           unit: i.unit || '',
           status: n(i.quantity) <= 0 ? 'out' : 'low',
         })),
-        reservations: reservationSnapshot,
       },
     });
   } catch (error) {

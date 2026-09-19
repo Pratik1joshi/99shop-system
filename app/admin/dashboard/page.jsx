@@ -5,8 +5,8 @@ import { usePathname, useRouter } from 'next/navigation';
 import AdminLayout from '@/components/admin/admin-layout';
 import {
   DollarSign, ShoppingCart, TrendingUp, TrendingDown,
-  AlertTriangle, PackageX, PackageMinus, Clock3, Receipt, CalendarClock,
-  ShoppingBag, ChefHat, UserCheck, Boxes, Package, Award, Users, Sparkles,
+  AlertTriangle, PackageX, PackageMinus, Receipt, CalendarClock,
+  ShoppingBag, Boxes, Package, Award, Users, Sparkles,
   Sun, Sunrise, Sunset, Moon, Inbox, Banknote, RotateCcw, CreditCard, Hash,
   Trash2, Loader2,
 } from 'lucide-react';
@@ -70,17 +70,13 @@ function GrowthBadge({ current, previous }) {
 const ATTENTION_META = {
   out_of_stock: { icon: PackageX, tone: 'text-red-600 bg-red-50' },
   low_stock: { icon: PackageMinus, tone: 'text-amber-600 bg-amber-50' },
-  kitchen_delay: { icon: Clock3, tone: 'text-orange-600 bg-orange-50' },
   unpaid_bill: { icon: Receipt, tone: 'text-rose-600 bg-rose-50' },
   reopened_bill: { icon: RotateCcw, tone: 'text-violet-600 bg-violet-50' },
   credit_due: { icon: CreditCard, tone: 'text-indigo-600 bg-indigo-50' },
-  reservation_soon: { icon: CalendarClock, tone: 'text-blue-600 bg-blue-50' },
 };
 
 const ACTIVITY_META = {
   order_created: { icon: ShoppingBag, tone: 'text-blue-600 bg-blue-50' },
-  kitchen_ready: { icon: ChefHat, tone: 'text-emerald-600 bg-emerald-50' },
-  reservation_checked_in: { icon: UserCheck, tone: 'text-violet-600 bg-violet-50' },
   manual_restock: { icon: Boxes, tone: 'text-teal-600 bg-teal-50' },
   purchase_receipt: { icon: Boxes, tone: 'text-teal-600 bg-teal-50' },
   opening_balance: { icon: Boxes, tone: 'text-indigo-600 bg-indigo-50' },
@@ -272,9 +268,9 @@ export default function AdminDashboard() {
                 </div>
                 <h3 className="text-xl sm:text-2xl font-bold text-gray-900 tabular-nums truncate">{formatCurrency(kpis?.sales?.value || 0)}</h3>
                 <p className="text-gray-500 text-xs sm:text-sm mt-1">Paid sales today</p>
-                {kpis?.floorOpen?.value > 0 && (
+                {kpis?.openCartValue?.value > 0 && (
                   <p className="text-[11px] text-sky-700 mt-0.5 tabular-nums">
-                    + {formatCurrency(kpis.floorOpen.value)} still on open bills
+                    + {formatCurrency(kpis.openCartValue.value)} still on open bills
                   </p>
                 )}
                 <div className="mt-1"><GrowthBadge current={kpis?.sales?.value || 0} previous={kpis?.sales?.prev} /></div>

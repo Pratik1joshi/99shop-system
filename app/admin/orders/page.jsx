@@ -21,7 +21,6 @@ import { compactOrderNumber } from '@/lib/document-display.js';
 import { printFinalBill } from '@/lib/pos-print.js';
 import { receiptFromOrderDetail } from '@/lib/bill-receipt.js';
 import { orderTypeLabel, normalizedOrderType } from '@/lib/order-types.js';
-import { SittingTime } from '@/components/tables/table-open-duration.jsx';
 
 const CHANNEL_ICON = { dine_in: LayoutGrid, takeaway: ShoppingBag, delivery: Bike };
 const CHANNEL_ICON_TONE = { dine_in: 'text-slate-500', takeaway: 'text-sky-600', delivery: 'text-orange-600' };
@@ -219,18 +218,6 @@ export default function AdminOrders() {
                 : orderTypeLabel(o)}
             </div>
           </div>
-        ),
-      },
-      {
-        key: 'sitting',
-        label: 'At table',
-        render: (o) => (
-          <SittingTime
-            openedAt={o.created_at}
-            closedAt={o.paid_at}
-            status={o.financial_status || o.status}
-            dineIn={normalizedOrderType(o) === 'dine_in'}
-          />
         ),
       },
       {

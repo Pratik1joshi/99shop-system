@@ -17,7 +17,6 @@ import { printFinalBill } from '@/lib/pos-print.js';
 import { receiptFromOrderDetail } from '@/lib/bill-receipt.js';
 import ReviseSettlementForm from '@/components/billing/revise-settlement-form';
 import { orderTypeLabel, normalizedOrderType } from '@/lib/order-types.js';
-import { SittingTime } from '@/components/tables/table-open-duration.jsx';
 
 export default function OrderView() {
   const params = useParams();
@@ -275,17 +274,6 @@ export default function OrderView() {
                 {formatNepalDateTime(order.created_at)}
                 {order.table_number ? ` · Table ${order.table_number}` : ''}
                 {order.party_label ? ` · ${order.party_label}` : ''}
-                {normalizedOrderType(order) === 'dine_in' ? (
-                  <>
-                    {' · '}
-                    <SittingTime
-                      openedAt={order.created_at}
-                      closedAt={order.paid_at}
-                      status={financialStatus || order.status}
-                      dineIn
-                    />
-                  </>
-                ) : null}
               </p>
             </div>
           </div>
@@ -482,17 +470,6 @@ export default function OrderView() {
                     <div className="text-sm text-gray-700">Type / Date</div>
                     <div className="font-medium text-gray-900">
                       {orderTypeLabel(order)} · {formatNepalDateTime(order.created_at)}
-                      {normalizedOrderType(order) === 'dine_in' ? (
-                        <>
-                          {' · '}
-                          <SittingTime
-                            openedAt={order.created_at}
-                            closedAt={order.paid_at}
-                            status={financialStatus || order.status}
-                            dineIn
-                          />
-                        </>
-                      ) : null}
                     </div>
                   </div>
                 </div>
