@@ -3,6 +3,7 @@ import { AuthService } from '@/lib/auth/auth.js';
 import { checkRateLimit, clientIp } from '@/lib/rate-limit.js';
 import { createCsrfToken, setSessionCookies } from '@/lib/csrf.js';
 import { logger } from '@/lib/logger.js';
+import { isRoleEnabled } from '@/lib/deployment.js';
 
 export async function POST(request) {
   try {
@@ -42,6 +43,17 @@ export async function POST(request) {
     if (!result.success) {
       logger.info('login_failed', { ip });
       return NextResponse.json({ success: false, error: result.error }, { status: 401 });
+    }
+
+    // Roles the deployment profile has switched off must not get a session at
+    // all. Without this they authenticate and land in an app with no
+    // permissions, which reads as a broken login rather than a closed door.
+    if (!isRoleEnabled(result.user.role)) {
+      logger.info('login_role_disabled', { ip, role: result.user.role });
+      return NextResponse.json(
+        { success: false, error: 'This account type is no longer used at this shop.' },
+        { status: 403 }
+      );
     }
 
     if (deviceId) {
