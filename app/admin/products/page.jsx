@@ -1,9 +1,10 @@
 'use client';
 
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useCallback } from 'react';
+import dynamic from 'next/dynamic';
 import AdminLayout from '@/components/admin/admin-layout';
 import MenuItemImage from '@/components/menu-item-image';
-import { Plus, Edit, Trash2, Search, Package, Upload, Link2 } from 'lucide-react';
+import { Plus, Edit, Trash2, Search, Package, Upload, Link2, ScanLine } from 'lucide-react';
 import { useToast } from '@/components/ui/toast';
 import { useConfirm } from '@/components/ui/confirm';
 import { friendlyMessage, friendlyFromError } from '@/lib/friendly-message';
@@ -11,6 +12,9 @@ import FieldError, { inputErrorClass } from '@/components/ui/field-error';
 import { numbersOnlyInput, validateName, validatePositiveNumber, firstError } from '@/lib/form-validation';
 import UnitSelect from '@/components/ui/unit-select';
 import Combobox from '@/components/ui/combobox';
+
+// The camera needs browser APIs, so it must never be part of the server bundle.
+const BarcodeScanner = dynamic(() => import('@/components/pos/barcode-scanner'), { ssr: false });
 
 const emptyVariant = () => ({ variant_name: '', price: '', stock_quantity: '', stock_unit: '', inventory_item_id: '', pos_stock_visible: false, barcode: '' });
 
@@ -59,6 +63,9 @@ export default function ProductsPage() {
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
   const [editingProduct, setEditingProduct] = useState(null);
+  // 'lookup' scans to find or start a product; 'field' fills the open form's
+  // barcode box. Null means the camera is closed.
+  const [scanMode, setScanMode] = useState(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [activeCategory, setActiveCategory] = useState('all');
   const [availabilityTab, setAvailabilityTab] = useState('active');
@@ -229,6 +236,36 @@ export default function ProductsPage() {
     });
     setShowForm(true);
   };
+
+  /**
+   * A scan either opens the product that already carries that barcode, or
+   * starts a new one with the code filled in. Either way the operator never
+   * types the digits.
+   */
+  const handleScan = useCallback((code) => {
+    const scanned = String(code || '').trim();
+    setScanMode(null);
+    if (!scanned) return;
+
+    if (scanMode === 'field') {
+      setFormData((current) => ({ ...current, barcode: scanned }));
+      return;
+    }
+
+    const match = products.find(
+      (product) =>
+        product.barcode === scanned ||
+        (product.variants || []).some((variant) => variant.barcode === scanned)
+    );
+    if (match) {
+      handleEdit(match);
+      addToast(`${match.name} already uses this barcode — opened for editing.`);
+      return;
+    }
+    setEditingProduct(null);
+    setFormData({ ...emptyForm, barcode: scanned });
+    setShowForm(true);
+  }, [scanMode, products, addToast]);
 
   const quickUpdate = async (product, patch) => {
     const field = Object.keys(patch)[0];
@@ -404,20 +441,29 @@ export default function ProductsPage() {
         <div className="max-w-7xl mx-auto">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-6 sm:mb-8">
             <div>
-              <h1 className="text-2xl sm:text-3xl font-bold text-gray-800">Products Management</h1>
-              <p className="text-gray-700 mt-1">Manage menu items and inventory</p>
+              <h1 className="text-2xl sm:text-3xl font-bold text-gray-800">Products</h1>
+              <p className="text-gray-700 mt-1">Scan a barcode or type the details to add stock to the catalogue</p>
             </div>
-          <button
-            onClick={() => {
-              setShowForm(true);
-              setEditingProduct(null);
-              setFormData({ ...emptyForm });
-            }}
-            className="flex items-center space-x-2 px-6 py-3 bg-gray-900 text-white rounded-lg hover:bg-gray-800"
-          >
-            <Plus className="w-5 h-5" />
-            <span>Add Menu Item</span>
-          </button>
+          <div className="flex gap-2">
+            <button
+              onClick={() => setScanMode('lookup')}
+              className="flex items-center space-x-2 rounded-lg border border-gray-300 px-5 py-3 font-medium text-gray-800 hover:bg-gray-50"
+            >
+              <ScanLine className="w-5 h-5" />
+              <span>Scan to add</span>
+            </button>
+            <button
+              onClick={() => {
+                setShowForm(true);
+                setEditingProduct(null);
+                setFormData({ ...emptyForm });
+              }}
+              className="flex items-center space-x-2 px-6 py-3 bg-gray-900 text-white rounded-lg hover:bg-gray-800"
+            >
+              <Plus className="w-5 h-5" />
+              <span>Add product</span>
+            </button>
+          </div>
         </div>
 
         {/* Search */}
@@ -552,6 +598,15 @@ export default function ProductsPage() {
                         className="h-11 min-w-0 flex-1 px-4 border border-gray-300 rounded-lg focus:ring-2 focus:ring-gray-400 text-gray-900"
                         placeholder="Scan or type the barcode"
                       />
+                      <button
+                        type="button"
+                        onClick={() => setScanMode('field')}
+                        className="h-11 flex-shrink-0 rounded-lg border border-gray-300 px-3 text-sm font-medium text-gray-700 hover:bg-gray-50"
+                        title="Scan with the camera"
+                        aria-label="Scan barcode with the camera"
+                      >
+                        <ScanLine className="h-4 w-4" />
+                      </button>
                       <button
                         type="button"
                         onClick={() => setFormData({ ...formData, barcode: generateBarcode() })}
@@ -1036,11 +1091,15 @@ export default function ProductsPage() {
           {filteredProducts.length === 0 && (
             <div className="text-center py-12">
               <Package className="w-12 h-12 text-gray-600 mx-auto mb-4" />
-              <p className="text-gray-700">No menu items found</p>
+              <p className="text-gray-700">No products found</p>
             </div>
           )}
         </div>
         </div>
+
+        {scanMode && (
+          <BarcodeScanner onDetected={handleScan} onClose={() => setScanMode(null)} />
+        )}
       </div>
     </AdminLayout>
   );
