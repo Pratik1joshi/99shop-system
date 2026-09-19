@@ -32,7 +32,7 @@ export default function SummaryReportPage(){
       {error&&<div className="mb-4 border border-red-200 bg-red-50 p-4 text-sm text-red-700">{error}</div>}
       {loading&&!d?<div className="py-24 text-center text-sm text-gray-500">Building the report...</div>:d&&<div className={`mx-auto max-w-7xl bg-white p-5 shadow-sm print:max-w-none print:p-0 print:shadow-none ${printColorClass}`}>
         <ReportHeader
-          restaurantName={d.restaurant_name}
+          shopName={d.shop_name}
           title="Summary Report"
           rangeText={`${formatNepalDisplay(d.range.start)} - ${formatNepalDisplay(d.range.end)}`}
           generatedText={`Generated ${formatNepalDateTime(d.generated_at)} NPT`}

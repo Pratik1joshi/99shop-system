@@ -13,7 +13,7 @@ export async function GET() {
   const started = Date.now();
   const payload = {
     ok: true,
-    service: 'pos-restaurant',
+    service: 'shop99-pos',
     env: process.env.NODE_ENV || 'unknown',
     driver: isPostgresUrl() ? 'postgres' : 'sqlite',
     time: new Date().toISOString(),

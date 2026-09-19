@@ -19,8 +19,8 @@ export default function BillConfirmModal({
   if (!open || !bill) return null;
 
   const {
-    restaurant_name = 'Restaurant',
-    restaurant_address = '',
+    shop_name = 'Shop',
+    shop_address = '',
     bill_number,
     order_number,
     customer_name,
@@ -62,9 +62,9 @@ export default function BillConfirmModal({
         <div className="flex-1 overflow-y-auto px-5 py-4">
           <div className="rounded-xl border border-dashed border-stone-300 bg-stone-50 p-4 font-mono text-sm text-stone-900">
             <div className="text-center mb-3">
-              <p className="font-bold text-base">{restaurant_name}</p>
-              {restaurant_address && (
-                <p className="text-xs text-stone-600 mt-0.5">{restaurant_address}</p>
+              <p className="font-bold text-base">{shop_name}</p>
+              {shop_address && (
+                <p className="text-xs text-stone-600 mt-0.5">{shop_address}</p>
               )}
               <p className="text-xs text-stone-500 mt-2">{formatCalendarDateTime(date)}</p>
             </div>

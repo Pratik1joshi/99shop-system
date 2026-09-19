@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
-  Search, Plus, Minus, Trash2, ChefHat, Loader2, RefreshCw, X, Ban,
+  Search, Plus, Minus, Trash2, Loader2, RefreshCw, X, Ban,
   LayoutGrid, FileText, ShoppingCart, Sparkles, ReceiptText, Clock,
   ArrowLeftRight, Users, Printer, CreditCard, ShoppingBag,
   Truck, ChevronDown, ChevronUp, ScanLine,
@@ -94,8 +94,8 @@ export default function AdminPos() {
     service_charge_percentage: 0,
     esewa_qr_image: '',
     bank_qr_image: '',
-    restaurant_name: '',
-    restaurant_address: '',
+    shop_name: '',
+    shop_address: '',
     vat_number: '',
     pan_number: '',
     delivery_pricing_enabled: false,
@@ -184,7 +184,7 @@ export default function AdminPos() {
 
   const fetchCategories = useCallback(async () => {
     try {
-      const data = await api('/api/restaurant/menu/categories');
+      const data = await api('/api/store/menu/categories');
       setCategories(data.categories || []);
     } catch (e) { notify(e.message, 'error'); }
   }, [notify]);
@@ -216,8 +216,8 @@ export default function AdminPos() {
         service_charge_percentage: Number(s.service_charge_percentage ?? 0),
         esewa_qr_image: s.esewa_qr_image || '',
         bank_qr_image: s.bank_qr_image || '',
-        restaurant_name: s.restaurant_name || 'Restaurant',
-        restaurant_address: s.restaurant_address || '',
+        shop_name: s.shop_name || 'Shop',
+        shop_address: s.shop_address || '',
         vat_number: s.vat_number || '',
         pan_number: s.pan_number || '',
         delivery_pricing_enabled: String(s.delivery_pricing_enabled ?? 'false') === 'true',
@@ -1087,7 +1087,7 @@ export default function AdminPos() {
                     : 'bg-white text-stone-700 border-stone-200 hover:bg-stone-50'
                 }`}
               >
-                <span className="text-base leading-none">{cat.icon || '🍽️'}</span>
+                <span className="text-base leading-none">{cat.icon || '🛍️'}</span>
                 {cat.name} ({categoryCounts.get(String(cat.id)) || 0})
               </button>
                   ))}
@@ -1898,7 +1898,7 @@ function ActiveBillCard({ bill, busy, onSelect }) {
 
           <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px]">
             <span className={`inline-flex items-center gap-1 font-medium ${hasUnsent ? 'text-amber-700' : 'text-emerald-700'}`}>
-              {hasUnsent ? <ChefHat className="w-3 h-3" /> : <ChefHat className="w-3 h-3" />}
+              {hasUnsent ? <Clock className="w-3 h-3" /> : <ShoppingBag className="w-3 h-3" />}
               {progressHint}
             </span>
             <span className="inline-flex items-center gap-1 text-slate-400">

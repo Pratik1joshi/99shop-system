@@ -43,7 +43,7 @@ export default function PaymentHistoryPage() {
       }
       
       const response = await fetch(
-        `/api/restaurant/payments?startDate=${startDate}&endDate=${endDate}`,
+        `/api/store/payments?startDate=${startDate}&endDate=${endDate}`,
         {
           headers: { Authorization: `Bearer ${token}` }
         }

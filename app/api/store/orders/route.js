@@ -95,38 +95,6 @@ export async function POST(request) {
       }
     }
     
-    // Block walk-in onto reserved tables unless force + admin
-    if (orderData.table_id && !orderData.reservation_id) {
-      const { upcomingHoldWarning } = await import('@/lib/reservation-conflicts.js');
-      const Database = (await import('@/lib/db/index.js')).default;
-      const warning = await upcomingHoldWarning(orderData.table_id, Database.getInstance());
-      if (warning) {
-        const canForce = user.role === 'admin' && orderData.force === true;
-        if (!canForce) {
-          return Response.json(
-            {
-              error: warning.message,
-              code: warning.code,
-              reservation: {
-                id: warning.reservation?.id,
-                name: warning.reservation?.name,
-                time: warning.reservation?.time,
-                guests: warning.reservation?.guests,
-              },
-              alternatives: warning.alternatives || [],
-            },
-            { status: 409 }
-          );
-        }
-        orderData.notes = [
-          orderData.notes || '',
-          `Override reserved table: ${warning.reservation?.name} (${orderData.force_reason || 'host override'})`,
-        ]
-          .filter(Boolean)
-          .join('\n');
-      }
-    }
-
     const orderRepo = new OrderRepository();
     const result = await orderRepo.create(orderData);
     // Items stay unsent until an explicit KOT send (/kot).
@@ -173,12 +141,6 @@ export async function PATCH(request) {
         return Response.json({ error: 'Only a cashier or admin can cancel an order that already has items.' }, { status: 403 });
       }
       await orderRepo.cancelOrder(id, reason, { actorId: user.id });
-      try {
-        const { cancelReservationForOrder, CANCEL_REASON } = await import('@/lib/leads.js');
-        await cancelReservationForOrder(id, CANCEL_REASON.RESTAURANT);
-      } catch (e) {
-        console.warn('Reservation cancel hook:', e?.message || e);
-      }
     } else {
       await orderRepo.updateStatus(id, status);
     }

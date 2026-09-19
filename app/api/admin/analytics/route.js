@@ -9,7 +9,7 @@ import { currentBusinessDay, businessDaySummary } from '@/lib/business-days.js';
 
 /**
  * GET /api/admin/analytics
- * Restaurant Analytics dashboard data. Server-derived, void-excluded,
+ * Shop analytics dashboard data. Server-derived, void-excluded,
  * reconciles with the ledger. Read-only.
  *
  * Query: period=today|yesterday|last3|last7|last30|this_week|this_month|

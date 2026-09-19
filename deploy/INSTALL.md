@@ -1,4 +1,4 @@
-# Restaurant POS — Production Install (cPanel + PostgreSQL + Node.js)
+# 99 Shop Retail POS — Production Install (cPanel + PostgreSQL + Node.js)
 
 Fresh install from scratch. ~15 minutes.
 

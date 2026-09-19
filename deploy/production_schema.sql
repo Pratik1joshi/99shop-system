@@ -3695,7 +3695,7 @@ CREATE INDEX IF NOT EXISTS idx_kots_cancelled_at ON kots(cancelled_at);
 CREATE INDEX IF NOT EXISTS idx_kots_cancelled_by ON kots(cancelled_by);
 
 -- ---- migrations/031_analytics_overview_indexes.sql ----
--- Reporting hot paths used by the restaurant management overview.
+-- Reporting hot paths used by the shop management overview.
 -- These are read-performance indexes only; no business data is changed.
 
 CREATE INDEX IF NOT EXISTS idx_bills_status_paid_at
@@ -3708,7 +3708,7 @@ CREATE INDEX IF NOT EXISTS idx_bill_corrections_type_created
   ON bill_corrections(type, created_at DESC);
 
 -- ---- migrations/032_business_days.sql ----
--- 032: restaurant-wide business day lifecycle.
+-- 032: shop-wide business day lifecycle.
 -- Business days are explicit operating periods and may cross calendar midnight.
 -- Drawer sessions remain independent cashier/register shifts within a day.
 

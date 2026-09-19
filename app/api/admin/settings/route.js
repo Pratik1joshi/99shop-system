@@ -22,11 +22,11 @@ async function ensureSystemSettingsTable(db) {
 
 async function seedMissingDefaults(db) {
   // Insert missing keys as well as initializing a blank install. This matters
-  // when a new setting is added after a restaurant is already in production.
+  // when a new setting is added after a shop is already in production.
 
   // 99 Shop deployment identity — used only when no settings exist yet.
   // All values remain editable in Settings; nothing here is hard-coded at billing time.
-  let restaurantInfo = {
+  let shopInfo = {
     name: '99 Shop by Shahana',
     address: 'Birendranagar-6, New Road, Surkhet 21700, Nepal',
     phone: '+977 980-8174841',
@@ -35,15 +35,15 @@ async function seedMissingDefaults(db) {
   let ownerName = '';
   try {
     const licenseInfo = await db.get(`
-      SELECT restaurant_name, restaurant_address, restaurant_phone, restaurant_email, owner_name
+      SELECT shop_name, shop_address, shop_phone, shop_email, owner_name
       FROM license_info ORDER BY id DESC LIMIT 1
     `);
     if (licenseInfo) {
-      restaurantInfo = {
-        name: licenseInfo.restaurant_name || restaurantInfo.name,
-        address: licenseInfo.restaurant_address || restaurantInfo.address,
-        phone: licenseInfo.restaurant_phone || restaurantInfo.phone,
-        email: licenseInfo.restaurant_email || restaurantInfo.email,
+      shopInfo = {
+        name: licenseInfo.shop_name || shopInfo.name,
+        address: licenseInfo.shop_address || shopInfo.address,
+        phone: licenseInfo.shop_phone || shopInfo.phone,
+        email: licenseInfo.shop_email || shopInfo.email,
       };
       ownerName = licenseInfo.owner_name || '';
     }
@@ -55,10 +55,10 @@ async function seedMissingDefaults(db) {
     // Tax/service default to 0% and are editable in Settings — no rate is assumed.
     { key: 'vat_percentage', value: '0' },
     { key: 'service_charge_percentage', value: '0' },
-    { key: 'restaurant_name', value: restaurantInfo.name },
-    { key: 'restaurant_address', value: restaurantInfo.address },
-    { key: 'restaurant_phone', value: restaurantInfo.phone },
-    { key: 'restaurant_email', value: restaurantInfo.email },
+    { key: 'shop_name', value: shopInfo.name },
+    { key: 'shop_address', value: shopInfo.address },
+    { key: 'shop_phone', value: shopInfo.phone },
+    { key: 'shop_email', value: shopInfo.email },
     { key: 'owner_name', value: ownerName },
     { key: 'vat_number', value: '' },
     { key: 'pan_number', value: '' },

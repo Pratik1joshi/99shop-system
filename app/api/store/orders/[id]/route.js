@@ -60,24 +60,7 @@ export async function GET(request, context) {
       kots = [];
     }
 
-    let reservation = null;
-    try {
-      const Database = (await import('@/lib/db/index.js')).default;
-      const { ensureLeadsTables } = await import('@/lib/leads.js');
-      const db = Database.getInstance();
-      await ensureLeadsTables(db);
-      reservation = await db.get(
-        `SELECT r.*, t.table_number
-         FROM reservations r
-         LEFT JOIN tables t ON t.id = r.table_id
-         WHERE r.order_id = ?`,
-        [orderId]
-      );
-    } catch {
-      reservation = null;
-    }
-
-    return Response.json({ order, items, kots, reservation });
+    return Response.json({ order, items, kots });
     
   } catch (error) {
     console.error('Get order details error:', error);

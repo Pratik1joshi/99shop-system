@@ -266,7 +266,7 @@ export function MoneyPosition({ data, closing, tint = 'indigo', highlight = true
         </div>
         <div>
           <h4 className="px-4 pt-3 pb-1 text-xs font-semibold uppercase tracking-wide text-gray-500">Online</h4>
-          <PositionRow label="Online Restaurant Sales" value={qr.restaurant} note="food sold" />
+          <PositionRow label="Online Shop Sales" value={qr.shopSales} note="items sold" />
           <PositionRow label="Online Cash Exchange" value={qr.exchange} note="cash paid out" />
           <PositionRow label="Total Online Received" value={qr.total} strong />
         </div>
@@ -285,22 +285,22 @@ export function MoneyPosition({ data, closing, tint = 'indigo', highlight = true
 /**
  * Digital takings split by WHY the money arrived.
  *
- * One eSewa or Fonepay account receives two unrelated things: a guest paying
- * for food, and a money-exchange customer sending digital money to take cash
+ * One eSewa or Fonepay account receives two unrelated things: a customer paying
+ * for a purchase, and a money-exchange customer sending digital money to take cash
  * out of the drawer. Added together they overstate trade and hide why the
  * drawer is light, so each medium is shown as
  *
- *     restaurant sale | money exchange | total
+ *     shop sale | money exchange | total
  *
- * with the two columns totalled separately at the foot. "Restaurant" already
+ * with the two columns totalled separately at the foot. "Shop sale" already
  * nets off refunds and void reversals booked back to that medium, which is why
  * it can read lower than the day's gross card/QR takings.
  */
 export function DigitalReceipts({ data, tint = 'sky', highlight = true, className = '' }) {
   const media = data?.media || [];
   const totals = data?.totals || {};
-  const restaurantOf = (row) => Number(row.sales || 0) + Number(row.collections || 0) + Number(row.reversals || 0);
-  const restaurantTotal = round(Number(totals.sales || 0) + Number(totals.collections || 0) + Number(totals.reversals || 0));
+  const shopOf = (row) => Number(row.sales || 0) + Number(row.collections || 0) + Number(row.reversals || 0);
+  const shopTotal = round(Number(totals.sales || 0) + Number(totals.collections || 0) + Number(totals.reversals || 0));
   const exchangeTotal = round(Number(totals.exchange || 0));
   return (
     <Card title="Online Received" tint={tint} highlight={highlight} className={className}>
@@ -314,7 +314,7 @@ export function DigitalReceipts({ data, tint = 'sky', highlight = true, classNam
             <thead>
               <tr className="border-b border-gray-200/70 text-xs uppercase tracking-wide text-gray-500">
                 <th scope="col" className="px-4 py-2 text-left font-semibold">Medium</th>
-                <th scope="col" className="px-3 py-2 text-right font-semibold">Restaurant Sale</th>
+                <th scope="col" className="px-3 py-2 text-right font-semibold">Shop Sale</th>
                 <th scope="col" className="px-3 py-2 text-right font-semibold">Money Exchange</th>
                 <th scope="col" className="px-4 py-2 text-right font-semibold">Total</th>
               </tr>
@@ -323,7 +323,7 @@ export function DigitalReceipts({ data, tint = 'sky', highlight = true, classNam
               {media.map((row) => (
                 <tr key={row.code}>
                   <td className="px-4 py-2 text-gray-700">{row.label}</td>
-                  <td className="px-3 py-2 text-right tabular-nums text-gray-800">{money(restaurantOf(row))}</td>
+                  <td className="px-3 py-2 text-right tabular-nums text-gray-800">{money(shopOf(row))}</td>
                   <td className="px-3 py-2 text-right tabular-nums text-gray-800">{money(row.exchange)}</td>
                   <td className="px-4 py-2 text-right font-semibold tabular-nums text-gray-950">{money(row.total)}</td>
                 </tr>
@@ -332,16 +332,16 @@ export function DigitalReceipts({ data, tint = 'sky', highlight = true, classNam
             <tfoot>
               <tr className="border-t-2 border-gray-950 font-bold text-gray-950">
                 <th scope="row" className="px-4 py-2.5 text-left text-xs uppercase tracking-wide">Total</th>
-                <td className="px-3 py-2.5 text-right tabular-nums">{money(restaurantTotal)}</td>
+                <td className="px-3 py-2.5 text-right tabular-nums">{money(shopTotal)}</td>
                 <td className="px-3 py-2.5 text-right tabular-nums">{money(exchangeTotal)}</td>
-                <td className="px-4 py-2.5 text-right tabular-nums">{money(round(restaurantTotal + exchangeTotal))}</td>
+                <td className="px-4 py-2.5 text-right tabular-nums">{money(round(shopTotal + exchangeTotal))}</td>
               </tr>
             </tfoot>
           </table>
         </div>
       )}
       <p className="border-t border-gray-200/70 px-4 py-3 text-xs text-gray-500">
-        Only the restaurant column is trade. Money exchange is a customer swapping
+        Only the shop sale column is trade. Money exchange is a customer swapping
         digital money for cash — the shop keeps the charge, and the drawer pays out.
       </p>
     </Card>
@@ -538,10 +538,10 @@ export function QuantitySummary({ items }) {
  * paragraphs. The per-card footnotes stay, because those explain the figures
  * sitting directly above them; a wall of narrative under the title does not.
  */
-export function ReportHeader({ restaurantName, title, rangeText, generatedText }) {
+export function ReportHeader({ shopName, title, rangeText, generatedText }) {
   return (
     <div className="mb-6 border-b-2 border-gray-900 pb-5">
-      <p className="text-sm font-semibold text-gray-600">{restaurantName}</p>
+      <p className="text-sm font-semibold text-gray-600">{shopName}</p>
       <h2 className="mt-1 text-3xl font-bold text-gray-950">{title}</h2>
       <p className="mt-2 text-sm text-gray-600">{rangeText}</p>
       <p className="mt-1 text-xs text-gray-400">{generatedText}</p>

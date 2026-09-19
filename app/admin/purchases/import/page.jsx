@@ -128,7 +128,7 @@ export default function PurchaseImportPage() {
           onCommitted={() => router.push(purchasesPath)}
         />
         <p className="mt-5 text-sm text-gray-500">
-          Item names must match an active inventory item — archived items are ignored on purpose, so a retired ingredient
+          Item names must match an active inventory item — archived items are ignored on purpose, so a retired item
           cannot quietly come back through an import. There is no unit column: each line uses the item&apos;s own purchase
           unit, shown above next to what it converts to in stock.
         </p>

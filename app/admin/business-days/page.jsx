@@ -155,7 +155,7 @@ export default function BusinessDaysPage() {
   return <AdminLayout>
     <header className="border-b border-gray-200 bg-white px-4 py-5 sm:px-6 lg:px-8">
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <div><h1 className="text-2xl font-bold text-gray-950 sm:text-3xl">Opening &amp; Closing</h1><p className="mt-1 text-sm text-gray-500">Restaurant business-day lifecycle and cash reconciliation.</p></div>
+        <div><h1 className="text-2xl font-bold text-gray-950 sm:text-3xl">Opening &amp; Closing</h1><p className="mt-1 text-sm text-gray-500">Shop business-day lifecycle and cash reconciliation.</p></div>
         <button type="button" onClick={() => load()} disabled={loading} title="Refresh" className="inline-flex h-10 w-10 items-center justify-center border border-gray-300 bg-white text-gray-700 hover:bg-gray-50 disabled:opacity-50"><RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} /></button>
       </div>
     </header>
@@ -218,7 +218,7 @@ function OpeningForm({ context, opening, setOpening, busy, onSubmit, confirmNext
   const primaryLabel = isNewDay ? `Open New Business Day · ${formatDate(suggestedNextDate)}` : storeClosed ? 'Reopen Store' : 'Open Business Day';
 
   return <div className="mx-auto max-w-3xl border border-gray-200 bg-white">
-    <div className="border-b border-gray-200 px-5 py-5 sm:px-7"><div className="flex items-center gap-3"><div className="flex h-10 w-10 items-center justify-center bg-gray-950 text-white"><CalendarClock className="h-5 w-5" /></div><div><p className="text-xs font-semibold uppercase text-gray-500">Business Day Opening</p><h2 className="text-xl font-bold text-gray-950">{isNewDay ? 'Start a new business day' : storeClosed ? 'Store session closed' : 'Begin restaurant operations'}</h2></div></div></div>
+    <div className="border-b border-gray-200 px-5 py-5 sm:px-7"><div className="flex items-center gap-3"><div className="flex h-10 w-10 items-center justify-center bg-gray-950 text-white"><CalendarClock className="h-5 w-5" /></div><div><p className="text-xs font-semibold uppercase text-gray-500">Business Day Opening</p><h2 className="text-xl font-bold text-gray-950">{isNewDay ? 'Start a new business day' : storeClosed ? 'Store session closed' : 'Begin shop operations'}</h2></div></div></div>
     <form onSubmit={(event) => onSubmit(event, primaryAction)} className="space-y-5 px-5 py-6 sm:px-7">
       {storeClosed && !isNewDay && <div className="border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900"><strong className="font-semibold">Business Day {formatDate(currentDate)} is still current.</strong> Reopen the store to continue this day.</div>}
       {isNewDay && <div className="border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900"><strong className="font-semibold">It&apos;s now {formatDate(suggestedNextDate)} in Nepal.</strong> Business Day {formatDate(currentDate)} is from an earlier date. Open today&apos;s business day below.{canContinueStale ? ` Use the stale-day notice above only if the previous night shift is genuinely still being finished.` : ''}</div>}

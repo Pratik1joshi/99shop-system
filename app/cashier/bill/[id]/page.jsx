@@ -55,9 +55,9 @@ export default function BillDetailsPage({ params }) {
   const [settings, setSettings] = useState({
     vat_percentage: 13,
     service_charge_percentage: 10,
-    restaurant_name: 'Restaurant',
-    restaurant_address: '',
-    restaurant_phone: '',
+    shop_name: 'Shop',
+    shop_address: '',
+    shop_phone: '',
     vat_number: '',
     pan_number: '',
     website: '',
@@ -246,8 +246,8 @@ export default function BillDetailsPage({ params }) {
     }
 
     setPendingBill({
-      restaurant_name: settings.restaurant_name,
-      restaurant_address: settings.restaurant_address,
+      shop_name: settings.shop_name,
+      shop_address: settings.shop_address,
       order_number: order?.order_number,
       customer_mode: customerSelection.mode,
       customer_name: customerCheck.name,

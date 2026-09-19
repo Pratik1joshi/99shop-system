@@ -9,7 +9,7 @@
  *
  * These tests pin the shared arithmetic those screens now use.
  */
-import test, { mock } from 'node:test';
+import test from 'node:test';
 import assert from 'node:assert/strict';
 
 import { nepalDateString, resolvePeriodRange } from '@/lib/report-dates.js';
@@ -106,48 +106,3 @@ test('AD presets retain Gregorian boundaries when AD is selected', () => {
   assert.equal(resolvePeriodRange('this_week', null, null, options).start, '2026-09-14');
 });
 
-/* ---- host desk boards ------------------------------------------- */
-
-test('reservation board boundaries come from the Nepal calendar, not the host', async () => {
-  const { listReservations } = await import('@/lib/leads.js');
-
-  /*
-   * Frozen at 20:00 UTC on 24 Aug = 01:45 NPT on 25 Aug — inside the window
-   * where the two calendars disagree. Without a fixed clock this test passes
-   * for 18 hours a day whatever the code does.
-   */
-  mock.timers.enable({ apis: ['Date'], now: new Date('2026-08-24T20:00:00Z') });
-  try {
-    assert.equal(nepalDateString(), '2026-08-25', 'the frozen instant is already tomorrow in Nepal');
-
-    const seen = [];
-    const db = {
-      driver: 'sqlite',
-      async all(sql, params = []) { seen.push({ sql, params }); return []; },
-      async get() { return {}; },
-      async run() { return {}; },
-      async exec() { return {}; },
-    };
-
-    for (const [board, expected] of [
-      ['today', '2026-08-25'],
-      ['upcoming', '2026-08-25'],
-      ['all', '2026-08-24'], // ops window opens the day before
-    ]) {
-      seen.length = 0;
-      await listReservations({ board }, db);
-      // ensureLeadsTables also touches `reservations`; match the board query by its join.
-      const query = seen.find((q) => /LEFT JOIN tables t ON t\.id = r\.table_id/.test(q.sql));
-      assert.ok(query, `${board} board must query reservations`);
-      const bound = query.params.find((p) => /^\d{4}-\d{2}-\d{2}$/.test(String(p)));
-      assert.equal(
-        bound,
-        expected,
-        `${board} board must anchor on the Nepal calendar — read from the host clock it bound `
-        + '2026-08-24, so from Nepal midnight to 05:45 NPT the host desk showed the wrong day'
-      );
-    }
-  } finally {
-    mock.timers.reset();
-  }
-});

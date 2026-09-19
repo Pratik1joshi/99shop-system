@@ -7,7 +7,7 @@ import {
   Calendar, CreditCard, AlertCircle, Users, ShoppingBag, Trash2, ClipboardList
 } from 'lucide-react';
 import { formatNepalClock, getNepaliDateString } from '@/lib/time-utils';
-import { isOpenOrder, canCashierBill, normalizeOrderStatus } from '@/lib/restaurant-status';
+import { isOpenOrder, canCashierBill, normalizeOrderStatus } from '@/lib/order-status';
 import LogoutButton from '@/components/ui/logout-button';
 import { authedRequest } from '@/lib/authed-fetch';
 import WastageModal from '@/components/inventory/wastage-modal';
@@ -98,7 +98,7 @@ export default function OrderDesk() {
         return;
       }
       
-      const ordersRes = await fetch('/api/restaurant/orders', {
+      const ordersRes = await fetch('/api/store/orders', {
         headers: { Authorization: `Bearer ${token}` }
       });
       

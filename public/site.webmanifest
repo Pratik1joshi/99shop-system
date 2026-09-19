@@ -1,11 +1,11 @@
 {
-  "name": "Dim Sum Puri Fastfood Restaurant",
-  "short_name": "Dim Sum Puri",
-  "description": "Dim Sum Puri Fastfood Restaurant in Birendranagar-6, New Road, Surkhet.",
+  "name": "99 Shop by Shahana",
+  "short_name": "99 Shop",
+  "description": "Kawaii accessories in Surkhet — hair clips, earrings, rings, nail polish, cosmetics and more.",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#ffffff",
-  "theme_color": "#A01818",
+  "theme_color": "#E8618C",
   "icons": [
     {
       "src": "/images/brand/favicon/icon-192.png?v=dsp-1",

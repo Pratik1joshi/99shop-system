@@ -21,8 +21,8 @@ test('bill actions reject deletion and direct users to an audited correction', a
 });
 
 test('order cancellation entry points require an operator-entered reason', async () => {
-  const collectionRoute = await source('app/api/restaurant/orders/route.js');
-  const detailRoute = await source('app/api/restaurant/orders/[id]/route.js');
+  const collectionRoute = await source('app/api/store/orders/route.js');
+  const detailRoute = await source('app/api/store/orders/[id]/route.js');
   const adminRoute = await source('app/api/admin/orders/[id]/route.js');
 
   assert.match(collectionRoute, /A cancel reason is required/i);

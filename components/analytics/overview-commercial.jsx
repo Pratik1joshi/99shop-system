@@ -144,7 +144,7 @@ export function PaymentFinance({ data }) {
 
 const MONEY_KPI_GROUPS = [
   { id: 'sold', title: '1. What customers ordered', caption: 'Start with menu prices, then subtract discounts.', keys: ['total_item_sales', 'discounts', 'net_item_sales'] },
-  { id: 'billed', title: '2. What the restaurant billed', caption: 'Add service, delivery and other charges; tax is shown separately; subtract refunds.', keys: ['service_extra', 'tax', 'refunds', 'net'] },
+  { id: 'billed', title: '2. What the shop billed', caption: 'Add service, delivery and other charges; tax is shown separately; subtract refunds.', keys: ['service_extra', 'tax', 'refunds', 'net'] },
   { id: 'settled', title: '3. How those bills were settled', caption: 'Cash and QR are received. Sold on credit is not cash; credit collections are already inside cash/QR.', keys: ['cash_received', 'qr_received', 'credit_sales', 'credit_collections'] },
   { id: 'position', title: '4. What remains open', caption: 'Receivables are the live all-time balance; open orders are not billed yet.', keys: ['receivables', 'open_orders_value', 'cancelled', 'aov'] },
 ];

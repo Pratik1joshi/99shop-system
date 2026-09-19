@@ -6,8 +6,7 @@
 --   1. Chart of Accounts + default cash drawer / bank
 --   2. Shop settings (99 Shop branding, VAT/service, receipt)
 --   3. First admin — login PIN 984898 (change after first sign-in)
---   4. Table floors, table types (categories) and tables T-01..T-12
---   5. Unit conversions (kg/g, l/ml, dozen/pcs, packet/pcs)
+--   4. Unit conversions (kg/g, l/ml, dozen/pcs, packet/pcs)
 --   6. Full real menu: 15 categories, 178 items (from the live site's menu
 --      list). No photos yet (image_url NULL — add via Admin -> Products).
 --      "Option" items are seeded at their single listed base price; the
@@ -77,10 +76,10 @@ INSERT INTO bank_accounts (name, account_id)
 
 -- ============================================================ 2. SETTINGS
 INSERT INTO system_settings (setting_key, setting_value) VALUES
-  ('restaurant_name','99 Shop by Shahana'),
-  ('restaurant_address','Surkhet, Nepal'),
-  ('restaurant_phone','+977 976-789-6814'),
-  ('restaurant_email',''),
+  ('shop_name','99 Shop by Shahana'),
+  ('shop_address','Surkhet, Nepal'),
+  ('shop_phone','+977 976-789-6814'),
+  ('shop_email',''),
   ('vat_number',''),
   ('pan_number',''),
   ('vat_percentage','0'),
@@ -91,58 +90,15 @@ INSERT INTO system_settings (setting_key, setting_value) VALUES
   ('website','https://pos.example.com'),
   ('qr_ordering_enabled','true'),
   ('bank_qr_image',''),
-  ('esewa_qr_image',''),
-  ('reservation_hold_minutes','30'),
-  ('reservation_grace_minutes','20'),
-  ('reservation_dining_minutes','90'),
-  ('reservation_cleaning_minutes','10'),
-  ('reservation_auto_cancel_minutes','20'),
-  ('reservation_min_lead_minutes','60')
+  ('esewa_qr_image','')
 ON CONFLICT (setting_key) DO NOTHING;
 
 -- ============================================================== 3. ADMIN
 -- Login is PIN-based. Seeded PIN = 984898. CHANGE after first sign-in
 -- (must_change_password forces a reset on first login).
 INSERT INTO users (username, password_hash, full_name, role, is_active, must_change_password)
-VALUES ('admin', crypt('984898', gen_salt('bf', 12)), 'Restaurant Admin', 'admin', 1, 1)
+VALUES ('admin', crypt('984898', gen_salt('bf', 12)), 'Shop Admin', 'admin', 1, 1)
 ON CONFLICT (username) DO NOTHING;
-
--- ============================================================== 4. FLOORS
-INSERT INTO table_floors (name, normalized_name, sort_order) VALUES
-  ('Ground',  'ground',  1),
-  ('First',   'first',   2),
-  ('Rooftop', 'rooftop', 3),
-  ('Outdoor', 'outdoor', 4)
-ON CONFLICT (normalized_name) DO NOTHING;
-
--- ---- table types (a.k.a. table categories) ----
-INSERT INTO table_types (name, normalized_name, color, default_capacity) VALUES
-  ('Regular', 'regular', '#3b82f6', 4),
-  ('VIP',     'vip',     '#a855f7', 6),
-  ('Family',  'family',  '#22c55e', 6),
-  ('Couple',  'couple',  '#ec4899', 2),
-  ('Outdoor', 'outdoor', '#f59e0b', 4),
-  ('Counter', 'counter', '#64748b', 2)
-ON CONFLICT (normalized_name) DO NOTHING;
-
--- ---- tables T-01..T-12 ----
-INSERT INTO tables (table_number, capacity, status, floor, section, table_type, is_active)
-SELECT v.num, v.cap, 'available', v.floor, v.section, v.ttype, 1
-FROM (VALUES
-  ('T-01', 2, 'Ground',  'Main',    'couple'),
-  ('T-02', 2, 'Ground',  'Main',    'couple'),
-  ('T-03', 4, 'Ground',  'Main',    'regular'),
-  ('T-04', 4, 'Ground',  'Main',    'regular'),
-  ('T-05', 4, 'Ground',  'Main',    'regular'),
-  ('T-06', 6, 'Ground',  'Main',    'family'),
-  ('T-07', 4, 'First',   'Hall',    'regular'),
-  ('T-08', 4, 'First',   'Hall',    'regular'),
-  ('T-09', 6, 'First',   'Hall',    'family'),
-  ('T-10', 6, 'First',   'VIP',     'vip'),
-  ('T-11', 4, 'Rooftop', 'Terrace', 'outdoor'),
-  ('T-12', 4, 'Rooftop', 'Terrace', 'outdoor')
-) AS v(num, cap, floor, section, ttype)
-WHERE NOT EXISTS (SELECT 1 FROM tables t WHERE t.table_number = v.num);
 
 -- ==================================================== 5. UNIT CONVERSIONS
 INSERT INTO unit_conversions (from_unit, to_unit, factor, note) VALUES

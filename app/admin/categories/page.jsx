@@ -30,7 +30,7 @@ export default function CategoriesPage() {
   const fetchCategories = useCallback(async () => {
     try {
       const token = localStorage.getItem('pos_token');
-      const response = await fetch('/api/restaurant/menu/categories', {
+      const response = await fetch('/api/store/menu/categories', {
         headers: { Authorization: `Bearer ${token}` }
       });
       
@@ -67,7 +67,7 @@ export default function CategoriesPage() {
         ? { ...formData, id: editingCategory.id }
         : formData;
 
-      const response = await fetch('/api/restaurant/menu/categories', {
+      const response = await fetch('/api/store/menu/categories', {
         method,
         headers: {
           'Content-Type': 'application/json',
@@ -112,7 +112,7 @@ export default function CategoriesPage() {
     
     try {
       const token = localStorage.getItem('pos_token');
-      const response = await fetch(`/api/restaurant/menu/categories?id=${id}`, {
+      const response = await fetch(`/api/store/menu/categories?id=${id}`, {
         method: 'DELETE',
         headers: { Authorization: `Bearer ${token}` }
       });
@@ -215,7 +215,7 @@ export default function CategoriesPage() {
                       value={formData.icon}
                       onChange={(e) => setFormData({ ...formData, icon: e.target.value })}
                       className="h-11 sm:h-12 w-full rounded-xl border border-gray-300 px-4 text-base focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
-                      placeholder="🍕 (emoji or icon name)"
+                      placeholder="🛍️ (emoji or icon name)"
                     />
                   </label>
 

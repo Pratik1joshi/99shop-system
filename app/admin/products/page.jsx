@@ -102,7 +102,7 @@ export default function ProductsPage() {
   const fetchCategories = async () => {
     try {
       const token = localStorage.getItem('pos_token');
-      const response = await fetch('/api/restaurant/menu/categories', {
+      const response = await fetch('/api/store/menu/categories', {
         headers: { Authorization: `Bearer ${token}` }
       });
       

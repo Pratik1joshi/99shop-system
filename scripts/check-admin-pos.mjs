@@ -45,7 +45,7 @@ async function main() {
   ok('admin authenticates');
 
   // --- menu ---
-  const menu = (await call('/api/restaurant/menu')).data.items || [];
+  const menu = (await call('/api/store/menu')).data.items || [];
   assert.ok(menu.length >= 2, 'menu should have items');
   const itemA = menu[0];
   const itemB = menu[1];

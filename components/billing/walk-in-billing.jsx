@@ -53,8 +53,8 @@ export default function WalkInBilling({ variant = 'admin' }) {
     service_charge_percentage: 0,
     esewa_qr_image: '',
     bank_qr_image: '',
-    restaurant_name: '',
-    restaurant_address: '',
+    shop_name: '',
+    shop_address: '',
     vat_number: '',
     pan_number: ''
   });
@@ -81,8 +81,8 @@ export default function WalkInBilling({ variant = 'admin' }) {
           service_charge_percentage: Number(data.settings?.service_charge_percentage ?? 0),
           esewa_qr_image: data.settings.esewa_qr_image || '',
           bank_qr_image: data.settings.bank_qr_image || '',
-          restaurant_name: data.settings.restaurant_name || 'Restaurant',
-          restaurant_address: data.settings.restaurant_address || '',
+          shop_name: data.settings.shop_name || 'Shop',
+          shop_address: data.settings.shop_address || '',
           vat_number: data.settings.vat_number || '',
           pan_number: data.settings.pan_number || ''
         });
@@ -95,7 +95,7 @@ export default function WalkInBilling({ variant = 'admin' }) {
   const fetchCategories = async () => {
     try {
       const token = localStorage.getItem('pos_token');
-      const response = await fetch('/api/restaurant/menu/categories', {
+      const response = await fetch('/api/store/menu/categories', {
         headers: { Authorization: `Bearer ${token}` }
       });
       if (response.ok) {
@@ -313,8 +313,8 @@ export default function WalkInBilling({ variant = 'admin' }) {
       idempotency_key: globalThis.crypto?.randomUUID?.() || `bill-${Date.now()}-${Math.random().toString(36).slice(2)}`,
       order_type: 'takeaway',
       date: new Date().toISOString(),
-      restaurant_name: settings.restaurant_name || 'Restaurant',
-      restaurant_address: settings.restaurant_address || '',
+      shop_name: settings.shop_name || 'Shop',
+      shop_address: settings.shop_address || '',
       vat_number: settings.vat_number,
       pan_number: settings.pan_number,
       items: cart.map((item) => ({
@@ -521,8 +521,8 @@ export default function WalkInBilling({ variant = 'admin' }) {
       </head>
       <body>
         <div class="header">
-          <div class="shop-name">${billData.restaurant_name || 'RESTAURANT POS'}</div>
-          ${billData.restaurant_address ? `<div style="font-size: 10px; margin-top: 3px;">${billData.restaurant_address}</div>` : ''}
+          <div class="shop-name">${billData.shop_name || 'SHOP'}</div>
+          ${billData.shop_address ? `<div style="font-size: 10px; margin-top: 3px;">${billData.shop_address}</div>` : ''}
           ${billData.vat_number ? `<div style="font-size: 9px; margin-top: 2px;">VAT: ${billData.vat_number}</div>` : ''}
           ${billData.pan_number ? `<div style="font-size: 9px;">PAN: ${billData.pan_number}</div>` : ''}
           <div style="margin-top: 5px;">Tax Invoice</div>
@@ -721,7 +721,7 @@ export default function WalkInBilling({ variant = 'admin' }) {
                       : 'bg-white text-stone-700 border-stone-200'
                   }`}
                 >
-                  <span className="text-base leading-none">{cat.icon || '🍽️'}</span>
+                  <span className="text-base leading-none">{cat.icon || '🛍️'}</span>
                   {cat.name}
                 </button>
               ))}

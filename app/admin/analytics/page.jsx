@@ -57,7 +57,7 @@ export default function AnalyticsPage() {
       const token = localStorage.getItem('pos_token');
       const response = await fetch(`/api/admin/analytics?${params}`, { headers: { Authorization: `Bearer ${token}` } });
       const body = await response.json();
-      if (!response.ok) throw new Error(body.error || 'Could not load restaurant analytics.');
+      if (!response.ok) throw new Error(body.error || 'Could not load analytics.');
       setData(body);
     } catch (err) {
       setError(err.message);
@@ -95,7 +95,7 @@ export default function AnalyticsPage() {
             <div className="flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between">
               <div>
                 <div className="flex items-center gap-2">
-                  <h1 className="text-2xl font-bold text-gray-950">Restaurant Analytics</h1>
+                  <h1 className="text-2xl font-bold text-gray-950">Shop Analytics</h1>
                   <span className="inline-flex items-center rounded bg-emerald-50 px-2 py-1 text-[11px] font-semibold text-emerald-700">LIVE</span>
                 </div>
                 <p className="mt-1 text-sm text-gray-500">Sales, collections, inventory and shop health for the selected period.</p>

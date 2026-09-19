@@ -48,9 +48,9 @@ export default function SettingsPage() {
   const [pw, setPw] = useState({ username: '', currentPassword: '', newPassword: '', confirmPassword: '' });
 
   const [s, setS] = useState({
-    restaurant_name: '', legal_name: '', owner_name: '', restaurant_phone: '', restaurant_email: '',
+    shop_name: '', legal_name: '', owner_name: '', shop_phone: '', shop_email: '',
     calendar_system: 'BS',
-    website: '', vat_number: '', pan_number: '', registration_number: '', restaurant_address: '',
+    website: '', vat_number: '', pan_number: '', registration_number: '', shop_address: '',
     vat_percentage: 13, service_charge_percentage: 10,
     receipt_footer: '', receipt_paper_size: '80', qr_ordering_enabled: true, online_order_minimum_amount: 500,
     cashier_expected_cash_schedule_enabled: true, cashier_expected_cash_reveal_time: '20:30',
@@ -82,10 +82,10 @@ export default function SettingsPage() {
           let deliveryBands = [];
           try { deliveryBands = JSON.parse(d.delivery_distance_bands || '[]'); } catch { deliveryBands = []; }
           set({
-            restaurant_name: d.restaurant_name || '', legal_name: d.legal_name || '', owner_name: d.owner_name || '',
-            restaurant_phone: d.restaurant_phone || '', restaurant_email: d.restaurant_email || '', website: d.website || '',
+            shop_name: d.shop_name || '', legal_name: d.legal_name || '', owner_name: d.owner_name || '',
+            shop_phone: d.shop_phone || '', shop_email: d.shop_email || '', website: d.website || '',
             vat_number: d.vat_number || '', pan_number: d.pan_number || '', registration_number: d.registration_number || '',
-            restaurant_address: d.restaurant_address || '',
+            shop_address: d.shop_address || '',
             calendar_system: String(d.calendar_system || 'BS').toUpperCase() === 'AD' ? 'AD' : 'BS',
             vat_percentage: Number(d.vat_percentage ?? 13), service_charge_percentage: Number(d.service_charge_percentage ?? 10),
             receipt_footer: d.receipt_footer || '', receipt_paper_size: d.receipt_paper_size || '80', qr_ordering_enabled: String(d.qr_ordering_enabled ?? 'true') !== 'false',
@@ -206,17 +206,17 @@ export default function SettingsPage() {
             {tab === 'business' && (
               <Panel title="Business information" hint="Prints on receipts and shows on the public storefront.">
                 <Grid>
-                  <Field label="Business name"><input value={s.restaurant_name} onChange={(e) => set({ restaurant_name: e.target.value })} className={INPUT} /></Field>
+                  <Field label="Business name"><input value={s.shop_name} onChange={(e) => set({ shop_name: e.target.value })} className={INPUT} /></Field>
                   <Field label="Legal / registered name"><input value={s.legal_name} onChange={(e) => set({ legal_name: e.target.value })} className={INPUT} /></Field>
                   <Field label="Owner"><input value={s.owner_name} onChange={(e) => set({ owner_name: e.target.value })} className={INPUT} /></Field>
-                  <Field label="Phone"><input value={s.restaurant_phone} onChange={(e) => set({ restaurant_phone: e.target.value })} className={INPUT} /></Field>
-                  <Field label="Email"><input value={s.restaurant_email} onChange={(e) => set({ restaurant_email: e.target.value })} className={INPUT} /></Field>
+                  <Field label="Phone"><input value={s.shop_phone} onChange={(e) => set({ shop_phone: e.target.value })} className={INPUT} /></Field>
+                  <Field label="Email"><input value={s.shop_email} onChange={(e) => set({ shop_email: e.target.value })} className={INPUT} /></Field>
                   <Field label="Website"><input value={s.website} onChange={(e) => set({ website: e.target.value })} className={INPUT} placeholder="prints on receipt" /></Field>
                   <Field label="VAT number"><input value={s.vat_number} onChange={(e) => set({ vat_number: e.target.value })} className={INPUT} /></Field>
                   <Field label="PAN number"><input value={s.pan_number} onChange={(e) => set({ pan_number: e.target.value })} className={INPUT} /></Field>
                   <Field label="Registration number"><input value={s.registration_number} onChange={(e) => set({ registration_number: e.target.value })} className={INPUT} /></Field>
                 </Grid>
-                <Field label="Address"><textarea rows={2} value={s.restaurant_address} onChange={(e) => set({ restaurant_address: e.target.value })} className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm" /></Field>
+                <Field label="Address"><textarea rows={2} value={s.shop_address} onChange={(e) => set({ shop_address: e.target.value })} className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm" /></Field>
                 <Field label="Calendar system">
                   <div className="grid grid-cols-2 gap-2">
                     {[

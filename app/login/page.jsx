@@ -5,9 +5,9 @@ import { useAuth } from '@/lib/auth-context'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Delete, LogIn, RefreshCw, ShieldCheck, UserRound } from 'lucide-react'
-import { RESTAURANT } from '@/lib/restaurant-info.js'
+import { SHOP } from '@/lib/shop-info.js'
 
-const BRAND_NAME = RESTAURANT.name
+const BRAND_NAME = SHOP.name
 
 export default function LoginPage() {
   const [users, setUsers] = useState([])

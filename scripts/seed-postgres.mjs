@@ -15,7 +15,7 @@ if (!url || !/^postgres(ql)?:\/\//i.test(url)) {
 const username = (process.env.ADMIN_USERNAME || 'admin').trim();
 const password = process.env.ADMIN_PASSWORD || '';
 const fullName = process.env.ADMIN_FULL_NAME || 'Administrator';
-const restaurantName = process.env.RESTAURANT_NAME || 'Dim Sum Puri Fastfood Restaurant';
+const shopName = process.env.SHOP_NAME || '99 Shop by Shahana';
 
 if (password.length < 8) {
   console.error('ADMIN_PASSWORD must be at least 8 characters.');
@@ -43,17 +43,13 @@ try {
   );
 
   const settings = [
-    ['restaurant_name', restaurantName],
-    ['restaurant_address', process.env.RESTAURANT_ADDRESS || 'Birendranagar, Surkhet, Karnali Province, Nepal'],
-    ['restaurant_phone', process.env.RESTAURANT_PHONE || '+977 984-9216081'],
-    ['restaurant_email', process.env.RESTAURANT_EMAIL || ''],
+    ['shop_name', shopName],
+    ['shop_address', process.env.SHOP_ADDRESS || 'Surkhet, Nepal'],
+    ['shop_phone', process.env.SHOP_PHONE || '+977 976-789-6814'],
+    ['shop_email', process.env.SHOP_EMAIL || ''],
     ['vat_percentage', process.env.VAT_PERCENT || '0'],
     ['service_charge_percentage', process.env.SERVICE_PERCENT || '0'],
     ['currency', 'NPR'],
-    ['reservation_grace_minutes', '20'],
-    ['reservation_dining_minutes', '90'],
-    ['reservation_cleaning_minutes', '10'],
-    ['reservation_min_lead_minutes', '60'],
   ];
 
   for (const [key, value] of settings) {
@@ -65,22 +61,8 @@ try {
     );
   }
 
-  // Baseline tables T-01 … T-10 if empty
-  const tableCount = await client.query(`SELECT COUNT(*)::int AS c FROM tables`);
-  if ((tableCount.rows[0]?.c || 0) === 0) {
-    for (let i = 1; i <= 10; i++) {
-      const num = `T-${String(i).padStart(2, '0')}`;
-      const capacity = i <= 4 ? 2 : i <= 7 ? 4 : 6;
-      await client.query(
-        `INSERT INTO tables (table_number, capacity, status, floor, section, is_active)
-         VALUES ($1, $2, 'available', 'Ground', 'Main', 1)`,
-        [num, capacity]
-      );
-    }
-  }
-
   console.log(`✓ Seeded admin user "${username}" (must change password on first login)`);
-  console.log('✓ Seeded system settings and default tables (if empty)');
+  console.log('✓ Seeded system settings');
 } finally {
   await client.end();
 }

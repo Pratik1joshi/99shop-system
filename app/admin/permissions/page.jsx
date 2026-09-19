@@ -9,7 +9,7 @@ import { useToast } from '@/components/ui/toast';
 import { formatNepalTime } from '@/lib/time-utils';
 
 const ROLES = {
-  cashier: { label: 'Cashier', description: 'Billing, customer service and day-to-day restaurant operations.', icon: UserCog, tone: 'bg-blue-600 text-white' },
+  cashier: { label: 'Cashier', description: 'Billing, customer service and day-to-day store operations.', icon: UserCog, tone: 'bg-blue-600 text-white' },
   waiter: { label: 'Waiter', description: 'Table service, orders and guest-facing actions.', icon: Users, tone: 'bg-violet-600 text-white' },
   kitchen: { label: 'Kitchen', description: 'Kitchen tickets, preparation and stock visibility.', icon: ChefHat, tone: 'bg-amber-500 text-white' },
 };

@@ -63,7 +63,7 @@ export default function HolidaysPage() {
           <div className="mb-6 flex flex-col gap-3 sm:mb-8 sm:flex-row sm:items-center sm:justify-between">
             <div>
               <h1 className="text-2xl font-bold text-gray-800 sm:text-3xl">Holidays</h1>
-              <p className="mt-1 text-gray-700">The restaurant&apos;s holiday calendar.</p>
+              <p className="mt-1 text-gray-700">The shop&apos;s holiday calendar.</p>
             </div>
             {canManage && (
               <button onClick={openCreate} className="flex items-center gap-2 rounded-lg bg-gray-900 px-6 py-3 text-white hover:bg-gray-800">

@@ -137,7 +137,7 @@ export async function POST(request, { params }) {
     if (!order) return NextResponse.json({ error: 'Order not found.' }, { status: 404 });
 
     // Waiters may only release empty orders — anything with active (unvoided) lines
-    // needs a cashier/admin, same rule as the legacy /api/restaurant/orders path.
+    // needs a cashier/admin, same rule as the legacy /api/store/orders path.
     if (auth.user.role === 'waiter') {
       const activeCount = await db.get(
         `SELECT COUNT(*) AS c FROM order_items WHERE order_id = ? AND COALESCE(status, '') NOT IN ('voided', 'cancelled')`,

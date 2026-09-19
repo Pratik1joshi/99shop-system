@@ -11,7 +11,6 @@ import {
   recordSupplementalSettlement,
   validateAllocations,
 } from '@/lib/split-payments.js';
-import { completeReservationForOrder } from '@/lib/leads.js';
 import { getOrderWorkspace, logPosEvent, ensureKotProSchema } from '@/lib/kot-service.js';
 import { refundBillAdmin, recordAudit } from '@/lib/bills-admin.js';
 import { diffReopenItems, parseJsonField } from '@/lib/reopen-diff.js';
@@ -376,8 +375,6 @@ export async function POST(request, context) {
             );
           }
         }
-        await completeReservationForOrder(orderId, tx).catch(() => {});
-
         const items = await tx.all(
           `SELECT * FROM order_items WHERE order_id = ? AND COALESCE(status,'') NOT IN ('voided','cancelled') ORDER BY id`,
           [orderId]
@@ -471,8 +468,6 @@ export async function POST(request, context) {
           );
         }
       }
-      await completeReservationForOrder(orderId, tx).catch(() => {});
-
       const items = await tx.all(
         `SELECT * FROM order_items WHERE order_id = ? AND COALESCE(status,'') NOT IN ('voided','cancelled') ORDER BY id`,
         [orderId]
@@ -593,9 +588,9 @@ export async function POST(request, context) {
         sitting_duration: result.order.table_id && finalBill?.paid_at ? formatSittingDuration(result.order.created_at, finalBill.paid_at) : null,
         processed_by: auth.user.full_name,
         processed_at: new Date().toISOString(),
-        restaurant_name: settings.restaurant_name || '99 Shop by Shahana',
-        restaurant_address: settings.restaurant_address || '',
-        restaurant_phone: settings.restaurant_phone || '',
+        shop_name: settings.shop_name || '99 Shop by Shahana',
+        shop_address: settings.shop_address || '',
+        shop_phone: settings.shop_phone || '',
         vat_number: settings.vat_number || '',
         pan_number: settings.pan_number || '',
         receipt_footer: settings.receipt_footer || '',

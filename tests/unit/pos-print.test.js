@@ -45,9 +45,9 @@ const baseReceipt = {
   customer_name: '',
   processed_by: 'Pratik',
   processed_at: '2026-08-13T08:56:00Z',
-  restaurant_name: 'Dim Sum Puri Fastfood Restaurant',
-  restaurant_address: 'Birendranagar, Surkhet',
-  restaurant_phone: '9800000000',
+  shop_name: 'Dim Sum Puri Fastfood Restaurant',
+  shop_address: 'Birendranagar, Surkhet',
+  shop_phone: '9800000000',
   pan_number: '123456789',
   allocations: [{ method: 'cash', amount: 1005, cash_tendered: 1100, change: 95 }],
 };

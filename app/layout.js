@@ -3,25 +3,25 @@ import './globals.css'
 import { AuthProvider } from '@/lib/auth-context'
 import { ToastProvider } from '@/components/ui/toast'
 import { ConfirmProvider } from '@/components/ui/confirm'
-import { RESTAURANT } from '@/lib/restaurant-info.js'
+import { SHOP } from '@/lib/shop-info.js'
 import { CalendarSystemProvider } from '@/lib/calendar-context.jsx'
 
 const _geist = Geist({ subsets: ["latin"] });
 const _geistMono = Geist_Mono({ subsets: ["latin"] });
 
-const SITE_DESCRIPTION = `${RESTAURANT.tagline}. Call ${RESTAURANT.phoneDisplay}.`
+const SITE_DESCRIPTION = `${SHOP.tagline}. Call ${SHOP.phoneDisplay}.`
 
 // Bump `v` whenever the favicon assets change to bust browser/CDN caches.
 const ICON_VERSION = 'km-2'
 
 export const metadata = {
-  metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL || RESTAURANT.siteUrl),
+  metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL || SHOP.siteUrl),
   title: {
-    default: `${RESTAURANT.name} | ${RESTAURANT.tagline}`,
-    template: `%s | ${RESTAURANT.name}`,
+    default: `${SHOP.name} | ${SHOP.tagline}`,
+    template: `%s | ${SHOP.name}`,
   },
   description: SITE_DESCRIPTION,
-  applicationName: RESTAURANT.name,
+  applicationName: SHOP.name,
   manifest: `/site.webmanifest?v=${ICON_VERSION}`,
   icons: {
     icon: [{ url: `/images/brand/icon-192.png?v=${ICON_VERSION}`, type: 'image/png', sizes: '192x192' }],
@@ -30,16 +30,16 @@ export const metadata = {
   },
   openGraph: {
     type: 'website',
-    siteName: RESTAURANT.name,
-    title: `${RESTAURANT.name} | ${RESTAURANT.tagline}`,
+    siteName: SHOP.name,
+    title: `${SHOP.name} | ${SHOP.tagline}`,
     description: SITE_DESCRIPTION,
-    images: [{ url: RESTAURANT.logo, alt: `${RESTAURANT.name} logo` }],
+    images: [{ url: SHOP.logo, alt: `${SHOP.name} logo` }],
   },
   twitter: {
     card: 'summary_large_image',
-    title: RESTAURANT.name,
+    title: SHOP.name,
     description: SITE_DESCRIPTION,
-    images: [RESTAURANT.logo],
+    images: [SHOP.logo],
   },
   appleWebApp: {
     capable: true,
@@ -48,7 +48,7 @@ export const metadata = {
 }
 
 export const viewport = {
-  themeColor: RESTAURANT.themeColor,
+  themeColor: SHOP.themeColor,
 }
 
 export default function RootLayout({ children }) {
