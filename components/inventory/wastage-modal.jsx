@@ -46,9 +46,7 @@ const SHIFTS = ['morning', 'afternoon', 'evening', 'night'];
  */
 export default function WastageModal({ request, presetItem = null, presetQuantity = '', onClose, onLogged }) {
   const { addToast } = useToast();
-  const [kind, setKind] = useState('raw_material');
   const [rawMaterials, setRawMaterials] = useState([]);
-  const [recipes, setRecipes] = useState([]);
   const [employees, setEmployees] = useState([]);
   const [saving, setSaving] = useState(false);
   const [uploading, setUploading] = useState(false);
@@ -69,14 +67,9 @@ export default function WastageModal({ request, presetItem = null, presetQuantit
   useEffect(() => {
     (async () => {
       try {
-        const [invRes, recipesRes] = await Promise.all([
-          request('/api/admin/inventory'),
-          request('/api/admin/recipes'),
-        ]);
+        const invRes = await request('/api/admin/inventory');
         const invData = await invRes.json();
-        const recipesData = await recipesRes.json();
         setRawMaterials(invData.items || []);
-        setRecipes(recipesData.recipes || []);
       } catch {
         addToast(friendlyMessage('load_failed'));
       }
@@ -118,15 +111,12 @@ export default function WastageModal({ request, presetItem = null, presetQuantit
     }
   }
 
-  const options = kind === 'raw_material' ? rawMaterials : recipes;
+  const options = rawMaterials;
   const selected = options.find((o) => String(o.id) === String(form.item_id));
 
-  // A recipe is wasted in its own yield unit — there is no purchase unit to
-  // offer, so the toggle only appears for raw materials.
-  const isRaw = kind === 'raw_material';
-  const factor = isRaw && Number(selected?.conversion_factor) > 0 ? Number(selected.conversion_factor) : 1;
-  const cUnit = isRaw ? selected?.consumption_unit || selected?.unit || '' : selected?.yield_unit || '';
-  const pUnit = isRaw ? selected?.purchase_unit || '' : '';
+  const factor = Number(selected?.conversion_factor) > 0 ? Number(selected.conversion_factor) : 1;
+  const cUnit = selected?.consumption_unit || selected?.unit || '';
+  const pUnit = selected?.purchase_unit || '';
   const dual = hasTwoUnits({ purchaseUnit: pUnit, consumptionUnit: cUnit, factor });
 
   const entry = dual ? quantity : { ...quantity, unit: 'consumption' };
@@ -135,7 +125,7 @@ export default function WastageModal({ request, presetItem = null, presetQuantit
   // Live estimate of what this entry will cost, so the owner sees the money
   // before saving. The server recomputes it from the ledger's cost basis.
   const estimatedCost =
-    isRaw && selected && Number.isFinite(wastedConsumption)
+    selected && Number.isFinite(wastedConsumption)
       ? wastedConsumption * Number(selected.cost_per_unit || 0)
       : null;
 
@@ -162,8 +152,8 @@ export default function WastageModal({ request, presetItem = null, presetQuantit
         unit: normalizeUnitOrKeep(cUnit),
         reason: form.reason,
         notes: form.notes || null,
-        raw_material_id: kind === 'raw_material' ? form.item_id : null,
-        recipe_id: kind === 'recipe' ? form.item_id : null,
+        raw_material_id: form.item_id,
+        recipe_id: null,
         employee_id: form.employee_id || null,
         shift: form.shift || null,
         photo_url: form.photo_url || null,
@@ -199,32 +189,10 @@ export default function WastageModal({ request, presetItem = null, presetQuantit
           <DialogTitle>Log Wastage</DialogTitle>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="mt-6 space-y-5">
-          <div className="flex gap-2">
-            {[
-              { value: 'raw_material', label: 'Ingredient' },
-              { value: 'recipe', label: 'Prepared dish' },
-            ].map((k) => (
-              <button
-                key={k.value}
-                type="button"
-                onClick={() => {
-                  setKind(k.value);
-                  setForm((f) => ({ ...f, item_id: '' }));
-                  setQuantity({ amount: '', unit: 'purchase' });
-                }}
-                className={`h-10 flex-1 rounded-lg border text-sm font-medium ${
-                  kind === k.value ? 'border-gray-900 bg-gray-900 text-white' : 'border-gray-300 text-gray-600 hover:bg-gray-50'
-                }`}
-              >
-                {k.label}
-              </button>
-            ))}
-          </div>
-
           <div className="grid gap-5 sm:grid-cols-2">
           <div>
             <label className="mb-1 block text-sm font-medium text-gray-700">
-              {kind === 'raw_material' ? 'Ingredient' : 'Prepared dish'}
+              Stock item
             </label>
             <select
               className={INPUT}
