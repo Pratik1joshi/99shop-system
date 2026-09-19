@@ -181,9 +181,6 @@ export async function POST(request, { params }) {
            WHERE id = ?`,
           [`\nVoided: ${reason}`, reason, orderId]
         );
-        const { cancelKotsForOrder } = await import('@/lib/kot-service.js');
-        await cancelKotsForOrder(db, { orderId, reason, actorId: auth.user?.id });
-        if (order.table_id) await orderRepo.releaseTableIfEmpty(order.table_id, orderId);
       }
 
       return NextResponse.json({ success: true, message: 'Order voided / cancelled.', action });

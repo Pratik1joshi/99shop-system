@@ -3,21 +3,12 @@
 import { useCallback, useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { usePathname, useRouter } from 'next/navigation';
-import { Bike, ChefHat, Globe, History, LayoutGrid, LoaderCircle, ReceiptText, ShoppingBag, X } from 'lucide-react';
+import { Bike, Globe, History, LayoutGrid, LoaderCircle, ReceiptText, ShoppingBag, X } from 'lucide-react';
 import { formatValue } from '@/components/admin/report-kit.jsx';
 import { formatNepalDateTime } from '@/lib/report-dates.js';
 import { compactBillNumber, compactOrderNumber } from '@/lib/document-display.js';
 import { latestReopenChanges, buildChangeIndex } from '@/lib/reopen-diff.js';
-import KotPopup from '@/components/admin/kot-popup.jsx';
 import { billPaymentHistory } from '@/lib/bill-payment-history.js';
-
-const KOT_BADGE = {
-  pending: 'bg-amber-100 text-amber-700',
-  preparing: 'bg-sky-100 text-sky-700',
-  completed: 'bg-emerald-100 text-emerald-700',
-  cancelled: 'bg-red-100 text-red-700',
-  voided: 'bg-red-100 text-red-700',
-};
 
 const PAY_BADGE = {
   paid: 'bg-emerald-100 text-emerald-700',
@@ -46,7 +37,6 @@ export default function BillInvoiceModal({ billId, onClose }) {
   const [bill, setBill] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [kotPopupId, setKotPopupId] = useState(null);
 
   const load = useCallback(async (signal) => {
     setLoading(true);
@@ -116,7 +106,7 @@ export default function BillInvoiceModal({ billId, onClose }) {
 
             {bill.voided?.reason && <div className="rounded-xl border border-red-100 bg-red-50 px-3 py-2 text-sm text-red-700"><span className="font-semibold">Void reason:</span> {bill.voided.reason}{bill.voided.at && <span className="block text-xs text-red-600/80">Voided {formatNepalDateTime(bill.voided.at)}</span>}</div>}
             {bill.customer && <p className="text-sm text-gray-600">Customer: <span className="font-medium">{bill.customer.name}</span>{bill.customer.phone ? ` · ${bill.customer.phone}` : ''}</p>}
-            {(bill.legacy.tableNumber || bill.legacy.cashierName) && <p className="text-xs text-gray-400">Legacy: {bill.legacy.tableNumber ? `Table ${bill.legacy.tableNumber}` : ''} {bill.legacy.cashierName ? `· ${bill.legacy.cashierName}` : ''}</p>}
+            {bill.legacy.cashierName && <p className="text-xs text-gray-400">Cashier: {bill.legacy.cashierName}</p>}
             {(bill.openedAt || bill.paidAt) && (
               <p className="text-xs text-gray-500">
                 {bill.openedAt ? `Opened ${formatNepalDateTime(bill.openedAt)}` : ''}
@@ -125,29 +115,6 @@ export default function BillInvoiceModal({ billId, onClose }) {
             )}
 
             <BillItemsSection bill={bill} />
-
-            <Section title="Kitchen tickets (KOT)">
-              {bill.kots?.length ? (
-                <div className="divide-y divide-gray-100">
-                  {bill.kots.map((kot) => (
-                    <button
-                      key={kot.id}
-                      type="button"
-                      onClick={() => setKotPopupId(kot.id)}
-                      className="flex w-full items-center justify-between gap-2 py-2 text-left text-sm hover:bg-gray-50"
-                    >
-                      <span className="flex items-center gap-2 font-medium text-blue-700 underline decoration-blue-300 underline-offset-2">
-                        <ChefHat className="h-3.5 w-3.5 shrink-0 text-gray-400" />{kot.kotNumber}
-                      </span>
-                      <span className="flex items-center gap-2 text-xs text-gray-500">
-                        {kot.quantity} item{kot.quantity === 1 ? '' : 's'}
-                        {kot.status && <span className={`rounded-full px-2 py-0.5 font-medium capitalize ${KOT_BADGE[String(kot.status).toLowerCase()] || 'bg-gray-100 text-gray-700'}`}>{kot.status}</span>}
-                      </span>
-                    </button>
-                  ))}
-                </div>
-              ) : <p className="text-sm text-gray-400">No kitchen ticket was generated for this order.</p>}
-            </Section>
 
             <Section title="Totals">
               <Row label="Subtotal" value={bill.totals.subtotal} />
@@ -170,7 +137,6 @@ export default function BillInvoiceModal({ billId, onClose }) {
           </div>
         )}
       </section>
-      {kotPopupId && <KotPopup kotId={kotPopupId} onClose={() => setKotPopupId(null)} />}
     </div>,
     document.body
   );

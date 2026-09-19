@@ -6,7 +6,7 @@ import { usePathname, useRouter } from 'next/navigation';
 import AdminLayout from '@/components/admin/admin-layout';
 import {
   Save, Store, Receipt, CreditCard, QrCode, Upload, Loader2, Shield, Percent,
-  CalendarClock, Utensils, ExternalLink, KeyRound, ScanLine, Truck, Plus, Trash2, Eye, ShieldCheck,
+  ExternalLink, KeyRound, Plus, Trash2, Eye,
 } from 'lucide-react';
 import { PRIMARY_ROUTE } from '@/lib/deployment';
 import { useCalendarSystem } from '@/lib/calendar-context.jsx';
@@ -20,15 +20,6 @@ const TABS = [
   { id: 'payments', label: 'Payments & QR', icon: CreditCard },
   { id: 'shortcuts', label: 'More config', icon: ExternalLink },
   { id: 'account', label: 'Account', icon: Shield },
-];
-
-const RES_FIELDS = [
-  ['reservation_hold_minutes', 'Reservation hold (min)', 30],
-  ['reservation_grace_minutes', 'No-show grace (min)', 20],
-  ['reservation_dining_minutes', 'Dining duration (min)', 90],
-  ['reservation_cleaning_minutes', 'Table cleaning (min)', 10],
-  ['reservation_auto_cancel_minutes', 'Auto-cancel after (min)', 20],
-  ['reservation_min_lead_minutes', 'Minimum lead time (min)', 60],
 ];
 
 const SHORTCUTS = [
@@ -62,14 +53,11 @@ export default function SettingsPage() {
     website: '', vat_number: '', pan_number: '', registration_number: '', restaurant_address: '',
     vat_percentage: 13, service_charge_percentage: 10,
     receipt_footer: '', receipt_paper_size: '80', qr_ordering_enabled: true, online_order_minimum_amount: 500,
-    kitchen_printing_enabled: false,
     cashier_expected_cash_schedule_enabled: true, cashier_expected_cash_reveal_time: '20:30',
     cashier_cash_count_schedule_enabled: false, cashier_cash_count_time: '14:00',
-    kot_cancellation_approval_enabled: false,
     delivery_pricing_enabled: false, delivery_pricing_mode: 'fixed', delivery_fixed_fee: 0,
     delivery_distance_bands: [], delivery_per_km_rate: 0, delivery_minimum_fee: 0, delivery_max_distance_km: 0,
     bank_qr_image: '', esewa_qr_image: '',
-    ...Object.fromEntries(RES_FIELDS.map(([k, , d]) => [k, d])),
   });
   const set = (patch) => setS((prev) => ({ ...prev, ...patch }));
 
@@ -102,12 +90,10 @@ export default function SettingsPage() {
             vat_percentage: Number(d.vat_percentage ?? 13), service_charge_percentage: Number(d.service_charge_percentage ?? 10),
             receipt_footer: d.receipt_footer || '', receipt_paper_size: d.receipt_paper_size || '80', qr_ordering_enabled: String(d.qr_ordering_enabled ?? 'true') !== 'false',
             online_order_minimum_amount: Number(d.online_order_minimum_amount ?? 500),
-            kitchen_printing_enabled: String(d.kitchen_printing_enabled ?? 'false') === 'true',
             cashier_expected_cash_schedule_enabled: String(d.cashier_expected_cash_schedule_enabled ?? 'true') !== 'false',
             cashier_expected_cash_reveal_time: /^(?:[01]\d|2[0-3]):[0-5]\d$/.test(String(d.cashier_expected_cash_reveal_time || '')) ? d.cashier_expected_cash_reveal_time : '20:30',
             cashier_cash_count_schedule_enabled: String(d.cashier_cash_count_schedule_enabled ?? 'false') === 'true',
             cashier_cash_count_time: /^(?:[01]\d|2[0-3]):[0-5]\d$/.test(String(d.cashier_cash_count_time || '')) ? d.cashier_cash_count_time : '14:00',
-            kot_cancellation_approval_enabled: String(d.kot_cancellation_approval_enabled ?? 'false') === 'true',
             bank_qr_image: d.bank_qr_image || '', esewa_qr_image: d.esewa_qr_image || '',
             delivery_pricing_enabled: String(d.delivery_pricing_enabled ?? 'false') === 'true',
             delivery_pricing_mode: d.delivery_pricing_mode || 'fixed',
@@ -116,7 +102,6 @@ export default function SettingsPage() {
             delivery_per_km_rate: Number(d.delivery_per_km_rate || 0),
             delivery_minimum_fee: Number(d.delivery_minimum_fee || 0),
             delivery_max_distance_km: Number(d.delivery_max_distance_km || 0),
-            ...Object.fromEntries(RES_FIELDS.map(([k, , dv]) => [k, Number(d[k] ?? dv)])),
           });
         }
       } catch { setMessage({ type: 'error', text: 'Failed to load settings' }); }
@@ -147,22 +132,18 @@ export default function SettingsPage() {
             cashier_expected_cash_reveal_time: s.cashier_expected_cash_reveal_time,
             cashier_cash_count_schedule_enabled: s.cashier_cash_count_schedule_enabled ? 'true' : 'false',
             cashier_cash_count_time: s.cashier_cash_count_time,
-            kot_cancellation_approval_enabled: s.kot_cancellation_approval_enabled ? 'true' : 'false',
           } : {
             cashier_expected_cash_schedule_enabled: undefined,
             cashier_expected_cash_reveal_time: undefined,
             cashier_cash_count_schedule_enabled: undefined,
             cashier_cash_count_time: undefined,
-            kot_cancellation_approval_enabled: undefined,
           }),
           vat_percentage: Number(s.vat_percentage) || 0,
           service_charge_percentage: Number(s.service_charge_percentage) || 0,
           qr_ordering_enabled: s.qr_ordering_enabled ? 'true' : 'false',
-          kitchen_printing_enabled: s.kitchen_printing_enabled ? 'true' : 'false',
           delivery_pricing_enabled: s.delivery_pricing_enabled ? 'true' : 'false',
           online_order_minimum_amount: Math.max(0, Number(s.online_order_minimum_amount) || 0),
           delivery_distance_bands: JSON.stringify(s.delivery_distance_bands || []),
-          ...Object.fromEntries(RES_FIELDS.map(([k]) => [k, Number(s[k]) || 0])),
         }),
       });
       if (res.ok) { setCalendarSystem(s.calendar_system); setMessage({ type: 'success', text: 'Settings saved.' }); setTimeout(() => setMessage({ type: '', text: '' }), 2500); }
@@ -207,7 +188,7 @@ export default function SettingsPage() {
 
       <header className="border-b border-gray-200 bg-white px-4 py-5 sm:px-6 lg:px-8">
         <h1 className="text-2xl font-bold text-gray-900 sm:text-3xl">Configuration Center</h1>
-        <p className="mt-1 text-sm text-gray-500">Every setting here changes real behaviour. Structural config (tables, accounts, staff) lives in its own module.</p>
+        <p className="mt-1 text-sm text-gray-500">Every setting here changes real behaviour. Structural config (accounts, staff, categories) lives in its own module.</p>
       </header>
 
       <div className="bg-gray-50 p-4 sm:p-6 lg:p-8">
@@ -223,7 +204,7 @@ export default function SettingsPage() {
 
           <div className="min-w-0 flex-1 space-y-5">
             {tab === 'business' && (
-              <Panel title="Business information" hint="Prints on receipts and the public menu where shown.">
+              <Panel title="Business information" hint="Prints on receipts and shows on the public storefront.">
                 <Grid>
                   <Field label="Business name"><input value={s.restaurant_name} onChange={(e) => set({ restaurant_name: e.target.value })} className={INPUT} /></Field>
                   <Field label="Legal / registered name"><input value={s.legal_name} onChange={(e) => set({ legal_name: e.target.value })} className={INPUT} /></Field>
@@ -263,16 +244,6 @@ export default function SettingsPage() {
               </Panel>
             )}
 
-            {tab === 'reservations' && (
-              <Panel title="Reservations & tables" hint="Drives the host desk hold, grace, dining and cleaning timers.">
-                <Grid>
-                  {RES_FIELDS.map(([k, label]) => (
-                    <Field key={k} label={label}><input type="number" value={s[k]} onChange={(e) => set({ [k]: e.target.value })} className={INPUT} /></Field>
-                  ))}
-                </Grid>
-              </Panel>
-            )}
-
             {tab === 'cashier' && currentUser?.role === 'admin' && (
               <Panel title="Expected cash visibility" hint="This is the original closing-time control. It remains independent from the midday security count below.">
                 <label className="flex items-start justify-between gap-4 rounded-xl border border-gray-200 bg-gray-50 p-4">
@@ -301,19 +272,6 @@ export default function SettingsPage() {
                   </Field>
                   <p className="mt-2 text-xs text-gray-500">The cashier never sees expected cash on this form. Administrators see expected, counted, variance, denominations, and the complete calculation under Scheduled Cash Counts.</p>
                 </div>
-              </Panel>
-            )}
-
-            {tab === 'cancelled-kots' && currentUser?.role === 'admin' && (
-              <Panel title="Cancelled KOT approval" hint="Owner-controlled fraud protection for cancelled kitchen tickets.">
-                <label className="flex items-start justify-between gap-4 rounded-xl border border-amber-200 bg-amber-50 p-4">
-                  <span>
-                    <span className="block text-sm font-semibold text-gray-950">Allow Admin and Kitchen to review cancelled KOTs</span>
-                    <span className="mt-1 block text-sm leading-6 text-gray-600">When enabled, both workspaces can approve or disallow a cancelled KOT and see each other&apos;s latest decision. When disabled, the review page and API are unavailable.</span>
-                  </span>
-                  <input type="checkbox" checked={s.kot_cancellation_approval_enabled} onChange={(e) => set({ kot_cancellation_approval_enabled: e.target.checked })} className="mt-1 h-5 w-5 shrink-0 accent-amber-700" />
-                </label>
-                <p className="text-xs leading-5 text-gray-500">A review never restores a cancelled KOT or changes its stock, payment, or accounting records. Every decision is retained in the audit history, including later changes from approved to disallowed.</p>
               </Panel>
             )}
 
@@ -363,13 +321,6 @@ export default function SettingsPage() {
                   <Field label="Receipt footer message"><input value={s.receipt_footer} onChange={(e) => set({ receipt_footer: e.target.value })} className={INPUT} placeholder="Thank you for your visit!" /></Field>
                 </Grid>
                 <p className="text-xs text-gray-400">Receipts print through the shared thermal system and re-format automatically for the selected width.</p>
-                <label className="mt-4 flex items-center justify-between rounded-lg border border-gray-200 p-4">
-                  <span className="flex items-center gap-2 text-sm font-medium text-gray-800"><Receipt className="h-4 w-4 text-gray-500" /> Auto-print kitchen tickets (KOT)</span>
-                  <input type="checkbox" checked={s.kitchen_printing_enabled} onChange={(e) => set({ kitchen_printing_enabled: e.target.checked })} className="h-5 w-5 rounded border-gray-300" />
-                </label>
-                <p className="text-xs text-gray-400">
-                  Enable only on devices physically connected to the kitchen printer (waiter tablet or POS PC in the kitchen). When on, KOTs print automatically as soon as they&apos;re sent — new, additional and cancellation tickets. When off, staff still see the ticket on the Kitchen display and can print any KOT manually from KOT history. Uses the thermal paper size above.
-                </p>
               </Panel>
             )}
 

@@ -9,7 +9,6 @@ import { createContext, useCallback, useContext, useMemo, useState } from 'react
 import { createPortal } from 'react-dom';
 import PurchaseDrawer from '@/components/purchases/purchase-drawer';
 import BillInvoiceModal from '@/components/admin/bill-invoice-modal';
-import KotPopup from '@/components/admin/kot-popup';
 import { RecordDetailsModal } from '@/components/admin/report-kit';
 import { apiJson } from '@/lib/authed-fetch';
 
@@ -18,7 +17,6 @@ const AnalyticsRecordContext = createContext(null);
 const noopApi = {
   openPurchase() {},
   openBill() {},
-  openKot() {},
   openExpense() {},
   openOrder() {},
   openReportRow() {},
@@ -31,7 +29,6 @@ export function useAnalyticsRecords() {
 export function AnalyticsRecordProvider({ children, range = null }) {
   const [purchaseId, setPurchaseId] = useState(null);
   const [billId, setBillId] = useState(null);
-  const [kotId, setKotId] = useState(null);
   const [record, setRecord] = useState(null);
 
   const openReportRow = useCallback(async ({ tab, tableId = '', row = {}, title = 'Record details' }) => {
@@ -68,12 +65,6 @@ export function AnalyticsRecordProvider({ children, range = null }) {
     const billIdValue = Number(id);
     if (!billIdValue) return;
     setBillId(billIdValue);
-  }, []);
-
-  const openKot = useCallback((id) => {
-    const kotIdValue = Number(id);
-    if (!kotIdValue) return;
-    setKotId(kotIdValue);
   }, []);
 
   const openExpense = useCallback((rowOrId) => {
@@ -114,11 +105,10 @@ export function AnalyticsRecordProvider({ children, range = null }) {
   const value = useMemo(() => ({
     openPurchase,
     openBill,
-    openKot,
     openExpense,
     openOrder,
     openReportRow,
-  }), [openPurchase, openBill, openKot, openExpense, openOrder, openReportRow]);
+  }), [openPurchase, openBill, openExpense, openOrder, openReportRow]);
 
   return (
     <AnalyticsRecordContext.Provider value={value}>
@@ -132,7 +122,6 @@ export function AnalyticsRecordProvider({ children, range = null }) {
         />
       ) : null}
       {billId ? <BillInvoiceModal billId={billId} onClose={() => setBillId(null)} /> : null}
-      {kotId ? <KotPopup kotId={kotId} onClose={() => setKotId(null)} /> : null}
       {record && typeof document !== 'undefined'
         ? createPortal(
           <RecordDetailsModal

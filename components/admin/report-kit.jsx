@@ -29,7 +29,6 @@ import { financialToneClass } from '@/lib/financial-tone';
 import { paymentBucket } from '@/lib/report-scope.js';
 import PaginationControls from '@/components/ui/pagination-controls';
 import { DEFAULT_PAGE_SIZE } from '@/lib/paginate.js';
-import KotPopup from '@/components/admin/kot-popup.jsx';
 
 const CHIP_ICONS = {
   up: { Icon: TrendingUp, tone: 'bg-emerald-50 text-emerald-600' },
@@ -903,7 +902,6 @@ export function DataTable({
 }
 
 export function RecordDetailsModal({ tableTitle, columns, row, detail, loading, error, onClose, onEntityClick }) {
-  const [kotPopupId, setKotPopupId] = useState(null);
   const [nestedDetail, setNestedDetail] = useState(null);
   const [nestedLoading, setNestedLoading] = useState(false);
   const [nestedError, setNestedError] = useState(null);
@@ -1008,8 +1006,8 @@ export function RecordDetailsModal({ tableTitle, columns, row, detail, loading, 
               )}
               {(shownDetail.sections || []).map((section, index) => (
                 section.type === 'table'
-                  ? <RecordDetailTable key={`${section.title}-${index}`} section={section} onKotClick={setKotPopupId} onEntityClick={openLinkedEntity} />
-                  : <RecordDetailFields key={`${section.title}-${index}`} section={section} onKotClick={setKotPopupId} onEntityClick={openLinkedEntity} />
+                  ? <RecordDetailTable key={`${section.title}-${index}`} section={section} onEntityClick={openLinkedEntity} />
+                  : <RecordDetailFields key={`${section.title}-${index}`} section={section} onEntityClick={openLinkedEntity} />
               ))}
             </div>
           ) : null}
@@ -1020,7 +1018,6 @@ export function RecordDetailsModal({ tableTitle, columns, row, detail, loading, 
           <button type="button" onClick={onClose} className="rounded-lg bg-gray-900 px-4 py-2 text-sm font-semibold text-white transition-transform duration-150 ease-out hover:bg-gray-800 active:scale-[0.97]">Close</button>
         </footer>
       </section>
-      {kotPopupId && <KotPopup kotId={kotPopupId} onClose={() => setKotPopupId(null)} />}
     </div>
   );
 }
@@ -1040,7 +1037,7 @@ function detailValue(value, format) {
   return formatValue(value, format === 'text' ? undefined : format);
 }
 
-function RecordDetailFields({ section, onKotClick, onEntityClick }) {
+function RecordDetailFields({ section, onEntityClick }) {
   const pathname = usePathname();
   const cashier = pathname?.startsWith('/cashier');
   if (!section.items?.length) return null;
@@ -1055,7 +1052,7 @@ function RecordDetailFields({ section, onKotClick, onEntityClick }) {
           <div key={`${item.label}-${index}`} className="grid gap-1 py-3 sm:grid-cols-[180px_minmax(0,1fr)] sm:gap-5">
             <dt className="text-xs font-medium text-gray-500">{item.label}</dt>
             <dd className={`break-words text-sm ${['currency', 'number', 'percent'].includes(item.format) ? 'font-semibold tabular-nums text-gray-950' : 'text-gray-700'}`}>
-              {item.link ? <RecordEntityLink link={item.link} cashier={cashier} onKotClick={onKotClick} onEntityClick={onEntityClick}>{detailValue(item.value, item.format)}</RecordEntityLink> : detailValue(item.value, item.format)}
+              {item.link ? <RecordEntityLink link={item.link} cashier={cashier} onEntityClick={onEntityClick}>{detailValue(item.value, item.format)}</RecordEntityLink> : detailValue(item.value, item.format)}
             </dd>
           </div>
         ))}
@@ -1064,7 +1061,7 @@ function RecordDetailFields({ section, onKotClick, onEntityClick }) {
   );
 }
 
-function RecordDetailTable({ section, onKotClick, onEntityClick }) {
+function RecordDetailTable({ section, onEntityClick }) {
   const pathname = usePathname();
   const cashier = pathname?.startsWith('/cashier');
   return (
@@ -1082,7 +1079,7 @@ function RecordDetailTable({ section, onKotClick, onEntityClick }) {
             <tbody className="divide-y divide-gray-100">
               {section.rows.map((record, rowIndex) => <tr key={record.id || `${section.title}-${rowIndex}`} className="align-top">
                 {section.columns.map((column) => <td key={column.key} className={`px-4 py-3 ${column.align === 'right' ? 'text-right font-medium tabular-nums text-gray-950' : 'text-gray-600'}`}>
-                  {column.format === 'status' ? <Badge value={String(record[column.key] || '—').replace(/_/g, ' ')} /> : record._links?.[column.key] ? <RecordEntityLink link={record._links[column.key]} cashier={cashier} onKotClick={onKotClick} onEntityClick={onEntityClick}>{detailValue(record[column.key], column.format)}</RecordEntityLink> : detailValue(record[column.key], column.format)}
+                  {column.format === 'status' ? <Badge value={String(record[column.key] || '—').replace(/_/g, ' ')} /> : record._links?.[column.key] ? <RecordEntityLink link={record._links[column.key]} cashier={cashier} onEntityClick={onEntityClick}>{detailValue(record[column.key], column.format)}</RecordEntityLink> : detailValue(record[column.key], column.format)}
                 </td>)}
               </tr>)}
             </tbody>
@@ -1099,35 +1096,19 @@ function recordEntityHref(link, cashier) {
   switch (link.type) {
     case 'order': return `${root}/orders/${id}`;
     case 'bill': return `${root}/bills?bill=${id}`;
-    case 'kot': return `${cashier ? '/cashier/kots' : '/admin/kot'}?kot=${id}${link.label ? `&search=${encodeURIComponent(link.label)}` : ''}`;
     case 'purchase': return `${root}/purchases?purchase=${id}`;
     case 'expense': return `${root}/expenses?expense=${id}`;
     case 'wastage': return `${root}/wastage?wastage=${id}`;
     case 'customer': return `${root}/customers/${id}`;
     case 'inventory': return `${root}/inventory/${id}`;
-    case 'reservation': return `${root}/reservations?reservation=${id}`;
     case 'employee': return `${root}/employees?employee=${id}`;
-    case 'table': return `${root}/table-management?table=${id}`;
     case 'supplier': return `${root}/suppliers?supplier=${id}`;
-    case 'menu': return `${cashier ? '/cashier/menu-items' : '/admin/products'}?item=${id}`;
+    case 'menu': return `${root}/products?item=${id}`;
     default: return null;
   }
 }
 
-function RecordEntityLink({ link, cashier, children, onKotClick, onEntityClick }) {
-  // A KOT opens in place — no reason to leave the record you're already
-  // reading just to glance at a kitchen ticket.
-  if (link.type === 'kot' && onKotClick) {
-    return (
-      <button
-        type="button"
-        onClick={(event) => { event.stopPropagation(); onKotClick(link.id); }}
-        className="inline-flex rounded-sm font-semibold text-blue-700 underline decoration-blue-300 underline-offset-2 transition-[color,transform] duration-150 ease-out hover:text-blue-900 active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2"
-      >
-        {children}
-      </button>
-    );
-  }
+function RecordEntityLink({ link, cashier, children, onEntityClick }) {
   if (onEntityClick && ['bill', 'order', 'purchase', 'expense'].includes(link.type)) {
     return (
       <button
