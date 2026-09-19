@@ -6,7 +6,6 @@ import {
   ensurePermissionCache,
   isPermissionAllowedSync,
 } from '@/lib/permissions.js';
-import { isKotCancellationApprovalEnabled } from '@/lib/cancellation-verification.js';
 
 /** Current user's dynamic capabilities for navigation and action visibility. */
 export async function GET(request) {
@@ -15,15 +14,11 @@ export async function GET(request) {
     if (auth.error) return auth.error;
     const db = Database.getInstance();
     await ensurePermissionCache(db);
-    const kotCancellationApprovalEnabled = await isKotCancellationApprovalEnabled(db);
     return NextResponse.json(
       {
         role: auth.user.role,
         capabilities: Object.fromEntries(
-          [
-            ...PERMISSION_CATALOG.map(({ key }) => [key, isPermissionAllowedSync(auth.user.role, key)]),
-            ['kot_cancellation_approval.enabled', kotCancellationApprovalEnabled],
-          ]
+          PERMISSION_CATALOG.map(({ key }) => [key, isPermissionAllowedSync(auth.user.role, key)]),
         ),
       },
       { headers: { 'Cache-Control': 'no-store, max-age=0' } },

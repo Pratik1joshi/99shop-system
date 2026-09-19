@@ -25,7 +25,7 @@ const PERMISSION_MODULES = [
   { id: 'customers', label: 'Customers', description: 'Customer records and customer ledger access.', matches: (key) => key.startsWith('customers.') || key.startsWith('customer_ledger.') },
   { id: 'finance', label: 'Finance & Accounting', description: 'Expenses, cash, opening/closing, ledgers and banking.', matches: (key) => key.startsWith('expenses.') || key.startsWith('expense_categories.') || key.startsWith('business_funding.') || key.startsWith('savings.') || key.startsWith('cash_') || key.startsWith('business_days.') || key.startsWith('corrections.') || key.startsWith('general_ledger.') || key.startsWith('finance_dashboard.') || key.startsWith('chart_of_accounts.') || key.startsWith('bank') || key.startsWith('financial_reports.') || key.startsWith('supplier_ledger.') },
   { id: 'hrm', label: 'HRM & Payroll', description: 'Staff, attendance, departments, holidays and payroll.', matches: (key) => key.startsWith('hrm.') || key.startsWith('employees.') || key.startsWith('employee_performance.') || key.startsWith('payroll.') },
-  { id: 'administration', label: 'Administration', description: 'Website, settings and verification.', matches: (key) => key.startsWith('cms.') || key.startsWith('settings.') || key.startsWith('cancellation_verifications.') },
+  { id: 'administration', label: 'Administration', description: 'Website and settings.', matches: (key) => key.startsWith('cms.') || key.startsWith('settings.') },
   { id: 'other', label: 'Other', description: 'Additional access controls.', matches: () => true },
 ];
 

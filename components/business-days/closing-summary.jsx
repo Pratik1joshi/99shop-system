@@ -115,12 +115,6 @@ export default function ClosingSummary({
 
   return (
     <div className="space-y-0">
-      {summary?.cancellationWarnings && (summary.cancellationWarnings.unverified + summary.cancellationWarnings.disputedAdmin + summary.cancellationWarnings.disputedKitchen > 0) && (
-        <p role="status" className="mb-5 border border-amber-300 bg-amber-50 p-4 text-sm text-amber-950">
-          Cancellation audit: {summary.cancellationWarnings.unverified} awaiting admin verification; {summary.cancellationWarnings.disputedKitchen} kitchen dispute(s); {summary.cancellationWarnings.disputedAdmin} admin dispute(s). These warnings do not block closing.
-        </p>
-      )}
-
       <Section icon={ReceiptText} title="Sales summary">
         <div className="grid grid-cols-2 gap-x-4 gap-y-5 sm:grid-cols-3 xl:grid-cols-6">
           <Metric label="Gross Billed Sales" value={sales.gross_sales} tone="positive" />

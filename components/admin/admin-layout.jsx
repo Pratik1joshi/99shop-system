@@ -426,7 +426,6 @@ export default function AdminLayout({ children }) {
       tint: 'cyan',
       items: [
         { icon: ReceiptText, label: 'Bills', href: '/admin/bills', color: 'text-emerald-600' },
-        { icon: ShieldCheck, label: 'Cancellation approval', href: '/admin/cancellations', color: 'text-red-700' },
         { icon: ShoppingCart, label: 'Sales', href: '/admin/orders', color: 'text-orange-600' },
       ],
     },
@@ -523,7 +522,7 @@ export default function AdminLayout({ children }) {
       label: 'Catalog',
       tint: 'amber',
       items: [
-        { icon: Package, label: 'Products', href: '/cashier/menu-items', color: 'text-blue-600', requiredPermission: 'menu.manage' },
+        { icon: Package, label: 'Products', href: '/cashier/products', color: 'text-blue-600', requiredPermission: 'menu.manage' },
         { icon: FolderOpen, label: 'Categories', href: '/cashier/categories', color: 'text-purple-600', requiredPermission: 'menu.manage' },
         { icon: BadgePercent, label: 'Offers & Discounts', href: '/cashier/promotions', color: 'text-rose-600', requiredPermission: 'promotions.manage' },
       ],
@@ -580,7 +579,6 @@ export default function AdminLayout({ children }) {
         { icon: Wallet, label: 'Cash Drawer', href: '/cashier/cash-drawer', color: 'text-orange-600', requiredPermission: 'cash_drawer.manage' },
         { icon: Landmark, label: 'Bank', href: '/cashier/bank', color: 'text-blue-700', requiredPermission: 'bank.access' },
         { icon: FileText, label: 'Financial Reports', href: '/cashier/financial-reports', color: 'text-indigo-700', requiredPermission: 'financial_reports.access' },
-        { icon: ShieldCheck, label: 'Cancellation approval', href: '/cashier/cancellations', color: 'text-amber-700', requiredPermission: 'cancellation_verifications.manage', featureFlag: 'kot_cancellation_approval.enabled' },
         { icon: Undo2, label: 'Corrections', href: '/cashier/corrections', color: 'text-amber-700', requiredPermission: 'corrections.manage' },
       ],
     },
@@ -603,8 +601,7 @@ export default function AdminLayout({ children }) {
 
   const rawNavGroups = isCashierPanel ? cashierNavGroups : adminNavGroups;
   const requiredPagePermission = isCashierPanel ? permissionForStaffPath(pathname) : null;
-  const featureDisabledPage = (pathname === '/admin/cancellations' || pathname === '/cashier/cancellations')
-    && capabilities?.['kot_cancellation_approval.enabled'] !== true;
+  const featureDisabledPage = false;
 
   // Apply the deployment profile: hide disabled waiter/kitchen/table/reservation
   // entries and drop any group left empty. Routes still exist for historical data.

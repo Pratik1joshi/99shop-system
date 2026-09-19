@@ -1,6 +1,5 @@
 import { cashSafePayload, assertCashClosingAllowed } from '@/lib/cash-closing-policy.js';
 import { NextResponse } from 'next/server';
-import { cancellationWarningCounts } from '@/lib/cancellation-verification.js';
 import Database from '@/lib/db/index.js';
 import { requireAuth, handleRouteError } from '@/lib/api-guard.js';
 import {
@@ -39,7 +38,6 @@ export async function GET(request) {
           [context.current.id]
         ).catch(() => []),
       ]);
-      summary.cancellationWarnings = await cancellationWarningCounts(db, context.current.id);
       return respond({ ...context, summary, audit });
     }
     return respond(context);
