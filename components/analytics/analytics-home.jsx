@@ -98,7 +98,6 @@ export function OwnerMoneyMetrics({ data, panelPrefix = '/admin' }) {
   const moneyReceived = Number(payments.grossCollected || (netCashCollection + netOnlineCollection));
 
   const channelRows = data.channelMix?.rows || [];
-  const dineIn = Number(channelRows.find((row) => row.channel === 'dine_in')?.billedTotal || 0);
   const takeaway = Number(channelRows.find((row) => row.channel === 'takeaway')?.billedTotal || 0);
   const delivery = Number(channelRows.find((row) => row.channel === 'delivery')?.billedTotal || 0);
 
@@ -153,7 +152,6 @@ export function OwnerMoneyMetrics({ data, panelPrefix = '/admin' }) {
           <h3 className="text-sm font-semibold text-gray-950">Where sales came from</h3>
           <p className="mt-0.5 text-xs text-gray-400">Finalized bills by order type.</p>
           <div className="mt-4 grid gap-4 sm:grid-cols-3">
-            <SplitStat icon={Users} iconTone="teal" label="Dine-in Sales" value={dineIn} href={analyticsReportHref('Dine-in Sales', data.range, panelPrefix)} />
             <SplitStat icon={ShoppingBag} iconTone="amber" label="Takeaway Sales" value={takeaway} href={analyticsReportHref('Takeaway Sales', data.range, panelPrefix)} />
             <SplitStat icon={Bike} iconTone="slate" label="Delivery Sales" value={delivery} href={analyticsReportHref('Delivery Sales', data.range, panelPrefix)} />
           </div>
@@ -167,18 +165,12 @@ export default function AnalyticsHome({ data }) {
   const totals = data.totals || {};
   const payments = data.payments || {};
   const customers = data.customers || {};
-  const tableEarnings = (data.tables?.rows || []).slice(0, 7).map((row) => ({
-    label: `Table ${row.table_number}`,
-    value: row.revenue,
-    meta: `${number(row.orders)} order${Number(row.orders) === 1 ? '' : 's'}${row.dining_minutes ? ` · ${Math.round(row.dining_minutes)} min avg` : ''}`,
-  }));
   const purchasing = data.suppliers?.purchasing || {};
   const cashSales = Number(payments.cashSales ?? Math.max(0, Number(payments.cashCollected || 0) - Number(payments.creditCollectionsCash || 0)));
   const onlineSales = Number(payments.onlineSales ?? Math.max(0, Number(payments.onlineCollected || 0) - Number(payments.creditCollectionsOnline || 0)));
   const creditSales = Number(payments.creditSales || 0);
   const channelRows = data.channelMix?.rows || [];
   const orderTypeRows = [
-    { label: 'Dine-in', value: Number(channelRows.find((row) => row.channel === 'dine_in')?.billedTotal || 0) },
     { label: 'Takeaway', value: Number(channelRows.find((row) => row.channel === 'takeaway')?.billedTotal || 0) },
     { label: 'Delivery', value: Number(channelRows.find((row) => row.channel === 'delivery')?.billedTotal || 0) },
   ];
@@ -223,9 +215,6 @@ export default function AnalyticsHome({ data }) {
           <VisualDonut title="Sales by Master Category" rows={chartRows.masterCategories} centerLabel="Sales" />
           <VisualDonut title="Purchases by Category" rows={chartRows.purchaseCategories} centerLabel="Purchases" />
           <VisualDonut title="Expenses by Category" rows={chartRows.expenseCategories} centerLabel="Expenses" />
-          <ChartCard title="Table Earnings" hint="Revenue earned by each dine-in table" isEmpty={!tableEarnings.length} empty="No settled table sales in this period.">
-            <RankBars data={tableEarnings} color="emerald" format="currency" limit={7} />
-          </ChartCard>
         </div>
 
         <div className="mt-4 grid grid-cols-2 gap-2 rounded-xl border border-gray-100 bg-gray-50/80 px-3 py-3 sm:grid-cols-3 lg:grid-cols-6">

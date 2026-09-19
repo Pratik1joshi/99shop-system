@@ -2,7 +2,7 @@
 
 /**
  * Shared click-to-open drawers/modals for Analytics tables — same containers
- * as Purchases page, Sales report bills, KOT popup, and report expense detail.
+ * as Purchases page, Sales report bills, and report expense detail.
  */
 
 import { createContext, useCallback, useContext, useMemo, useState } from 'react';

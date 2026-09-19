@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import {
-  Activity, BarChart3, ChefHat, ClipboardCheck, History, PackageSearch, ShoppingBasket, Users,
+  Activity, BarChart3, ClipboardCheck, History, PackageSearch, Receipt, ShoppingBasket, Users,
 } from 'lucide-react';
 import AnalyticsHome, { OwnerMoneyMetrics } from './analytics-home';
 import { AllChanges } from './order-operations-analytics';
@@ -13,7 +13,6 @@ import { AnalyticsRecordProvider } from './analytics-record-viewer';
 import { MenuPerformance, PaymentFinance } from './overview-commercial';
 import {
   AttentionCenter, Controls,
-  FloorAndReservations,
   InventorySupplier,
   LiveStatus,
   ManagementSummary,
@@ -34,8 +33,8 @@ export default function OverviewDashboard({
     ['overview', 'Overview', Activity],
     ['sales', 'Sales & Money', BarChart3],
     ['stock', 'Purchases & Stock', PackageSearch],
-    ['menu', 'Menu & Tables', ShoppingBasket],
-    ['kitchen', 'Orders & Billing', ChefHat],
+    ['catalog', 'Products', ShoppingBasket],
+    ['orders', 'Sales & Billing', Receipt],
     ['people', 'Customers & Team', Users],
     ['control', 'Controls & Activity', ClipboardCheck],
     // Its own top-level view, not a sub-tab of Orders & Billing: an owner asking
@@ -69,8 +68,8 @@ export default function OverviewDashboard({
         {view === 'overview' && <AnalyticsHome data={data} />}
         {view === 'sales' && <div className="space-y-5"><PaymentFinance data={data} /></div>}
         {view === 'stock' && <div className="space-y-5"><InventorySupplier data={data} /></div>}
-        {view === 'menu' && <div className="space-y-5"><MenuPerformance data={data} /><FloorAndReservations data={data} /></div>}
-        {view === 'kitchen' && <div className="space-y-5"><LiveStatus data={data} /><OrderOperationsAnalytics data={data.orderOperations} live={data.live} /></div>}
+        {view === 'catalog' && <div className="space-y-5"><MenuPerformance data={data} /></div>}
+        {view === 'orders' && <div className="space-y-5"><LiveStatus data={data} /><OrderOperationsAnalytics data={data.orderOperations} live={data.live} /></div>}
         {view === 'people' && <div className="space-y-5"><PeoplePerformance data={data} /></div>}
         {view === 'changes' && <div className="space-y-5"><VoidedPaymentControl data={data} /><AllChanges report={data.orderOperations || {}} /></div>}
         {view === 'control' && <div className="space-y-5">

@@ -13,7 +13,7 @@ import { clickableRowClass, useAnalyticsRecords } from './analytics-record-viewe
 
 const NAV = [
   ['overview', 'Overview', ListChecks],
-  ['orders', 'Orders & KOT', ClipboardList],
+  ['orders', 'Sales', ClipboardList],
   ['cancellations', 'Cancellations', AlertTriangle],
   ['billing', 'Bills & Money', WalletCards],
   ['audit', 'Staff & Audit', FileClock],
@@ -22,9 +22,9 @@ const NAV = [
 /**
  * Merge every reversal, rewrite and giveaway into one time-ordered list.
  *
- * Six record types answer the same question — an order cancelled, a kitchen
- * ticket cancelled, a line removed, a bill voided or refunded, a bill reopened
- * and re-billed, a discount given — and each lived on a different tab. Read
+ * Five record types answer the same question — a sale cancelled, a line
+ * removed, a bill voided or refunded, a bill reopened and re-billed, a
+ * discount given — and each lived on a different tab. Read
  * together they are the shift's exception log: the actions that move money
  * without selling anything.
  *
@@ -39,28 +39,18 @@ function buildChangeLog(report, related) {
   const rows = [];
   for (const row of related(report.cancellations)) {
     rows.push({
-      id: `order-${row.id}`, at: row.cancelledAt || row.createdAt, kind: 'Order cancelled', tone: 'negative',
-      document: row.orderNumber, orderId: row.id, billId: row.billId || null, kotId: null,
-      where: `${row.table} \u00b7 ${row.orderType}`,
+      id: `order-${row.id}`, at: row.cancelledAt || row.createdAt, kind: 'Sale cancelled', tone: 'negative',
+      document: row.orderNumber, orderId: row.id, billId: row.billId || null,
+      where: row.orderType,
       value: Math.abs(Number(row.originalValue || 0)),
-      detail: `${row.quantity} item(s), ${row.kotCount} KOT${row.kitchenStarted ? ' \u00b7 prep started' : ''}`,
-      reason: row.reason, actor: row.cancelledBy, actorRole: row.cancelledByRole,
-    });
-  }
-  for (const row of related(report.cancelledKots || report.kots).filter((k) => k.lifecycle === 'cancelled' || k.status === 'cancelled')) {
-    rows.push({
-      id: `kot-${row.id}`, at: row.cancelledAt || row.printedAt, kind: 'KOT cancelled', tone: 'negative',
-      document: row.kotNumber, orderId: row.orderId, billId: null, kotId: row.id,
-      where: row.table && row.table !== '\u2014' ? `Table ${row.table}` : (row.orderType || '\u2014'),
-      value: Math.abs(Number(row.value || 0)),
-      detail: (row.items || []).map((item) => `${item.quantity}\u00d7 ${item.name}`).join(', ') || 'No snapshot',
+      detail: `${row.quantity} item(s)`,
       reason: row.reason, actor: row.cancelledBy, actorRole: row.cancelledByRole,
     });
   }
   for (const row of related(report.itemChanges).filter((i) => ['item_removed', 'kot_item_cancelled'].includes(i.action))) {
     rows.push({
       id: `item-${row.id}`, at: row.createdAt, kind: 'Item removed', tone: 'negative',
-      document: row.orderNumber, orderId: row.orderId, billId: row.billId || null, kotId: null, where: '\u2014',
+      document: row.orderNumber, orderId: row.orderId, billId: row.billId || null, where: '\u2014',
       value: row.valueDifference == null ? null : Math.abs(Number(row.valueDifference)),
       detail: `${row.quantity}\u00d7 ${row.item}`, reason: row.reason, actor: row.actor, actorRole: row.actorRole,
     });
@@ -68,7 +58,7 @@ function buildChangeLog(report, related) {
   for (const row of related(report.corrections)) {
     rows.push({
       id: `corr-${row.id}`, at: row.createdAt, kind: row.type === 'void' ? 'Bill voided' : 'Refund', tone: 'negative',
-      document: row.billNumber, orderId: row.orderId, billId: row.billId, kotId: null, where: row.orderNumber,
+      document: row.billNumber, orderId: row.orderId, billId: row.billId, where: row.orderNumber,
       value: Math.abs(Number(row.amount || 0)),
       detail: row.originalMethods?.join(' + ') || 'Method not recorded',
       reason: row.reason, actor: row.actor, actorRole: row.actorRole,
@@ -78,7 +68,7 @@ function buildChangeLog(report, related) {
     const delta = Number(row.delta || 0);
     rows.push({
       id: `rev-${row.id}`, at: row.createdAt, kind: 'Bill reopened / changed', tone: delta < 0 ? 'negative' : 'warning',
-      document: row.billNumber, orderId: row.orderId, billId: row.billId, kotId: null, where: row.orderNumber, value: Math.abs(delta),
+      document: row.billNumber, orderId: row.orderId, billId: row.billId, where: row.orderNumber, value: Math.abs(delta),
       detail: `${money(row.originalTotal)} \u2192 ${money(row.newTotal)}`,
       reason: row.reason, actor: row.createdBy, actorRole: '',
     });
@@ -86,8 +76,8 @@ function buildChangeLog(report, related) {
   for (const row of related(report.discounts)) {
     rows.push({
       id: `disc-${row.id}`, at: row.createdAt, kind: 'Discount given', tone: 'warning',
-      document: row.billNumber, orderId: row.orderId, billId: row.id || row.billId, kotId: null,
-      where: row.table && row.table !== '\u2014' ? `Table ${row.table}` : (row.orderType || row.orderNumber),
+      document: row.billNumber, orderId: row.orderId, billId: row.id || row.billId,
+      where: row.orderType || row.orderNumber,
       value: Math.abs(Number(row.discount || 0)),
       detail: `${money(row.gross)} \u2192 ${money(row.netItemValue ?? row.gross - row.discount)} (${percent(row.discountPercent)})`,
       reason: row.discountReason, actor: row.cashier, actorRole: row.cashierRole,
@@ -97,13 +87,12 @@ function buildChangeLog(report, related) {
 }
 
 const CHANGE_KINDS = [
-  'Order cancelled', 'KOT cancelled', 'Item removed',
+  'Sale cancelled', 'Item removed',
   'Bill voided', 'Refund', 'Bill reopened / changed', 'Discount given',
 ];
 
 const CHANGE_TONES = {
   'Order cancelled': 'bg-red-50 text-red-700 ring-red-200',
-  'KOT cancelled': 'bg-orange-50 text-orange-700 ring-orange-200',
   'Item removed': 'bg-rose-50 text-rose-700 ring-rose-200',
   'Bill voided': 'bg-violet-50 text-violet-700 ring-violet-200',
   Refund: 'bg-fuchsia-50 text-fuchsia-700 ring-fuchsia-200',
@@ -117,14 +106,14 @@ function ChangeKindPill({ kind }) {
 
 export /** Metric cards double as filters: the count and the way to see it are one control. */
 const CHANGE_GROUPS = [
-  ['cancellations', 'Cancellations', ['Order cancelled', 'KOT cancelled', 'Item removed']],
+  ['cancellations', 'Cancellations', ['Sale cancelled', 'Item removed']],
   ['voids', 'Voids & refunds', ['Bill voided', 'Refund']],
   ['rebilled', 'Re-billed', ['Bill reopened / changed']],
   ['discounts', 'Discounts given', ['Discount given']],
 ];
 
 export function AllChanges({ report, related = (rows) => rows || [] }) {
-  const { openBill, openKot, openOrder } = useAnalyticsRecords();
+  const { openBill, openOrder } = useAnalyticsRecords();
   const [kind, setKind] = useState('');
   const [group, setGroup] = useState('');
   const [search, setSearch] = useState('');
@@ -146,8 +135,7 @@ export function AllChanges({ report, related = (rows) => rows || [] }) {
   const groupUnavailable = (kinds) => rows.filter((row) => kinds.includes(row.kind) && row.value == null).length;
   const selectGroup = (id) => { setGroup((current) => (current === id ? '' : id)); setKind(''); };
   const openChange = (row) => {
-    if (row.kotId) openKot(row.kotId);
-    else if (row.billId) openBill(row.billId);
+    if (row.billId) openBill(row.billId);
     else if (row.orderId) openOrder({ orderId: row.orderId, orderNumber: row.document, billId: row.billId });
   };
   return <>
@@ -155,7 +143,7 @@ export function AllChanges({ report, related = (rows) => rows || [] }) {
       <SectionHeading
         icon={History} tone="rose" eyebrow="Exception log"
         title="Everything cancelled, changed, refunded or discounted"
-        description="One chronological list across orders, kitchen tickets, items and bills. Click a row to open the bill, KOT, or order. Value is the money impact of each action." />
+        description="One chronological list across sales, items and bills. Click a row to open the bill or the sale. Value is the money impact of each action." />
       <div className="grid gap-3 sm:grid-cols-3 xl:grid-cols-6">
         <button type="button" onClick={() => { setGroup(''); setKind(''); }}
           className={`rounded-xl border p-4 text-left transition-colors ${group || kind ? 'border-gray-200 bg-gray-50 hover:border-gray-300' : 'border-gray-950 bg-white'}`}>
@@ -178,7 +166,7 @@ export function AllChanges({ report, related = (rows) => rows || [] }) {
         <input
           value={search}
           onChange={(event) => setSearch(event.target.value)}
-          placeholder="Search bill, order, KOT, table, item, reason or staff…"
+          placeholder="Search bill, sale, item, reason or staff…"
           className="h-10 w-full rounded-lg border border-gray-300 bg-white pl-9 pr-3 text-sm"
         />
       </label>
@@ -211,11 +199,11 @@ export function AllChanges({ report, related = (rows) => rows || [] }) {
               {shown.map((row) => (
                 <tr
                   key={row.id}
-                  className={row.billId || row.kotId || row.orderId ? clickableRowClass : undefined}
+                  className={row.billId || row.orderId ? clickableRowClass : undefined}
                   onClick={() => openChange(row)}
                   onKeyDown={(event) => { if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); openChange(row); } }}
-                  tabIndex={row.billId || row.kotId || row.orderId ? 0 : undefined}
-                  role={row.billId || row.kotId || row.orderId ? 'button' : undefined}
+                  tabIndex={row.billId || row.orderId ? 0 : undefined}
+                  role={row.billId || row.orderId ? 'button' : undefined}
                 >
                   <Td><NepalTime value={row.at} /></Td>
                   <Td><ChangeKindPill kind={row.kind} /></Td>
@@ -237,7 +225,6 @@ export function AllChanges({ report, related = (rows) => rows || [] }) {
 
 const ACTION_LABELS = {
   order_created: 'Order created', item_added: 'Item added', item_edited: 'Item edited', item_removed: 'Item removed',
-  kot_issued: 'KOT issued', kot_reprinted: 'KOT reprinted', kot_cancelled: 'KOT cancelled', kot_item_cancelled: 'KOT item cancelled',
   order_changed_table: 'Table changed', order_moved_to_billing: 'Moved to billing', invoice_generated: 'Bill generated',
   payment_recorded: 'Payment recorded', bill_completed: 'Bill completed', table_released: 'Table released',
   bill_reopened_to_pos: 'Bill reopened', reopen_settled: 'Reopen settled', reopen_refund_settled: 'Reopen reduction refunded',
@@ -270,13 +257,13 @@ export default function OrderOperationsAnalytics({ data, live }) {
 
   return <div className="space-y-5">
     <DashboardSection>
-      <SectionHeading icon={ClipboardList} tone="indigo" eyebrow="Order operations" title="Orders & Billing Analytics" description="Order, KOT, bill and payment states stay separate. Sensitive actions show value, reason, user and time wherever the application persisted them." />
+      <SectionHeading icon={ClipboardList} tone="indigo" eyebrow="Order operations" title="Sales & Billing Analytics" description="Sale, bill and payment states stay separate. Sensitive actions show value, reason, user and time wherever the application persisted them." />
       <div className="mt-6 overflow-x-auto border-b border-gray-200" role="tablist" aria-label="Order analytics sections"><div className="flex min-w-max gap-1">{NAV.map(([id, label, Icon]) => <button key={id} type="button" role="tab" aria-selected={view === id} onClick={() => setView(id)} className={`inline-flex h-11 items-center gap-2 border-b-2 px-3 text-sm font-medium transition-[border-color,color,transform] duration-150 ease-out active:scale-[0.98] ${view === id ? 'border-gray-950 text-gray-950' : 'border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-800'}`}><Icon className="h-4 w-4" />{label}</button>)}</div></div>
       {view !== 'overview' && <Filters search={search} setSearch={setSearch} status={status} setStatus={setStatus} type={type} setType={setType} staff={staff} setStaff={setStaff} staffOptions={staffOptions} />}
     </DashboardSection>
 
     {view === 'overview' && <Overview report={report} live={live} drill={drill} />}
-    {view === 'orders' && <OrdersAndKot report={report} orders={filteredOrders} related={filterRelated} expandedOrder={expandedOrder} setExpandedOrder={setExpandedOrder} />}
+    {view === 'orders' && <OrdersList report={report} orders={filteredOrders} expandedOrder={expandedOrder} setExpandedOrder={setExpandedOrder} />}
     {view === 'cancellations' && <Cancellations report={report} related={filterRelated} />}
     {view === 'billing' && <BillsAndMoney report={report} related={filterRelated} />}
     {view === 'audit' && <StaffAndAudit report={report} related={filterRelated} search={search} />}
@@ -285,9 +272,9 @@ export default function OrderOperationsAnalytics({ data, live }) {
 
 function Filters({ search, setSearch, status, setStatus, type, setType, staff, setStaff, staffOptions }) {
   return <div className="mt-5 grid gap-2 rounded-xl border border-gray-200 bg-gray-50 p-3 sm:grid-cols-2 xl:grid-cols-[minmax(260px,1fr)_180px_180px_220px]">
-    <label className="relative"><Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" /><input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Search order, bill, customer or table…" className="h-10 w-full rounded-lg border border-gray-300 bg-white pl-9 pr-3 text-sm" /></label>
+    <label className="relative"><Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" /><input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Search sale, bill or customer…" className="h-10 w-full rounded-lg border border-gray-300 bg-white pl-9 pr-3 text-sm" /></label>
     <select value={status} onChange={(event) => setStatus(event.target.value)} className="h-10 rounded-lg border border-gray-300 bg-white px-3 text-sm"><option value="">All order statuses</option>{['pending','preparing','ready','dining','awaiting_payment','completed','cancelled'].map((value) => <option key={value} value={value}>{labelize(value)}</option>)}</select>
-    <select value={type} onChange={(event) => setType(event.target.value)} className="h-10 rounded-lg border border-gray-300 bg-white px-3 text-sm"><option value="">All order types</option>{['Dine-in','Takeaway','Delivery','Online ordering'].map((value) => <option key={value}>{value}</option>)}</select>
+    <select value={type} onChange={(event) => setType(event.target.value)} className="h-10 rounded-lg border border-gray-300 bg-white px-3 text-sm"><option value="">All sale types</option>{['Counter','Delivery','Online ordering'].map((value) => <option key={value}>{value}</option>)}</select>
     <select value={staff} onChange={(event) => setStaff(event.target.value)} className="h-10 rounded-lg border border-gray-300 bg-white px-3 text-sm"><option value="">All staff</option>{staffOptions.map((value) => <option key={value}>{value}</option>)}</select>
   </div>;
 }
@@ -297,7 +284,7 @@ function Overview({ report, live, drill }) {
   const cards = [
     ['Orders Created', s.ordersCreated, 'number', 'orders', ''], ['Completed Orders', s.completedOrders, 'number', 'orders', 'completed'], ['Open Orders', s.openOrders, 'number', 'orders', 'pending'], ['Cancelled Orders', s.cancelledOrders, 'number', 'cancellations', 'cancelled'],
     ['Total Order Value', s.totalOrderValue, 'currency', 'orders', ''], ['Completed Sales', s.completedSalesValue, 'currency', 'billing', ''], ['Average Order', s.averageOrderValue, 'currency', 'orders', ''],
-    ['Dine-in', s.dineIn, 'number', 'orders', ''], ['Takeaway', s.takeaway, 'number', 'orders', ''], ['Delivery', s.delivery, 'number', 'orders', ''],
+    ['Counter', s.takeaway, 'number', 'orders', ''], ['Delivery', s.delivery, 'number', 'orders', ''],
     // Collections by medium, beside the order counts: what was actually taken,
     // split the way the drawer is reconciled. QR is every digital medium; the
     // per-provider split belongs to the payment breakdown chart, not a headline.
@@ -311,49 +298,37 @@ function Overview({ report, live, drill }) {
   const typeRows = (report.charts?.byType || []).map((row) => ({ label: row.type, value: row.orders, meta: `${money(row.sales)} · ${percent(row.cancellationRate)} cancelled` }));
   return <>
     <DashboardSection><SectionHeading eyebrow="Period summary" title="Everything that happened to orders" description="Click a metric to open the relevant detail section." /><div className="grid gap-2 sm:grid-cols-3 lg:grid-cols-6">{cards.filter(([, value], index) => index < 16 || Number(value) > 0).map(([label, value, format, target, nextStatus]) => <button key={label} type="button" onClick={() => drill(target, nextStatus)} className="rounded-xl border border-gray-200 bg-gray-50 p-3.5 text-left transition-[border-color,transform] duration-150 ease-out hover:border-gray-300 active:scale-[0.98]"><p className="text-xs text-gray-500">{label}</p><p className={`mt-1 text-lg font-semibold tabular-nums ${/Void|Refund|Discount/.test(label) && Number(value) > 0 ? 'text-red-700' : 'text-gray-950'}`}>{format === 'currency' ? money(value) : Number(value || 0).toLocaleString()}</p></button>)}</div></DashboardSection>
-    <DashboardSection><SectionHeading icon={Clock3} tone="blue" eyebrow="Lifecycle" title="Order → kitchen → billing → payment" description="These are independent persisted states; later stages never overwrite the earlier counts." /><Lifecycle values={report.lifecycle} /><div className="mt-6 grid gap-5 xl:grid-cols-2"><ChartCard title="Orders by Nepal hour" isEmpty={!hourRows.length} empty="No orders in this period."><BarChart data={hourRows} color="blue" format="number" height={240} /></ChartCard><ChartCard title="Order type performance" isEmpty={!typeRows.length} empty="No order types in this period."><RankBars data={typeRows} color="slate" format="number" /></ChartCard></div></DashboardSection>
-    <DashboardSection><SectionHeading icon={ChefHat} tone="orange" eyebrow="Kitchen data quality" title="Prep timing that can be trusted" description={report.kitchenQuality?.note} /><KitchenQuality data={report.kitchenQuality} live={live} /><ReasonGrid reasons={report.reasons} compact /></DashboardSection>
+    <DashboardSection><SectionHeading icon={Clock3} tone="blue" eyebrow="Lifecycle" title="Sale → billing → payment" description="These are independent persisted states; later stages never overwrite the earlier counts." /><Lifecycle values={report.lifecycle} /><div className="mt-6 grid gap-5 xl:grid-cols-2"><ChartCard title="Orders by Nepal hour" isEmpty={!hourRows.length} empty="No orders in this period."><BarChart data={hourRows} color="blue" format="number" height={240} /></ChartCard><ChartCard title="Order type performance" isEmpty={!typeRows.length} empty="No order types in this period."><RankBars data={typeRows} color="slate" format="number" /></ChartCard></div></DashboardSection>
+    <DashboardSection><SectionHeading icon={AlertTriangle} tone="orange" eyebrow="Reasons" title="Why sales were changed" description="Every cancellation, void and refund reason staff recorded in this period." /><ReasonGrid reasons={report.reasons} compact /></DashboardSection>
   </>;
 }
 
 function Lifecycle({ values = {} }) {
-  const steps = [['Created', values.ordersCreated], ['KOT Sent', values.kotSent], ['Preparing', values.preparing], ['Ready', values.ready], ['Served', values.served], ['Billed', values.billed], ['Paid', values.paid]];
-  return <div className="grid gap-2 sm:grid-cols-4 xl:grid-cols-7">{steps.map(([label, value], index) => <div key={label} className="relative rounded-xl border border-gray-200 bg-white p-4"><p className="text-xs text-gray-500">{label}</p><p className="mt-1 text-2xl font-semibold tabular-nums text-gray-950">{Number(value || 0)}</p>{index < steps.length - 1 && <span className="absolute -right-2 top-1/2 z-10 hidden h-px w-2 bg-gray-300 xl:block" />}</div>)}</div>;
+  const steps = [['Created', values.ordersCreated], ['Billed', values.billed], ['Paid', values.paid]];
+  return <div className="grid gap-2 sm:grid-cols-3">{steps.map(([label, value], index) => <div key={label} className="relative rounded-xl border border-gray-200 bg-white p-4"><p className="text-xs text-gray-500">{label}</p><p className="mt-1 text-2xl font-semibold tabular-nums text-gray-950">{Number(value || 0)}</p>{index < steps.length - 1 && <span className="absolute -right-2 top-1/2 z-10 hidden h-px w-2 bg-gray-300 xl:block" />}</div>)}</div>;
 }
 
-function KitchenQuality({ data = {}, live = {} }) {
-  const rows = [
-    ['Valid completed KOTs', data.validCompleted, 'positive'], ['Auto-closed / incomplete', data.autoClosedOrIncomplete, 'warning'], ['Invalid timestamps', data.invalidTimestamps, 'negative'], ['Still open', data.stillOpen, 'warning'], ['Cancelled', data.cancelled, 'negative'],
-    ['Average prep', data.averagePrepMinutes == null ? 'Not enough valid data' : `${data.averagePrepMinutes} min`, 'default'], ['Median prep', data.medianPrepMinutes == null ? 'Not enough valid data' : `${data.medianPrepMinutes} min`, 'default'], ['Live backlog', Number(live?.preparingKots || 0) + Number(live?.pendingKots || 0), 'warning'],
-  ];
-  return <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">{rows.map(([label, value, tone]) => <div key={label} className="rounded-xl border border-gray-100 bg-gray-50 p-4"><p className="text-xs text-gray-500">{label}</p><p className={`mt-1 text-base font-semibold ${tone === 'positive' ? 'text-emerald-700' : tone === 'negative' ? 'text-red-700' : tone === 'warning' ? 'text-amber-700' : 'text-gray-950'}`}>{value ?? 0}</p></div>)}</div>;
-}
-
-function OrdersAndKot({ report, orders, related, expandedOrder, setExpandedOrder }) {
-  const { openKot } = useAnalyticsRecords();
-  const kots = related(report.kots);
+function OrdersList({ report, orders, expandedOrder, setExpandedOrder }) {
   return <>
-    <DashboardSection><SectionHeading icon={ClipboardList} tone="blue" eyebrow="Orders" title={`${orders.length} order${orders.length === 1 ? '' : 's'} match the filters`} description="Click an order to open its bill (same as the sales report). Expand the order number for the audit timeline." /><div className="max-h-[620px] overflow-auto"><TableWrap minWidth="1120px"><thead className="sticky top-0 z-10 bg-gray-50 text-xs uppercase tracking-wide text-gray-400"><tr><Th>Placed</Th><Th>Order</Th><Th>Status</Th><Th>Type / table</Th><Th>Customer</Th><Th>Staff</Th><Th right>Items</Th><Th right>Value</Th><Th>Bill</Th></tr></thead><tbody className="divide-y divide-gray-100">{orders.map((row) => <OrderRow key={row.id} row={row} expanded={expandedOrder === row.id} onExpand={() => setExpandedOrder(expandedOrder === row.id ? null : row.id)} timeline={(report.timeline || []).filter((event) => Number(event.orderId) === Number(row.id))} />)}</tbody></TableWrap></div></DashboardSection>
-    <DashboardSection><SectionHeading icon={ChefHat} tone="orange" eyebrow="KOT" title="Kitchen ticket lifecycle" description="Click a KOT row to open the ticket popup. Completed-normally tickets alone contribute to prep averages." /><div className="max-h-[620px] overflow-auto"><TableWrap minWidth="1120px"><thead className="sticky top-0 z-10 bg-gray-50 text-xs uppercase tracking-wide text-gray-400"><tr><Th>Issued</Th><Th>KOT / Order</Th><Th>Table</Th><Th>Status</Th><Th>Lifecycle quality</Th><Th right>Qty</Th><Th right>Value</Th><Th right>Prep</Th><Th>Reason / actor</Th></tr></thead><tbody className="divide-y divide-gray-100">{kots.map((row) => <tr key={row.id} className={clickableRowClass} onClick={() => openKot(row.id)} onKeyDown={(event) => { if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); openKot(row.id); } }} tabIndex={0} role="button"><Td><NepalTime value={row.printedAt} /></Td><Td><span className="font-semibold text-gray-900">{row.kotNumber}</span><p className="text-xs text-gray-400">{row.orderNumber}</p></Td><Td>{row.table}</Td><Td><StatusPill tone={statusTone(row.status)}>{labelize(row.status)}</StatusPill></Td><Td><QualityPill value={row.lifecycle} /></Td><Td right>{row.quantity}</Td><Td right>{money(row.value)}</Td><Td right>{row.prepMinutes == null ? '—' : `${row.prepMinutes} min`}</Td><Td><p>{row.reason}</p>{row.cancelledAt && <p className="text-xs text-gray-400">{row.cancelledBy} · <NepalTime value={row.cancelledAt} /></p>}</Td></tr>)}</tbody></TableWrap></div></DashboardSection>
+    <DashboardSection><SectionHeading icon={ClipboardList} tone="blue" eyebrow="Orders" title={`${orders.length} sale${orders.length === 1 ? '' : 's'} match the filters`} description="Click a sale to open its bill (same as the sales report). Expand the sale number for the audit timeline." /><div className="max-h-[620px] overflow-auto"><TableWrap minWidth="1120px"><thead className="sticky top-0 z-10 bg-gray-50 text-xs uppercase tracking-wide text-gray-400"><tr><Th>Placed</Th><Th>Sale</Th><Th>Status</Th><Th>Type</Th><Th>Customer</Th><Th>Staff</Th><Th right>Items</Th><Th right>Value</Th><Th>Bill</Th></tr></thead><tbody className="divide-y divide-gray-100">{orders.map((row) => <OrderRow key={row.id} row={row} expanded={expandedOrder === row.id} onExpand={() => setExpandedOrder(expandedOrder === row.id ? null : row.id)} timeline={(report.timeline || []).filter((event) => Number(event.orderId) === Number(row.id))} />)}</tbody></TableWrap></div></DashboardSection>
   </>;
 }
 
 function OrderRow({ row, expanded, onExpand, timeline }) {
   const { openOrder } = useAnalyticsRecords();
-  return <><tr className={`${clickableRowClass} hover:bg-gray-50`} onClick={() => openOrder(row)} onKeyDown={(event) => { if (event.key === 'Enter') openOrder(row); }} tabIndex={0} role="button"><Td><NepalTime value={row.createdAt} /></Td><Td><button type="button" onClick={(event) => { event.stopPropagation(); onExpand(); }} className="font-semibold text-gray-900 hover:underline">{row.orderNumber}</button></Td><Td><StatusPill tone={statusTone(row.status)}>{labelize(row.status)}</StatusPill></Td><Td>{row.orderType}<p className="text-xs text-gray-400">Table {row.table}</p></Td><Td>{row.customer}</Td><Td>{row.staff}<p className="text-xs text-gray-400">{row.staffRole}</p></Td><Td right>{row.quantity}</Td><Td right><span className="font-semibold">{money(row.originalValue)}</span></Td><Td>{row.billNumber ? <span className="font-medium text-blue-700">{row.billNumber}</span> : '—'}</Td></tr>{expanded && <tr><td colSpan={9} className="bg-slate-50 px-5 py-4"><OrderTimeline rows={timeline} /></td></tr>}</>;
+  return <><tr className={`${clickableRowClass} hover:bg-gray-50`} onClick={() => openOrder(row)} onKeyDown={(event) => { if (event.key === 'Enter') openOrder(row); }} tabIndex={0} role="button"><Td><NepalTime value={row.createdAt} /></Td><Td><button type="button" onClick={(event) => { event.stopPropagation(); onExpand(); }} className="font-semibold text-gray-900 hover:underline">{row.orderNumber}</button></Td><Td><StatusPill tone={statusTone(row.status)}>{labelize(row.status)}</StatusPill></Td><Td>{row.orderType}</Td><Td>{row.customer}</Td><Td>{row.staff}<p className="text-xs text-gray-400">{row.staffRole}</p></Td><Td right>{row.quantity}</Td><Td right><span className="font-semibold">{money(row.originalValue)}</span></Td><Td>{row.billNumber ? <span className="font-medium text-blue-700">{row.billNumber}</span> : '—'}</Td></tr>{expanded && <tr><td colSpan={9} className="bg-slate-50 px-5 py-4"><OrderTimeline rows={timeline} /></td></tr>}</>;
 }
 
 function Cancellations({ report, related }) {
-  const { openOrder, openKot } = useAnalyticsRecords();
+  const { openOrder } = useAnalyticsRecords();
   const orders = related(report.cancelledOrders);
-  const kots = related(report.cancelledKots);
   const items = related(report.itemChanges).filter((row) => ['item_removed', 'kot_item_cancelled'].includes(row.action));
   const value = orders.reduce((sum, row) => sum + Number(row.originalValue || 0), 0);
   const rate = report.summary?.ordersCreated ? orders.length / report.summary.ordersCreated * 100 : 0;
   return <>
-    <DashboardSection><SectionHeading icon={AlertTriangle} tone="rose" eyebrow="Cancellations" title="Cancelled orders, KOTs and individual items" description="Click a row to open the order or KOT. Whole-order, kitchen-ticket and line-item cancellations remain separate records." /><div className="grid gap-3 sm:grid-cols-4"><MiniMetric label="Cancelled orders" value={orders.length} /><MiniMetric label="Order value affected" value={money(value)} negative /><MiniMetric label="Cancellation rate" value={percent(rate)} /><MiniMetric label="Average cancelled order" value={money(orders.length ? value / orders.length : 0)} /></div></DashboardSection>
-    <DashboardSection><SectionHeading title="Cancelled orders" description="Cancellation actor is shown only when an audit record exists; older rows are explicitly marked Not persisted." /><ScrollTable><table className="w-full min-w-[1280px] text-left text-sm"><thead className="bg-gray-50 text-xs uppercase tracking-wide text-gray-400"><tr><Th>Cancelled</Th><Th>Order</Th><Th>Table / type</Th><Th>Customer</Th><Th right>Items</Th><Th right>Value</Th><Th>Prior activity</Th><Th>Reason</Th><Th>Cancelled by</Th></tr></thead><tbody className="divide-y divide-gray-100">{orders.map((row) => <tr key={row.id} className={clickableRowClass} onClick={() => openOrder(row)} onKeyDown={(event) => { if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); openOrder(row); } }} tabIndex={0} role="button"><Td><NepalTime value={row.cancelledAt} /></Td><Td><span className="font-semibold">{row.orderNumber}</span></Td><Td>{row.table} · {row.orderType}</Td><Td>{row.customer}</Td><Td right>{row.quantity}</Td><Td right>{money(row.originalValue)}</Td><Td>{row.kotCount} KOT{row.kitchenStarted ? ' · prep started' : ''}</Td><Td>{row.reason}</Td><Td>{row.cancelledBy}<p className="text-xs text-gray-400">{row.cancelledByRole}</p></Td></tr>)}</tbody></table></ScrollTable></DashboardSection>
-    <DashboardSection><div className="grid gap-7 xl:grid-cols-2"><div><SectionHeading title="Cancelled KOTs" description="Full ticket cancellations and cancellation tickets are shown with their saved item snapshot." /><ScrollTable><table className="w-full min-w-[780px] text-left text-sm"><thead className="bg-gray-50 text-xs uppercase tracking-wide text-gray-400"><tr><Th>KOT / Order</Th><Th>Items</Th><Th right>Value</Th><Th>Previous state</Th><Th>Reason / actor</Th></tr></thead><tbody className="divide-y divide-gray-100">{kots.map((row) => <tr key={row.id} className={clickableRowClass} onClick={() => openKot(row.id)} onKeyDown={(event) => { if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); openKot(row.id); } }} tabIndex={0} role="button"><Td><span className="font-semibold">{row.kotNumber}</span><p className="text-xs text-gray-400">{row.orderNumber}</p></Td><Td>{row.items.map((item) => `${item.quantity}× ${item.name}`).join(', ') || 'No snapshot'}</Td><Td right>{money(row.value)}</Td><Td>{row.previousStatus || '—'}</Td><Td>{row.reason}<p className="text-xs text-gray-400">{row.cancelledBy}</p></Td></tr>)}</tbody></table></ScrollTable></div><div><SectionHeading title="Item removals and reductions" description="Draft removals and sent-item cancellation notices from the POS audit trail." /><ScrollTable><table className="w-full min-w-[760px] text-left text-sm"><thead className="bg-gray-50 text-xs uppercase tracking-wide text-gray-400"><tr><Th>Time</Th><Th>Order / item</Th><Th>Action</Th><Th right>Impact</Th><Th>Reason</Th><Th>Staff</Th></tr></thead><tbody className="divide-y divide-gray-100">{items.map((row) => <tr key={row.id} className={row.orderId ? clickableRowClass : undefined} onClick={() => row.orderId && openOrder({ orderId: row.orderId, orderNumber: row.orderNumber })}><Td><NepalTime value={row.createdAt} /></Td><Td>{row.orderNumber}<p className="text-xs text-gray-400">{row.quantity}× {row.item}</p></Td><Td>{labelize(row.action)}</Td><Td right><span className="text-red-700">{money(row.valueDifference)}</span></Td><Td>{row.reason}</Td><Td>{row.actor}</Td></tr>)}</tbody></table></ScrollTable></div></div></DashboardSection>
+    <DashboardSection><SectionHeading icon={AlertTriangle} tone="rose" eyebrow="Cancellations" title="Cancelled sales and individual items" description="Click a row to open the sale. Whole-sale and line-item cancellations remain separate records." /><div className="grid gap-3 sm:grid-cols-4"><MiniMetric label="Cancelled sales" value={orders.length} /><MiniMetric label="Sale value affected" value={money(value)} negative /><MiniMetric label="Cancellation rate" value={percent(rate)} /><MiniMetric label="Average cancelled sale" value={money(orders.length ? value / orders.length : 0)} /></div></DashboardSection>
+    <DashboardSection><SectionHeading title="Cancelled sales" description="Cancellation actor is shown only when an audit record exists; older rows are explicitly marked Not persisted." /><ScrollTable><table className="w-full min-w-[1280px] text-left text-sm"><thead className="bg-gray-50 text-xs uppercase tracking-wide text-gray-400"><tr><Th>Cancelled</Th><Th>Sale</Th><Th>Type</Th><Th>Customer</Th><Th right>Items</Th><Th right>Value</Th><Th>Reason</Th><Th>Cancelled by</Th></tr></thead><tbody className="divide-y divide-gray-100">{orders.map((row) => <tr key={row.id} className={clickableRowClass} onClick={() => openOrder(row)} onKeyDown={(event) => { if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); openOrder(row); } }} tabIndex={0} role="button"><Td><NepalTime value={row.cancelledAt} /></Td><Td><span className="font-semibold">{row.orderNumber}</span></Td><Td>{row.orderType}</Td><Td>{row.customer}</Td><Td right>{row.quantity}</Td><Td right>{money(row.originalValue)}</Td><Td>{row.reason}</Td><Td>{row.cancelledBy}<p className="text-xs text-gray-400">{row.cancelledByRole}</p></Td></tr>)}</tbody></table></ScrollTable></DashboardSection>
+    <DashboardSection><div><div><SectionHeading title="Item removals and reductions" description="Draft removals and sent-item cancellation notices from the POS audit trail." /><ScrollTable><table className="w-full min-w-[760px] text-left text-sm"><thead className="bg-gray-50 text-xs uppercase tracking-wide text-gray-400"><tr><Th>Time</Th><Th>Order / item</Th><Th>Action</Th><Th right>Impact</Th><Th>Reason</Th><Th>Staff</Th></tr></thead><tbody className="divide-y divide-gray-100">{items.map((row) => <tr key={row.id} className={row.orderId ? clickableRowClass : undefined} onClick={() => row.orderId && openOrder({ orderId: row.orderId, orderNumber: row.orderNumber })}><Td><NepalTime value={row.createdAt} /></Td><Td>{row.orderNumber}<p className="text-xs text-gray-400">{row.quantity}× {row.item}</p></Td><Td>{labelize(row.action)}</Td><Td right><span className="text-red-700">{money(row.valueDifference)}</span></Td><Td>{row.reason}</Td><Td>{row.actor}</Td></tr>)}</tbody></table></ScrollTable></div></div></DashboardSection>
     <DashboardSection><SectionHeading title="Reason analytics" description="No reason recorded remains a visible exception category." /><ReasonGrid reasons={report.reasons} /></DashboardSection>
   </>;
 }
@@ -403,7 +378,7 @@ function BillsAndMoney({ report, related }) {
 function StaffAndAudit({ report, related, search }) {
   const timeline = related(report.timeline).filter((row) => !search || `${row.orderNumber || ''} ${row.action} ${row.actor} ${row.reason || ''}`.toLowerCase().includes(search.toLowerCase()));
   return <>
-    <DashboardSection><SectionHeading icon={Users} tone="violet" eyebrow="Staff activity" title="Objective action and value attribution" description="This report surfaces actions and rates; it does not label staff behaviour as suspicious or fraudulent." /><ScrollTable><table className="w-full min-w-[1280px] text-left text-sm"><thead className="bg-gray-50 text-xs uppercase tracking-wide text-gray-400"><tr><Th>Staff</Th><Th right>Orders</Th><Th right>Sales handled</Th><Th right>Bills</Th><Th right>Discounts</Th><Th right>Discount value</Th><Th right>Order cancels</Th><Th right>Item cancels</Th><Th right>KOT cancels</Th><Th right>Voids</Th><Th right>Reopens</Th><Th right>Refunds</Th></tr></thead><tbody className="divide-y divide-gray-100">{(report.staff || []).map((row) => <tr key={row.id || row.name}><Td><span className="font-semibold">{row.name}</span><p className="text-xs text-gray-400">{row.role}</p></Td><Td right>{row.ordersCreated}</Td><Td right>{money(row.salesHandled)}</Td><Td right>{row.billsGenerated}</Td><Td right>{row.discounts}</Td><Td right>{money(row.discountValue)}</Td><Td right>{row.ordersCancelled}</Td><Td right>{row.itemsCancelled}</Td><Td right>{row.kotsCancelled}</Td><Td right>{row.billsVoided}</Td><Td right>{row.billsReopened}</Td><Td right>{row.refunds}</Td></tr>)}</tbody></table></ScrollTable></DashboardSection>
+    <DashboardSection><SectionHeading icon={Users} tone="violet" eyebrow="Staff activity" title="Objective action and value attribution" description="This report surfaces actions and rates; it does not label staff behaviour as suspicious or fraudulent." /><ScrollTable><table className="w-full min-w-[1280px] text-left text-sm"><thead className="bg-gray-50 text-xs uppercase tracking-wide text-gray-400"><tr><Th>Staff</Th><Th right>Orders</Th><Th right>Sales handled</Th><Th right>Bills</Th><Th right>Discounts</Th><Th right>Discount value</Th><Th right>Order cancels</Th><Th right>Item cancels</Th><Th right>Voids</Th><Th right>Reopens</Th><Th right>Refunds</Th></tr></thead><tbody className="divide-y divide-gray-100">{(report.staff || []).map((row) => <tr key={row.id || row.name}><Td><span className="font-semibold">{row.name}</span><p className="text-xs text-gray-400">{row.role}</p></Td><Td right>{row.ordersCreated}</Td><Td right>{money(row.salesHandled)}</Td><Td right>{row.billsGenerated}</Td><Td right>{row.discounts}</Td><Td right>{money(row.discountValue)}</Td><Td right>{row.ordersCancelled}</Td><Td right>{row.itemsCancelled}</Td><Td right>{row.billsVoided}</Td><Td right>{row.billsReopened}</Td><Td right>{row.refunds}</Td></tr>)}</tbody></table></ScrollTable></DashboardSection>
     <DashboardSection><SectionHeading icon={ChefHat} tone="teal" title="Item operational analytics" description="Revenue, cancellations and modifications use persisted order items and POS audit events. Item-level discounts/refunds are omitted because they are not persisted separately." /><ScrollTable><table className="w-full min-w-[900px] text-left text-sm"><thead className="bg-gray-50 text-xs uppercase tracking-wide text-gray-400"><tr><Th>Item</Th><Th right>Ordered</Th><Th right>Revenue</Th><Th right>Cancelled qty</Th><Th right>Cancellation value</Th><Th right>Cancellation rate</Th><Th right>Modifications</Th></tr></thead><tbody className="divide-y divide-gray-100">{(report.items || []).map((row) => <tr key={`${row.item}-${row.variant || ''}`}><Td><span className="font-medium">{row.item}</span>{row.variant && <p className="text-xs text-gray-400">{row.variant}</p>}</Td><Td right>{row.orderedQuantity}</Td><Td right>{money(row.revenue)}</Td><Td right>{row.cancelledQuantity}</Td><Td right>{money(row.cancellationValue)}</Td><Td right>{percent(row.cancellationRate)}</Td><Td right>{row.modifications}</Td></tr>)}</tbody></table></ScrollTable></DashboardSection>
     <DashboardSection><SectionHeading icon={FileClock} tone="slate" title="Complete persisted audit trail" description="Events are shown only when they were actually written to POS or bill audit history." /><AuditTable rows={timeline} /></DashboardSection>
     <DashboardSection><SectionHeading title="Data coverage notes" /><ul className="space-y-2 text-sm text-gray-600">{(report.limitations || []).map((note) => <li key={note} className="flex gap-2"><span className="text-gray-300">•</span><span>{note}</span></li>)}</ul></DashboardSection>
@@ -411,16 +386,15 @@ function StaffAndAudit({ report, related, search }) {
 }
 
 function ReasonGrid({ reasons = {}, compact = false }) {
-  const groups = [['Order cancellations', reasons.orderCancellations], ['KOT cancellations', reasons.kotCancellations], ['Item cancellations', reasons.itemCancellations], ['Bill voids', reasons.billVoids], ['Refunds', reasons.refunds], ['Bill reopens', reasons.reopens], ['Discounts', reasons.discounts]].filter(([, rows]) => rows?.length);
+  const groups = [['Sale cancellations', reasons.orderCancellations], ['Item cancellations', reasons.itemCancellations], ['Bill voids', reasons.billVoids], ['Refunds', reasons.refunds], ['Bill reopens', reasons.reopens], ['Discounts', reasons.discounts]].filter(([, rows]) => rows?.length);
   if (!groups.length) return compact ? null : <p className="py-10 text-center text-sm text-gray-400">No sensitive-action reasons in this period.</p>;
   return <div className={`${compact ? 'mt-6' : ''} grid gap-4 xl:grid-cols-2`}>{groups.map(([title, rows]) => <div key={title} className="rounded-xl border border-gray-200 bg-white p-4"><h3 className="text-sm font-semibold text-gray-900">{title}</h3><div className="mt-3 divide-y divide-gray-100">{rows.slice(0, compact ? 4 : 8).map((row) => <div key={row.reason} className="flex items-center justify-between gap-4 py-2.5 text-sm"><div className="min-w-0"><p className="truncate font-medium text-gray-800">{row.reason}</p><p className="text-xs text-gray-400">{percent(row.share)} of actions</p></div><div className="shrink-0 text-right"><p className="font-semibold tabular-nums">{row.count}</p>{row.value > 0 && <p className="text-xs tabular-nums text-gray-500">{money(row.value)}</p>}</div></div>)}</div></div>)}</div>;
 }
 
 function AuditTable({ rows = [] }) {
-  const { openOrder, openBill, openKot } = useAnalyticsRecords();
+  const { openOrder, openBill } = useAnalyticsRecords();
   const openRow = (row) => {
-    if (row.kotId) openKot(row.kotId);
-    else if (row.billId) openBill(row.billId);
+    if (row.billId) openBill(row.billId);
     else if (row.orderId) openOrder({ orderId: row.orderId, orderNumber: row.orderNumber });
   };
   return (
@@ -433,7 +407,7 @@ function AuditTable({ rows = [] }) {
           {rows.map((row) => (
             <tr
               key={row.id}
-              className={row.orderId || row.billId || row.kotId ? clickableRowClass : undefined}
+              className={row.orderId || row.billId ? clickableRowClass : undefined}
               onClick={() => openRow(row)}
             >
               <Td><NepalTime value={row.createdAt} /></Td>

@@ -3,8 +3,8 @@
 import { useEffect, useState } from 'react';
 import Link from '@/components/admin/panel-link';
 import {
-  AlertTriangle, Award, ArrowRight, CheckCircle2, ChefHat, CircleDollarSign,
-  Clock3, Download, Info, LayoutGrid, PackageSearch, ReceiptText, Search, ShieldAlert, Users, X,
+  AlertTriangle, Award, ArrowRight, CheckCircle2, CircleDollarSign,
+  Download, Info, PackageSearch, ReceiptText, Search, ShieldAlert, Users, X,
 } from 'lucide-react';
 import { ChartCard, RankBars } from '@/components/admin/report-kit';
 import { Bar, BarChart, CartesianGrid, Legend, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
@@ -17,7 +17,7 @@ import {
 } from './analytics-ui';
 import { compactBillNumber, compactOrderNumber } from '@/lib/document-display';
 import { orderTypeLabel } from '@/lib/order-types.js';
-import { formatCalendarDate, formatCalendarRangeLabel } from '@/lib/calendar-system.js';
+import { formatCalendarRangeLabel } from '@/lib/calendar-system.js';
 import { clickableRowClass, useAnalyticsRecords } from './analytics-record-viewer';
 
 // Driven by the Analytics page's own period filter (data.range) — no second
@@ -235,11 +235,8 @@ function CreditEntryModal({ entry, onClose }) {
 export function LiveStatus({ data }) {
   const live = data.live;
   const items = [
-    ['Tables Occupied', live.occupiedTables], ['Tables Available', live.availableTables],
-    ['Orders Open', live.openOrders], ['Open Orders Value', money(live.openOrdersValue)],
-    ['KOTs Preparing', live.preparingKots],
-    ['KOTs Ready', live.readyKots], ['Pending Payments', live.pendingPayments],
-    ['Reservations Soon', live.upcomingReservations],
+    ['Sales Open', live.openOrders], ['Open Sales Value', money(live.openOrdersValue)],
+    ['Pending Payments', live.pendingPayments],
   ];
   return (
     <section className="rounded-2xl border border-gray-800 bg-gray-950 px-5 py-5 text-white shadow-sm sm:px-6">
@@ -248,7 +245,7 @@ export function LiveStatus({ data }) {
           <span className="h-2 w-2 shrink-0 animate-pulse rounded-full bg-emerald-400" />
           <div>
             <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-emerald-400">{live.label}</p>
-            <p className="mt-0.5 text-sm text-gray-400">Current operational state</p>
+            <p className="mt-0.5 text-sm text-gray-400">Current counter state</p>
           </div>
         </div>
         <div className="grid flex-1 grid-cols-2 gap-x-6 gap-y-3 sm:grid-cols-4 xl:grid-cols-7">
@@ -279,136 +276,6 @@ export function AttentionCenter({ rows }) {
       </div>
     </DashboardSection>
   );
-}
-
-export function LifecycleKitchen({ data }) {
-  const life = data.lifecycle;
-  const kitchen = data.kitchen;
-  const lifecycleRows = [
-    ['Orders created', life.ordersCreated], ['KOTs sent', life.kotsSent], ['Preparing', life.preparing], ['Ready', life.ready],
-    ['Completed bills', life.completedBills], ['Cancelled orders', life.cancelledOrders], ['Cancelled KOTs', life.cancelledKots], ['Voided bills', life.voidedBills],
-  ];
-  const cancellationBars = (kitchen.cancellationReasons || []).map((row) => ({ label: row.reason, value: row.count }));
-  return (
-    <DashboardSection>
-      <SectionHeading icon={ChefHat} tone="orange" eyebrow="Order flow" title="Lifecycle and kitchen health" description="Order, KOT, bill, and payment states remain separate so bottlenecks are visible." action={<Link href="/admin/reports?tab=orders" className="inline-flex items-center gap-1 text-sm font-medium text-gray-700">Orders analytics <ArrowRight className="h-4 w-4" /></Link>} />
-      <div className="grid gap-3 sm:grid-cols-4 xl:grid-cols-8">
-        {lifecycleRows.map(([label, value]) => <StatCell key={label} label={label} value={value} />)}
-      </div>
-      <div className="mt-5 grid gap-5 xl:grid-cols-[1fr_1.15fr]">
-        <div className="grid grid-cols-2 gap-4 rounded-xl border border-gray-100 bg-gray-50 p-4 sm:grid-cols-3">
-          <Metric label="KOTs Generated" value={kitchen.generated} />
-          <Metric label="Completed" value={kitchen.completed} tone="positive" />
-          <Metric label="Cancelled" value={kitchen.cancelled} tone={kitchen.cancelled ? 'negative' : 'default'} />
-          <Metric label="Avg Prep" value={kitchen.averagePrepMinutes} format="minutes" />
-          <Metric label="Median Prep" value={kitchen.medianPrepMinutes} format="minutes" />
-          <Metric label="Over 25 min" value={kitchen.overTarget} tone={kitchen.overTarget ? 'warning' : 'default'} />
-          <Metric label="Current Backlog" value={kitchen.backlog} tone={kitchen.backlog ? 'warning' : 'default'} />
-          <Metric label="Completion Rate" value={life.completionRate} format="percent" />
-          <Metric label="KOT Cancel Rate" value={life.kotCancellationRate} format="percent" />
-        </div>
-        <ChartCard title="KOT Cancellation Reasons" isEmpty={!cancellationBars.length} empty="No cancelled KOTs in this period."><RankBars data={cancellationBars} color="red" format="number" /></ChartCard>
-      </div>
-      {kitchen.slowest?.length > 0 && <div className="mt-5"><h3 className="mb-2 text-sm font-semibold text-gray-900">Slowest completed KOTs</h3><TableWrap minWidth="620px"><thead className="bg-gray-50 text-xs uppercase tracking-wide text-gray-400"><tr><th className="px-4 py-2.5">KOT</th><th className="px-4 py-2.5">Order</th><th className="px-4 py-2.5">Table</th><th className="px-4 py-2.5 text-right">Items</th><th className="px-4 py-2.5 text-right">Prep time</th></tr></thead><tbody className="divide-y divide-gray-100">{kitchen.slowest.map((row) => <tr key={row.id}><td className="px-4 py-3 font-medium">{row.kot_number || row.id}</td><td className="px-4 py-3">{row.order_number}</td><td className="px-4 py-3">{row.table_number || '-'}</td><td className="px-4 py-3 text-right tabular-nums">{row.item_count}</td><td className="px-4 py-3 text-right font-medium tabular-nums">{Math.round(row.prep_minutes)} min</td></tr>)}</tbody></TableWrap></div>}
-    </DashboardSection>
-  );
-}
-
-export function FloorAndReservations({ data }) {
-  const table = data.tables;
-  const reservations = data.reservations;
-  return (
-    <DashboardSection>
-      <SectionHeading icon={LayoutGrid} tone="cyan" eyebrow="Floor" title="Tables and reservations" description="Historical table results use the table snapshot saved on each order; live occupancy uses current table state." />
-      <div className="grid min-w-0 gap-5 xl:grid-cols-[1.35fr_0.65fr] [&>*]:min-w-0">
-        <TablePaymentChart rows={table.paymentMix || []} />
-        <div className="space-y-4">
-          <div className="grid grid-cols-2 gap-4 rounded-xl border border-gray-100 bg-gray-50 p-4 sm:grid-cols-3">
-            <Metric label="Occupancy Now" value={table.occupancy} format="percent" />
-            <Metric label="Occupied" value={table.occupied} />
-            <Metric label="Available" value={table.available} />
-            <Metric label="Avg sitting" value={table.averageDiningMinutes} format="minutes" />
-            <Metric label="Reservations" value={reservations.total} />
-            <Metric label="Guests Expected" value={reservations.guests} />
-          </div>
-          {(table.rows || []).length > 0 && (
-            <div>
-              <h3 className="mb-2 text-sm font-semibold text-gray-900">Sitting time by table</h3>
-              <div className="space-y-2 sm:hidden">
-                {table.rows.map((row) => (
-                  <div key={row.table_number} className="rounded-xl border border-gray-200 bg-white p-3">
-                    <p className="font-semibold text-gray-900">Table {row.table_number}</p>
-                    <dl className="mt-2 grid grid-cols-3 gap-2 text-xs">
-                      <div><dt className="text-gray-400">Orders</dt><dd className="mt-0.5 font-semibold tabular-nums text-gray-800">{row.orders}</dd></div>
-                      <div><dt className="text-gray-400">Revenue</dt><dd className="mt-0.5 font-semibold tabular-nums text-emerald-700">{money(row.revenue)}</dd></div>
-                      <div className="text-right"><dt className="text-gray-400">Avg sitting</dt><dd className="mt-0.5 font-semibold tabular-nums text-gray-800">{row.dining_minutes ? `${Math.round(row.dining_minutes)} min` : '—'}</dd></div>
-                    </dl>
-                  </div>
-                ))}
-              </div>
-              <div className="hidden sm:block">
-                <TableWrap minWidth="480px">
-                <thead className="bg-gray-50 text-xs uppercase tracking-wide text-gray-400">
-                  <tr>
-                    <th className="px-4 py-2.5">Table</th>
-                    <th className="px-4 py-2.5 text-right">Orders</th>
-                    <th className="px-4 py-2.5 text-right">Revenue</th>
-                    <th className="px-4 py-2.5 text-right">Avg sitting</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-gray-100 bg-white">
-                  {table.rows.map((row) => (
-                    <tr key={row.table_number}>
-                      <td className="px-4 py-2.5 font-medium">Table {row.table_number}</td>
-                      <td className="px-4 py-2.5 text-right tabular-nums">{row.orders}</td>
-                      <td className="px-4 py-2.5 text-right tabular-nums">{money(row.revenue)}</td>
-                      <td className="px-4 py-2.5 text-right tabular-nums">{row.dining_minutes ? `${Math.round(row.dining_minutes)} min` : '—'}</td>
-                    </tr>
-                  ))}
-                </tbody>
-                </TableWrap>
-              </div>
-            </div>
-          )}
-          <div className="rounded-xl border border-gray-100 bg-gray-50 p-4">
-            <h3 className="flex items-center gap-2 text-sm font-semibold text-gray-900"><Users className="h-4 w-4" /> Upcoming reservations</h3>
-            <div className="mt-2 divide-y divide-gray-100">{reservations.upcoming?.length ? reservations.upcoming.map((row) => <div key={row.id} className="flex items-center justify-between gap-4 py-2.5 text-sm"><div><p className="font-medium text-gray-900">{row.name}</p><p className="text-xs text-gray-400">{formatCalendarDate(row.date)} {row.time || ''} | {row.party_size || 0} guests</p></div><span className="text-gray-600">{row.table_number ? `Table ${row.table_number}` : 'Unassigned'}</span></div>) : <p className="py-6 text-center text-sm text-gray-400">No upcoming reservations.</p>}</div>
-          </div>
-        </div>
-      </div>
-    </DashboardSection>
-  );
-}
-
-function TablePaymentChart({ rows = [] }) {
-  const height = Math.max(360, rows.length * 54);
-  return (
-    <ChartCard title="Table revenue by payment method" hint="Every ordered table · cash, online, and credit collections" isEmpty={!rows.length} empty="No settled dine-in bills in this period.">
-      <div className="space-y-2 md:hidden">
-        {rows.map((row) => (
-          <div key={row.table_number} className="rounded-xl border border-gray-100 bg-gray-50 p-3">
-            <div className="flex items-center justify-between gap-3"><span className="font-semibold text-gray-900">Table {row.table_number}</span><span className="font-semibold tabular-nums text-gray-900">{money(row.total)}</span></div>
-            <div className="mt-2 grid grid-cols-3 gap-2 text-xs">
-              <span className="text-emerald-700">Cash <strong className="block tabular-nums">{money(row.cash)}</strong></span>
-              <span className="text-blue-700">Online <strong className="block tabular-nums">{money(row.online)}</strong></span>
-              <span className="text-right text-violet-700">Credit <strong className="block tabular-nums">{money(row.credit)}</strong></span>
-            </div>
-          </div>
-        ))}
-      </div>
-      <div className="hidden md:block">
-        <div className="mb-4 flex flex-wrap gap-x-5 gap-y-2 text-xs font-medium text-gray-600"><span className="inline-flex items-center gap-1.5"><span className="h-2.5 w-2.5 rounded-sm bg-emerald-500" /> Cash</span><span className="inline-flex items-center gap-1.5"><span className="h-2.5 w-2.5 rounded-sm bg-blue-500" /> Online</span><span className="inline-flex items-center gap-1.5"><span className="h-2.5 w-2.5 rounded-sm bg-violet-500" /> Credit</span></div>
-        <div style={{ height }}><ResponsiveContainer width="100%" height="100%"><BarChart data={rows} layout="vertical" margin={{ top: 4, right: 22, left: 4, bottom: 4 }} barCategoryGap="22%"><CartesianGrid horizontal={false} stroke="#e5e7eb" /><XAxis type="number" tickFormatter={(value) => `Rs ${(Number(value) / 1000).toFixed(Number(value) >= 10000 ? 0 : 1)}k`} tick={{ fontSize: 11, fill: '#6b7280' }} axisLine={false} tickLine={false} /><YAxis type="category" dataKey="table_number" width={76} tickFormatter={(value) => `Table ${value}`} tick={{ fontSize: 12, fill: '#374151', fontWeight: 600 }} axisLine={false} tickLine={false} /><Tooltip cursor={{ fill: '#f8fafc' }} content={<TablePaymentTooltip />} /><Legend wrapperStyle={{ display: 'none' }} /><Bar dataKey="cash" stackId="payments" fill="#10b981" radius={[0, 0, 0, 0]} /><Bar dataKey="online" stackId="payments" fill="#3b82f6" /><Bar dataKey="credit" stackId="payments" fill="#8b5cf6" radius={[0, 4, 4, 0]} /></BarChart></ResponsiveContainer></div>
-      </div>
-    </ChartCard>
-  );
-}
-
-function TablePaymentTooltip({ active, payload, label }) {
-  if (!active || !payload?.length) return null;
-  const values = Object.fromEntries(payload.map((item) => [item.dataKey, Number(item.value || 0)]));
-  const total = Number(values.cash || 0) + Number(values.online || 0) + Number(values.credit || 0);
-  return <div className="rounded-lg border border-gray-200 bg-white px-3 py-2.5 text-xs shadow-lg"><p className="mb-2 font-semibold text-gray-900">Table {label}</p><div className="space-y-1.5"><p className="flex justify-between gap-5 text-emerald-700"><span>Cash</span><span className="font-semibold tabular-nums">{money(values.cash)}</span></p><p className="flex justify-between gap-5 text-blue-700"><span>Online</span><span className="font-semibold tabular-nums">{money(values.online)}</span></p><p className="flex justify-between gap-5 text-violet-700"><span>Credit</span><span className="font-semibold tabular-nums">{money(values.credit)}</span></p><p className="flex justify-between gap-5 border-t border-gray-100 pt-1.5 font-semibold text-gray-900"><span>Total</span><span className="tabular-nums">{money(total)}</span></p></div></div>;
 }
 
 export function InventorySupplier({ data }) {
@@ -483,10 +350,10 @@ function ExpenseTable({ title, rows = [] }) {
 
 export function PeoplePerformance({ data }) {
   const customers = data.customers;
-  const waiterBars = (data.staff.waiters || []).map((row) => ({ label: row.name, value: row.sales, meta: `${row.orders} orders` }));
+  const staffBars = (data.staff.waiters || []).map((row) => ({ label: row.name, value: row.sales, meta: `${row.orders} sales` }));
   return (
     <DashboardSection>
-      <SectionHeading icon={Users} tone="violet" eyebrow="People" title="Customers and staff" description="Anonymous walk-ins are excluded from repeat-customer metrics. Staff sales are attributed only through saved waiter/cashier IDs." />
+      <SectionHeading icon={Users} tone="violet" eyebrow="People" title="Customers and staff" description="Anonymous walk-ins are excluded from repeat-customer metrics. Staff sales are attributed only through the saved cashier ID." />
       <CustomerCreditLedger range={data.range} />
       <div className="mt-5 grid gap-5 xl:grid-cols-2">
         <div className="rounded-xl border border-gray-100 bg-gray-50 p-4">
@@ -500,7 +367,7 @@ export function PeoplePerformance({ data }) {
           </div>
           <div className="mt-4 divide-y divide-gray-100">{customers.top?.map((row) => <div key={row.id ?? `customer:${row.name}`} className="flex justify-between py-2 text-sm"><span className="font-medium text-gray-800">{row.name}</span><span className="tabular-nums text-gray-600">{money(row.spend)} | {row.bills} bills</span></div>)}</div>
         </div>
-        <ChartCard title="Waiter Sales Attribution" isEmpty={!waiterBars.length} empty="No settled bills are attributed to a waiter."><RankBars data={waiterBars} color="emerald" format="currency" /></ChartCard>
+        <ChartCard title="Staff Sales Attribution" isEmpty={!staffBars.length} empty="No settled bills are attributed to a staff member."><RankBars data={staffBars} color="emerald" format="currency" /></ChartCard>
       </div>
     </DashboardSection>
   );
@@ -508,7 +375,7 @@ export function PeoplePerformance({ data }) {
 
 export function Controls({ data }) {
   const c = data.controls;
-  const reasonRows = [...(c.reasons.orders || []).map((r) => ({ label: `Order: ${r.reason}`, value: r.count })), ...(c.reasons.kots || []).map((r) => ({ label: `KOT: ${r.reason}`, value: r.count })), ...(c.reasons.bills || []).map((r) => ({ label: `Bill: ${r.reason}`, value: r.count }))];
+  const reasonRows = [...(c.reasons.orders || []).map((r) => ({ label: `Order: ${r.reason}`, value: r.count })), ...(c.reasons.bills || []).map((r) => ({ label: `Bill: ${r.reason}`, value: r.count }))];
   return (
     <DashboardSection>
       <SectionHeading icon={ShieldAlert} tone="rose" eyebrow="Management control" title="Discounts, refunds, voids and cancellations" description="A compact fraud/control view backed by persisted reasons and audit history." />
@@ -516,7 +383,7 @@ export function Controls({ data }) {
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
           {[
             ['Discount', c.discounts, 'currency'], ['Discounted Bills', c.discountedBills, 'number'], ['Refunds', c.refunds, 'currency'], ['Refund Count', c.refundCount, 'number'],
-            ['Cancelled Orders', c.cancelledOrders, 'number'], ['Cancelled KOTs', c.cancelledKots, 'number'], ['Voided Bills', c.voidedBills, 'number'], ['Value Voided', c.voidedValue, 'currency'],
+            ['Cancelled Sales', c.cancelledOrders, 'number'], ['Voided Bills', c.voidedBills, 'number'], ['Value Voided', c.voidedValue, 'currency'],
           ].map(([label, value, format]) => <StatCell key={label} label={label} value={value} format={format} tone={value ? 'negative' : 'default'} />)}
         </div>
         <ChartCard title="Top Recorded Reasons" isEmpty={!reasonRows.length} empty="No cancellation or void reasons in this period."><RankBars data={reasonRows.slice(0, 8)} color="red" format="number" /></ChartCard>
@@ -526,7 +393,7 @@ export function Controls({ data }) {
 }
 
 export function RecentActivity({ data, pagination, loading = false, onPageChange, onPageSizeChange, onExportTransactions }) {
-  const { openBill, openKot } = useAnalyticsRecords();
+  const { openBill } = useAnalyticsRecords();
   return (
     <DashboardSection>
       <SectionHeading
@@ -543,12 +410,12 @@ export function RecentActivity({ data, pagination, loading = false, onPageChange
             <h3 className="flex items-center gap-2 text-sm font-semibold"><CircleDollarSign className="h-4 w-4" /> Transactions</h3>
             <Link href="/admin/bills" className="text-xs font-medium text-gray-600">View bills</Link>
           </div>
-          <TableWrap minWidth="1360px">
+          <TableWrap minWidth="1060px">
             <thead className="bg-gray-50 text-xs uppercase tracking-wide text-gray-400">
               <tr>
-                <th className="px-4 py-2.5">Time</th><th className="px-4 py-2.5">Bill / Order</th><th className="px-4 py-2.5">Table / Channel</th><th className="px-4 py-2.5">Customer</th><th className="px-4 py-2.5">Cashier</th><th className="px-4 py-2.5">Payment</th>
+                <th className="px-4 py-2.5">Time</th><th className="px-4 py-2.5">Bill / Order</th><th className="px-4 py-2.5">Channel</th><th className="px-4 py-2.5">Customer</th><th className="px-4 py-2.5">Cashier</th><th className="px-4 py-2.5">Payment</th>
                 <th className="px-4 py-2.5 text-right">Subtotal</th><th className="px-4 py-2.5 text-right">Discount</th><th className="px-4 py-2.5 text-right">Cash</th><th className="px-4 py-2.5 text-right">Digital</th><th className="px-4 py-2.5">Digital Via</th>
-                <th className="px-4 py-2.5 text-right">Food</th><th className="px-4 py-2.5 text-right">Beverage</th><th className="px-4 py-2.5 text-right">Tobacco</th><th className="px-4 py-2.5 text-right">Final Total</th>
+                <th className="px-4 py-2.5 text-right">Final Total</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100">
@@ -563,7 +430,7 @@ export function RecentActivity({ data, pagination, loading = false, onPageChange
                 >
                   <td className="px-4 py-3 text-gray-500"><NepalTime value={row.paid_at || row.created_at} /></td>
                   <td className="px-4 py-3"><p className="font-medium">{compactBillNumber(row.bill_number)}</p><p className="text-xs text-gray-400">{compactOrderNumber(row.order_number)}</p></td>
-                  <td className="px-4 py-3">{row.table_number ? `Table ${row.table_number}` : orderTypeLabel(row)}</td>
+                  <td className="px-4 py-3">{orderTypeLabel(row)}</td>
                   <td className="px-4 py-3">{row.customer_name || 'Walk-in'}</td>
                   <td className="px-4 py-3">{row.cashier}</td>
                   <td className="px-4 py-3 capitalize">{row.payment}</td>
@@ -572,50 +439,12 @@ export function RecentActivity({ data, pagination, loading = false, onPageChange
                   <td className="px-4 py-3 text-right tabular-nums">{money(row.cash_amount)}</td>
                   <td className="px-4 py-3 text-right tabular-nums">{money(row.qr_amount)}</td>
                   <td className="px-4 py-3">{row.qr_type || 'Not recorded'}</td>
-                  <td className="px-4 py-3 text-right tabular-nums">{money(row.food_amount)}</td>
-                  <td className="px-4 py-3 text-right tabular-nums">{money(row.beverage_amount)}</td>
-                  <td className="px-4 py-3 text-right tabular-nums">{money(row.tobacco_amount)}</td>
                   <td className="px-4 py-3 text-right font-semibold tabular-nums">{money(row.final_total || row.grand_total)}</td>
                 </tr>
               ))}
             </tbody>
           </TableWrap>
           <PaginationControls pagination={pagination} loading={loading} onPageChange={onPageChange} onPageSizeChange={onPageSizeChange} />
-        </div>
-        <div>
-          <div className="mb-2 flex items-center justify-between">
-            <h3 className="flex items-center gap-2 text-sm font-semibold"><ChefHat className="h-4 w-4" /> Recent KOT activity</h3>
-            <Link href="/admin/kot" className="text-xs font-medium text-gray-600">View KOT history</Link>
-          </div>
-          <TableWrap minWidth="760px">
-            <thead className="bg-gray-50 text-xs uppercase tracking-wide text-gray-400">
-              <tr>
-                <th className="px-4 py-2.5">Created</th><th className="px-4 py-2.5">KOT</th><th className="px-4 py-2.5">Order</th><th className="px-4 py-2.5">Table</th>
-                <th className="px-4 py-2.5 text-right">Items</th><th className="px-4 py-2.5">Status</th><th className="px-4 py-2.5 text-right">Prep</th><th className="px-4 py-2.5">Reason</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-100">
-              {data.recentKots?.map((row, i) => (
-                <tr
-                  key={`${row.id || row.kot_number}-${i}`}
-                  className={row.id ? clickableRowClass : undefined}
-                  onClick={() => row.id && openKot(row.id)}
-                  onKeyDown={(event) => { if (row.id && (event.key === 'Enter' || event.key === ' ')) { event.preventDefault(); openKot(row.id); } }}
-                  tabIndex={row.id ? 0 : undefined}
-                  role={row.id ? 'button' : undefined}
-                >
-                  <td className="px-4 py-3 text-gray-500"><NepalTime value={row.printed_at} /></td>
-                  <td className="px-4 py-3 font-medium">{row.kot_number || '-'}</td>
-                  <td className="px-4 py-3">{row.order_number}</td>
-                  <td className="px-4 py-3">{row.table_number || '-'}</td>
-                  <td className="px-4 py-3 text-right tabular-nums">{row.item_count}</td>
-                  <td className="px-4 py-3"><StatusPill tone={row.status === 'completed' ? 'positive' : row.status === 'cancelled' ? 'negative' : 'warning'}>{row.status}</StatusPill></td>
-                  <td className="px-4 py-3 text-right tabular-nums">{row.prep_minutes == null ? '-' : `${Math.round(row.prep_minutes)} min`}</td>
-                  <td className="px-4 py-3 text-gray-500">{row.cancel_reason || '-'}</td>
-                </tr>
-              ))}
-            </tbody>
-          </TableWrap>
         </div>
       </div>
     </DashboardSection>
@@ -628,10 +457,8 @@ export function ManagementSummary({ data }) {
     ['Best selling item', best.bestItem?.item, best.bestItem ? `${best.bestItem.quantity} sold` : null],
     ['Lowest selling item', best.lowestItem?.item, best.lowestItem ? `${best.lowestItem.quantity} sold` : null],
     ['Highest revenue category', best.bestCategory?.category, best.bestCategory ? money(best.bestCategory.revenue) : null],
-    ['Best performing waiter', best.bestWaiter?.name, best.bestWaiter ? money(best.bestWaiter.sales) : null],
-    ['Highest revenue table', best.bestTable?.table_number ? `Table ${best.bestTable.table_number}` : null, best.bestTable ? money(best.bestTable.revenue) : null],
+    ['Best performing staff member', best.bestWaiter?.name, best.bestWaiter ? money(best.bestWaiter.sales) : null],
     ['Peak sales hour', best.peakHour ? `${String(best.peakHour.hour).padStart(2, '0')}:00` : null, best.peakHour ? money(best.peakHour.sales) : null],
-    ['Slowest KOT', best.slowestKot?.kot_number, best.slowestKot ? `${Math.round(best.slowestKot.prep_minutes)} min` : null],
   ].filter((row) => row[1]);
   return (
     <DashboardSection className="pb-8">

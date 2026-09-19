@@ -234,13 +234,13 @@ function DueOrderTable({ rows = [] }) {
 }
 
 function ChannelPaymentMix({ rows = [] }) {
-  const preferredOrder = ['Dine In', 'Takeaway', 'Delivery'];
+  const preferredOrder = ['Counter', 'Delivery', 'Online'];
   const ordered = [...rows].sort((a, b) => {
     const aIndex = preferredOrder.indexOf(a.channel);
     const bIndex = preferredOrder.indexOf(b.channel);
     return (aIndex === -1 ? 99 : aIndex) - (bIndex === -1 ? 99 : bIndex);
   });
-  return <div className="mt-7 border-t border-gray-100 pt-6"><div className="mb-4"><p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-gray-400">Channel payment mix</p><h3 className="mt-1 text-base font-semibold text-gray-950">How each order channel was paid</h3><p className="mt-1 text-sm text-gray-500">Cash, bank / QR, and credit collections for dine-in, takeaway, and delivery orders.</p></div><div className="grid gap-5 xl:grid-cols-2">{ordered.length ? ordered.map((row) => <DonutMix key={row.channel} title={`${row.channel} payments`} rows={row.methods} centerLabel={row.channel} />) : <div className="rounded-xl border border-dashed border-gray-200 py-10 text-center text-sm text-gray-400 xl:col-span-2">No channel payment data for this period.</div>}</div></div>;
+  return <div className="mt-7 border-t border-gray-100 pt-6"><div className="mb-4"><p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-gray-400">Channel payment mix</p><h3 className="mt-1 text-base font-semibold text-gray-950">How each sales channel was paid</h3><p className="mt-1 text-sm text-gray-500">Cash, bank / QR, and credit collections for counter, delivery and online sales.</p></div><div className="grid gap-5 xl:grid-cols-2">{ordered.length ? ordered.map((row) => <DonutMix key={row.channel} title={`${row.channel} payments`} rows={row.methods} centerLabel={row.channel} />) : <div className="rounded-xl border border-dashed border-gray-200 py-10 text-center text-sm text-gray-400 xl:col-span-2">No channel payment data for this period.</div>}</div></div>;
 }
 
 function DonutMix({ title, rows, centerLabel }) {
