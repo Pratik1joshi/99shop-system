@@ -2,8 +2,8 @@ import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import ProductCard from '@/components/storefront/product-card.jsx';
 import { getCategoryBySlug, getProductsByCategoryId } from '@/lib/storefront.js';
-import { GENERIC_ORDER_MESSAGE } from '@/lib/storefront-links.js';
-import { RESTAURANT, whatsappHref } from '@/lib/restaurant-info.js';
+import { getSiteContent, whatsappLink } from '@/lib/site-content.js';
+import Database from '@/lib/db/index';
 
 export const dynamic = 'force-dynamic';
 
@@ -13,17 +13,23 @@ export const dynamic = 'force-dynamic';
  */
 export async function generateMetadata({ params }) {
   const { slug } = await params;
-  const category = await getCategoryBySlug(slug);
+  const [category, content] = await Promise.all([
+    getCategoryBySlug(slug),
+    getSiteContent(Database.getInstance()),
+  ]);
   if (!category) return { title: 'Not found' };
   return {
-    title: `${category.name} — ${RESTAURANT.name}`,
-    description: category.description || `${category.name} at ${RESTAURANT.name}.`,
+    title: `${category.name} — ${content['shop.name']}`,
+    description: category.description || `${category.name} at ${content['shop.name']}.`,
   };
 }
 
 export default async function CategoryPage({ params }) {
   const { slug } = await params;
-  const category = await getCategoryBySlug(slug);
+  const [category, content] = await Promise.all([
+    getCategoryBySlug(slug),
+    getSiteContent(Database.getInstance()),
+  ]);
   if (!category) notFound();
 
   const products = await getProductsByCategoryId(category.id);
@@ -46,25 +52,25 @@ export default async function CategoryPage({ params }) {
         {products.length > 0 ? (
           <div className="grid">
             {products.map((product) => (
-              <ProductCard key={product.id} product={product} />
+              <ProductCard key={product.id} product={product} content={content} />
             ))}
           </div>
         ) : (
-          <p>Nothing in this category right now — message us and we&apos;ll tell you what&apos;s in.</p>
+          <p>{content['category.empty_note']}</p>
         )}
       </section>
 
       <section className="wrap">
         <div className="cta-band">
-          <h3>Didn&apos;t find your favorite?</h3>
-          <p>We restock every week — ask us what&apos;s fresh.</p>
+          <h3>{content['category.cta_title']}</h3>
+          <p>{content['category.cta_body']}</p>
           <a
             className="btn btn-pink"
-            href={whatsappHref(GENERIC_ORDER_MESSAGE)}
+            href={whatsappLink(content, content['contact.order_message'])}
             target="_blank"
             rel="noopener"
           >
-            Ask on WhatsApp
+            {content['category.cta_button']}
           </a>
         </div>
       </section>

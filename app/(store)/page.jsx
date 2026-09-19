@@ -3,19 +3,21 @@ import BunnyMascot from '@/components/storefront/bunny-mascot.jsx';
 import ProductCard from '@/components/storefront/product-card.jsx';
 import { WhatsappIcon } from '@/components/storefront/icons.jsx';
 import { getStorefrontCategories, getFeaturedProducts } from '@/lib/storefront.js';
-import { GENERIC_ORDER_MESSAGE } from '@/lib/storefront-links.js';
-import { RESTAURANT, whatsappHref } from '@/lib/restaurant-info.js';
+import { LOGO_IMAGE } from '@/lib/storefront-links.js';
+import { getSiteContent, whatsappLink } from '@/lib/site-content.js';
+import Database from '@/lib/db/index';
 
-// The catalogue changes whenever the shop adds a product at the till, so the
+// The catalogue and the copy both change from the admin panel, so the
 // storefront is rendered per request rather than cached at build time.
 export const dynamic = 'force-dynamic';
 
 export default async function StoreHomePage() {
-  const [categories, featured] = await Promise.all([
+  const [categories, featured, content] = await Promise.all([
     getStorefrontCategories(),
     getFeaturedProducts(8),
+    getSiteContent(Database.getInstance()),
   ]);
-  const orderHref = whatsappHref(GENERIC_ORDER_MESSAGE);
+  const orderHref = whatsappLink(content, content['contact.order_message']);
   const firstCategory = categories[0];
 
   return (
@@ -23,19 +25,20 @@ export default async function StoreHomePage() {
       <section className="hero">
         <div className="wrap">
           <div className="reveal">
-            <span className="eyebrow-tag">🎀 New drops every week</span>
+            <span className="eyebrow-tag">{content['home.eyebrow']}</span>
             <h1>
-              Cute. Cozy.<span className="line2">Kawaii-fied.</span>
+              {content['home.headline']}
+              <span className="line2">{content['home.headline_accent']}</span>
             </h1>
-            <p className="lede">{RESTAURANT.intro}</p>
+            <p className="lede">{content['shop.intro']}</p>
             <div className="cta-row">
               <a className="btn btn-pink" href={orderHref} target="_blank" rel="noopener">
                 <WhatsappIcon size={17} />
-                Order on WhatsApp
+                {content['home.cta_primary']}
               </a>
               {firstCategory ? (
                 <Link className="btn btn-outline" href={`/shop/${firstCategory.slug}`}>
-                  Explore Shop
+                  {content['home.cta_secondary']}
                 </Link>
               ) : null}
             </div>
@@ -77,7 +80,7 @@ export default async function StoreHomePage() {
 
       <section className="wrap">
         <div className="cat-head">
-          <h2>Categories</h2>
+          <h2>{content['home.categories_title']}</h2>
         </div>
         <div className="cat-grid">
           {categories.map((category) => (
@@ -95,11 +98,11 @@ export default async function StoreHomePage() {
           <Link className="cat-tile" href="/about">
             <div className="imgbox">
               {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src="/storefront/99-shop-by-shahana-logo.jpg" alt={`About ${RESTAURANT.shortName}`} />
+              <img src={LOGO_IMAGE} alt={`About ${content['shop.short_name']}`} />
               <div className="overlay" />
             </div>
             <span className="label">
-              About &amp; Contact <span className="arrow">→</span>
+              {content['home.about_tile_label']} <span className="arrow">→</span>
             </span>
           </Link>
         </div>
@@ -108,12 +111,12 @@ export default async function StoreHomePage() {
       {featured.length > 0 ? (
         <section className="wrap shop-section">
           <div className="section-head">
-            <div className="tag">🎀 New &amp; Loved</div>
-            <h2>A few current favorites</h2>
+            <div className="tag">{content['home.featured_tag']}</div>
+            <h2>{content['home.featured_title']}</h2>
           </div>
           <div className="feat-scroll">
             {featured.map((product) => (
-              <ProductCard key={product.id} product={product} />
+              <ProductCard key={product.id} product={product} content={content} />
             ))}
           </div>
         </section>
@@ -121,33 +124,24 @@ export default async function StoreHomePage() {
 
       <section className="wrap shop-section" id="order">
         <div className="section-head">
-          <div className="tag">🎀 How to Order</div>
-          <h2>Three cute steps, that&apos;s it.</h2>
+          <div className="tag">{content['steps.tag']}</div>
+          <h2>{content['steps.title']}</h2>
         </div>
         <div className="steps">
           <div className="step">
             <span className="num">1</span>
-            <h3>Pick your favorites</h3>
-            <p>
-              Tap &ldquo;Order →&rdquo; under any item you love, or browse the whole shop and
-              message us your picks.
-            </p>
+            <h3>{content['steps.one_title']}</h3>
+            <p>{content['steps.one_body']}</p>
           </div>
           <div className="step">
             <span className="num">2</span>
-            <h3>Chat &amp; confirm</h3>
-            <p>
-              We&apos;ll reply with stock and photos, then confirm your order and delivery or
-              pickup details.
-            </p>
+            <h3>{content['steps.two_title']}</h3>
+            <p>{content['steps.two_body']}</p>
           </div>
           <div className="step">
             <span className="num">3</span>
-            <h3>Receive it, cutely wrapped</h3>
-            <p>
-              Pay on delivery around {RESTAURANT.address.city}, or arrange pickup. Every order is
-              packed with care.
-            </p>
+            <h3>{content['steps.three_title']}</h3>
+            <p>{content['steps.three_body']}</p>
           </div>
         </div>
       </section>

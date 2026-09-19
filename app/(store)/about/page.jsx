@@ -1,14 +1,22 @@
 import Link from 'next/link';
 import { InstagramIcon, TiktokIcon, WhatsappIcon } from '@/components/storefront/icons.jsx';
-import { LOGO_IMAGE, GENERIC_ORDER_MESSAGE } from '@/lib/storefront-links.js';
-import { RESTAURANT, whatsappHref } from '@/lib/restaurant-info.js';
+import { LOGO_IMAGE } from '@/lib/storefront-links.js';
+import { getSiteContent, paragraphs, whatsappLink } from '@/lib/site-content.js';
+import Database from '@/lib/db/index';
 
-export const metadata = {
-  title: `About & Contact — ${RESTAURANT.name}`,
-  description: RESTAURANT.intro,
-};
+export const dynamic = 'force-dynamic';
 
-export default function AboutPage() {
+export async function generateMetadata() {
+  const content = await getSiteContent(Database.getInstance());
+  return {
+    title: `About & Contact — ${content['shop.name']}`,
+    description: content['shop.intro'],
+  };
+}
+
+export default async function AboutPage() {
+  const content = await getSiteContent(Database.getInstance());
+
   return (
     <>
       <div className="page-banner">
@@ -17,8 +25,8 @@ export default function AboutPage() {
             <div className="crumb">
               <Link href="/">Home</Link> / About &amp; Contact
             </div>
-            <h1>A little shop, started with a big soft spot for cute things.</h1>
-            <p>Everything you need to know about us — and the fastest ways to reach us.</p>
+            <h1>{content['about.banner_title']}</h1>
+            <p>{content['about.banner_lede']}</p>
           </div>
         </div>
       </div>
@@ -26,35 +34,29 @@ export default function AboutPage() {
       <section className="wrap about-grid">
         <div className="frame">
           {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src={LOGO_IMAGE} alt={`${RESTAURANT.name} logo`} />
+          <img src={LOGO_IMAGE} alt={`${content['shop.name']} logo`} />
         </div>
         <div>
-          <h2 style={{ fontSize: '1.6rem', marginBottom: '14px' }}>Our story</h2>
-          <p>
-            {RESTAURANT.name} started in 2024 right here in {RESTAURANT.address.city}, with one
-            simple idea: little accessories can make an ordinary day feel a bit softer and a lot
-            cuter.
-          </p>
-          <p>
-            Every clip, charm, polish and trinket is handpicked, not mass-dumped — we&apos;d rather
-            bring you fewer pieces we genuinely love than everything under the sun. New drops land
-            often, so it&apos;s always worth a peek.
-          </p>
-          <p className="sign">— Shahana, {RESTAURANT.shortName}</p>
+          <h2 style={{ fontSize: '1.6rem', marginBottom: '14px' }}>{content['about.story_title']}</h2>
+          {paragraphs(content['about.story_body']).map((para, index) => (
+            // Owner-written prose with no stable ids of its own.
+            <p key={index}>{para}</p>
+          ))}
+          <p className="sign">{content['about.signature']}</p>
         </div>
       </section>
 
       <section className="wrap">
         <div className="section-head" style={{ textAlign: 'center' }}>
           <div className="tag" style={{ justifyContent: 'center' }}>
-            🎀 Get in touch
+            {content['about.contact_tag']}
           </div>
-          <h2>However you like to chat, we&apos;re there.</h2>
+          <h2>{content['about.contact_title']}</h2>
         </div>
         <div className="contact-grid">
           <a
             className="contact-card"
-            href={whatsappHref(GENERIC_ORDER_MESSAGE)}
+            href={whatsappLink(content, content['contact.order_message'])}
             target="_blank"
             rel="noopener"
           >
@@ -62,11 +64,11 @@ export default function AboutPage() {
               <WhatsappIcon size={20} />
             </div>
             <h4>WhatsApp</h4>
-            <p>{RESTAURANT.phoneDisplay}</p>
+            <p>{content['contact.phone_display']}</p>
           </a>
           <a
             className="contact-card"
-            href={RESTAURANT.social.instagram}
+            href={content['contact.instagram_url']}
             target="_blank"
             rel="noopener"
           >
@@ -74,14 +76,19 @@ export default function AboutPage() {
               <InstagramIcon size={18} />
             </div>
             <h4>Instagram</h4>
-            <p>@99shop_surkhet</p>
+            <p>{content['contact.instagram_handle']}</p>
           </a>
-          <a className="contact-card" href={RESTAURANT.social.tiktok} target="_blank" rel="noopener">
+          <a
+            className="contact-card"
+            href={content['contact.tiktok_url']}
+            target="_blank"
+            rel="noopener"
+          >
             <div className="ci">
               <TiktokIcon size={17} />
             </div>
             <h4>TikTok</h4>
-            <p>@99shop_surkhet</p>
+            <p>{content['contact.tiktok_handle']}</p>
           </a>
         </div>
       </section>

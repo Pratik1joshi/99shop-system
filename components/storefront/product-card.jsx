@@ -1,17 +1,16 @@
 import { formatCurrency } from '@/lib/currency';
-import { whatsappHref } from '@/lib/restaurant-info.js';
-import { orderMessageFor } from '@/lib/storefront-links.js';
+import { orderMessageFor, whatsappLink } from '@/lib/site-content.js';
 
 /**
  * One product tile. The whole card is the order link — tapping it opens
  * WhatsApp with the product name already typed, which is how this shop takes
  * orders.
  */
-export default function ProductCard({ product }) {
+export default function ProductCard({ product, content }) {
   return (
     <a
       className="card"
-      href={whatsappHref(orderMessageFor(product.name))}
+      href={whatsappLink(content, orderMessageFor(content, product.name))}
       target="_blank"
       rel="noopener"
     >

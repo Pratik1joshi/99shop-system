@@ -3,18 +3,20 @@ import './storefront.css';
 import SiteHeader, { WhatsappFloat } from '@/components/storefront/site-header.jsx';
 import { InstagramIcon, TiktokIcon, WhatsappIcon } from '@/components/storefront/icons.jsx';
 import { getStorefrontCategories } from '@/lib/storefront.js';
-import { GENERIC_ORDER_MESSAGE } from '@/lib/storefront-links.js';
-import { RESTAURANT, whatsappHref } from '@/lib/restaurant-info.js';
+import { getSiteContent, whatsappLink } from '@/lib/site-content.js';
+import Database from '@/lib/db/index';
 
-// The shell reads the live category list, so every storefront page renders per
-// request. Without this the layout is prerendered against a database that does
-// not exist at build time.
+// The shell reads the live category list and the owner's copy, so every
+// storefront page renders per request.
 export const dynamic = 'force-dynamic';
 
-export const metadata = {
-  title: `${RESTAURANT.name} — ${RESTAURANT.tagline}`,
-  description: RESTAURANT.intro,
-};
+export async function generateMetadata() {
+  const content = await getSiteContent(Database.getInstance());
+  return {
+    title: `${content['shop.name']} — ${content['shop.tagline']}`,
+    description: content['shop.intro'],
+  };
+}
 
 /**
  * Public storefront shell.
@@ -23,13 +25,16 @@ export const metadata = {
  * outside it and keep the plain admin styling.
  */
 export default async function StoreLayout({ children }) {
-  const categories = await getStorefrontCategories();
-  const orderHref = whatsappHref(GENERIC_ORDER_MESSAGE);
+  const [categories, content] = await Promise.all([
+    getStorefrontCategories(),
+    getSiteContent(Database.getInstance()),
+  ]);
+  const orderHref = whatsappLink(content, content['contact.order_message']);
 
   return (
     <div className="sf">
       <div className="gingham-strip" aria-hidden />
-      <SiteHeader categories={categories} />
+      <SiteHeader categories={categories} content={content} />
 
       <main>{children}</main>
 
@@ -37,11 +42,11 @@ export default async function StoreLayout({ children }) {
         <div className="wrap">
           <div className="footer-top">
             <div className="footer-brand">
-              <div className="name">{RESTAURANT.name}</div>
-              <p>{RESTAURANT.intro}</p>
+              <div className="name">{content['shop.name']}</div>
+              <p>{content['shop.intro']}</p>
               <div className="footer-social">
                 <a
-                  href={RESTAURANT.social.instagram}
+                  href={content['contact.instagram_url']}
                   target="_blank"
                   rel="noopener"
                   aria-label="Instagram"
@@ -49,7 +54,7 @@ export default async function StoreLayout({ children }) {
                   <InstagramIcon size={16} />
                 </a>
                 <a
-                  href={RESTAURANT.social.tiktok}
+                  href={content['contact.tiktok_url']}
                   target="_blank"
                   rel="noopener"
                   aria-label="TikTok"
@@ -63,7 +68,7 @@ export default async function StoreLayout({ children }) {
             </div>
 
             <div className="footer-col">
-              <h4>Shop</h4>
+              <h4>{content['footer.shop_heading']}</h4>
               {categories.map((category) => (
                 <Link key={category.slug} href={`/shop/${category.slug}`}>
                   {category.name}
@@ -72,28 +77,30 @@ export default async function StoreLayout({ children }) {
             </div>
 
             <div className="footer-col">
-              <h4>Reach us</h4>
+              <h4>{content['footer.reach_heading']}</h4>
               <a href={orderHref} target="_blank" rel="noopener">
-                WhatsApp: {RESTAURANT.phoneDisplay}
+                WhatsApp: {content['contact.phone_display']}
               </a>
-              <a href={RESTAURANT.social.instagram} target="_blank" rel="noopener">
-                Instagram @99shop_surkhet
+              <a href={content['contact.instagram_url']} target="_blank" rel="noopener">
+                Instagram {content['contact.instagram_handle']}
               </a>
-              <a href={RESTAURANT.social.tiktok} target="_blank" rel="noopener">
-                TikTok @99shop_surkhet
+              <a href={content['contact.tiktok_url']} target="_blank" rel="noopener">
+                TikTok {content['contact.tiktok_handle']}
               </a>
-              <span>📍 {RESTAURANT.address.full}</span>
+              <span>📍 {content['shop.address']}</span>
             </div>
           </div>
 
           <div className="footer-bottom">
-            <span>© {new Date().getFullYear()} {RESTAURANT.name}. All rights reserved.</span>
-            <span>Made with 🎀 in {RESTAURANT.address.city}</span>
+            <span>
+              © {new Date().getFullYear()} {content['shop.name']}. All rights reserved.
+            </span>
+            <span>{content['footer.note']}</span>
           </div>
         </div>
       </footer>
 
-      <WhatsappFloat />
+      <WhatsappFloat content={content} />
     </div>
   );
 }

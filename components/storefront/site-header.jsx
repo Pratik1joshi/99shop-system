@@ -4,15 +4,20 @@ import { useState } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { LOGO_IMAGE } from '@/lib/storefront-links.js';
-import { RESTAURANT, whatsappHref } from '@/lib/restaurant-info.js';
 import { InstagramIcon, TiktokIcon, WhatsappIcon } from './icons.jsx';
+
+/** Same link the server builds; duplicated here so the header stays a client component. */
+function waHref(content, message) {
+  const number = String(content['contact.whatsapp_number'] || '').replace(/\D/g, '');
+  return `https://wa.me/${number}?text=${encodeURIComponent(message)}`;
+}
 
 /**
  * Storefront header: brand, category nav, socials, WhatsApp CTA and the
  * dark-mode toggle. Client-side only for the mobile panel and the toggle —
- * the category list itself is resolved on the server and passed in.
+ * the category list and the copy are resolved on the server and passed in.
  */
-export default function SiteHeader({ categories = [] }) {
+export default function SiteHeader({ categories = [], content = {} }) {
   const pathname = usePathname();
   const [menuOpen, setMenuOpen] = useState(false);
   const [dark, setDark] = useState(() => {
@@ -20,9 +25,7 @@ export default function SiteHeader({ categories = [] }) {
     return document.documentElement.classList.contains('dark');
   });
 
-  const orderHref = whatsappHref(
-    "Hi 99 Shop! I'd love to order something cute from your shop 🎀"
-  );
+  const orderHref = waHref(content, content['contact.order_message']);
 
   const links = [
     { href: '/', label: 'Home' },
@@ -56,7 +59,7 @@ export default function SiteHeader({ categories = [] }) {
     <>
       <a
         className="icon-btn"
-        href={RESTAURANT.social.instagram}
+        href={content['contact.instagram_url']}
         target="_blank"
         rel="noopener"
         aria-label="Instagram"
@@ -65,7 +68,7 @@ export default function SiteHeader({ categories = [] }) {
       </a>
       <a
         className="icon-btn"
-        href={RESTAURANT.social.tiktok}
+        href={content['contact.tiktok_url']}
         target="_blank"
         rel="noopener"
         aria-label="TikTok"
@@ -73,7 +76,7 @@ export default function SiteHeader({ categories = [] }) {
         <TiktokIcon size={15} />
       </a>
       <a className="btn btn-pink btn-small" href={orderHref} target="_blank" rel="noopener">
-        Order on WhatsApp
+        {content['home.cta_primary']}
       </a>
     </>
   );
@@ -83,11 +86,11 @@ export default function SiteHeader({ categories = [] }) {
       <div className="navrow wrap">
         <Link className="brand" href="/">
           {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src={LOGO_IMAGE} alt={`${RESTAURANT.name} logo`} />
+          <img src={LOGO_IMAGE} alt={`${content['shop.name']} logo`} />
           <span className="brandtext">
-            <span className="name">{RESTAURANT.shortName}</span>
+            <span className="name">{content['shop.short_name']}</span>
             <br />
-            <span className="sub">BY SHAHANA · SURKHET</span>
+            <span className="sub">{content['shop.brand_sub']}</span>
           </span>
         </Link>
 
@@ -141,14 +144,14 @@ export default function SiteHeader({ categories = [] }) {
   );
 }
 
-export function WhatsappFloat() {
+export function WhatsappFloat({ content = {} }) {
   return (
     <a
       className="wa-float"
-      href={whatsappHref("Hi 99 Shop! I'd love to order something cute from your shop 🎀")}
+      href={waHref(content, content['contact.order_message'])}
       target="_blank"
       rel="noopener"
-      aria-label="Order on WhatsApp"
+      aria-label={content['home.cta_primary']}
     >
       <span className="pulse" />
       <WhatsappIcon size={26} />

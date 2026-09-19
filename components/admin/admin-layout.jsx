@@ -488,6 +488,7 @@ export default function AdminLayout({ children }) {
         { icon: TrendingUp, label: 'Staff Performance', href: '/admin/employee-performance', color: 'text-lime-600' },
       ],
     },
+    { icon: Globe, label: 'Website', href: '/admin/website', color: 'text-cyan-600' },
     { icon: ShieldCheck, label: 'Staff Permissions', href: '/admin/permissions', color: 'text-red-600' },
     { icon: Printer, label: 'Printer', href: '/admin/printer', color: 'text-violet-700' },
     { icon: Settings, label: 'Settings', href: '/admin/settings', color: 'text-gray-600' },
@@ -595,6 +596,7 @@ export default function AdminLayout({ children }) {
         { icon: TrendingUp, label: 'Staff Performance', href: '/cashier/employee-performance', color: 'text-lime-600', requiredPermission: 'employee_performance.view' },
       ],
     },
+    { icon: Globe, label: 'Website', href: '/cashier/website', color: 'text-cyan-600', requiredPermission: 'cms.manage' },
     { icon: Printer, label: 'Printer', href: '/cashier/printer', color: 'text-violet-700', requiredPermission: 'settings.manage' },
     { icon: Settings, label: 'Settings', href: '/cashier/settings', color: 'text-gray-600', requiredPermission: 'settings.manage' },
   ];
