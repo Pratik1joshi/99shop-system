@@ -225,10 +225,6 @@ export async function DELETE(request, { params }) {
     await db.transaction(async () => {
       try { await db.run('DELETE FROM sessions WHERE user_id = ?', [userId]); } catch { /* table may not exist */ }
       try { await db.run('DELETE FROM devices WHERE user_id = ?', [userId]); } catch { /* optional */ }
-      try { await db.run('UPDATE tables SET waiter_id = NULL WHERE waiter_id = ?', [userId]); } catch { /* optional */ }
-      try { await db.run('UPDATE orders SET waiter_id = NULL WHERE waiter_id = ?', [userId]); } catch { /* optional */ }
-      try { await db.run('UPDATE bills SET cashier_id = NULL WHERE cashier_id = ?', [userId]); } catch { /* optional */ }
-      try { await db.run('UPDATE kots SET prepared_by = NULL WHERE prepared_by = ?', [userId]); } catch { /* optional */ }
 
       await db.run('DELETE FROM users WHERE id = ?', [userId]);
     });
@@ -242,7 +238,7 @@ export async function DELETE(request, { params }) {
     if (/FOREIGN KEY|foreign key/i.test(msg)) {
       return NextResponse.json(
         {
-          error: 'This employee is linked to past orders or bills, so they cannot be deleted. Deactivate them instead.',
+          error: 'This employee is linked to past sales or records, so they cannot be deleted. Deactivate them instead.',
           code: 'employee_in_use',
         },
         { status: 409 }

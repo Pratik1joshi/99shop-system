@@ -43,7 +43,7 @@ function friendlyDbError(error, fallback) {
 
 export async function GET(request) {
   try {
-    const auth = await requireAuth(request, { roles: ['admin', 'cashier', 'manager', 'waiter'], permission: 'customers.access' });
+    const auth = await requireAuth(request, { roles: ['admin', 'cashier', 'manager'], permission: 'customers.access' });
     if (auth.error) return auth.error;
 
     const db = Database.getInstance();
@@ -268,15 +268,12 @@ export async function DELETE(request) {
 
     const db = Database.getInstance();
 
-    // customer_id on orders/bills/customer_ledger is ON DELETE SET NULL — a
-    // hard delete would silently strip customer attribution from real order,
-    // billing and credit-ledger history instead of failing loudly.
+    // customer_id on customer_ledger is ON DELETE SET NULL — a hard delete
+    // would silently strip customer attribution from credit-ledger history
+    // instead of failing loudly.
     const referenced = await db.get(
-      `SELECT
-         (SELECT COUNT(*) FROM orders WHERE customer_id = ?) +
-         (SELECT COUNT(*) FROM bills WHERE customer_id = ?) +
-         (SELECT COUNT(*) FROM customer_ledger WHERE customer_id = ?) AS n`,
-      [id, id, id]
+      `SELECT COUNT(*) AS n FROM customer_ledger WHERE customer_id = ?`,
+      [id]
     ).catch(() => null);
     const retailReferenced = await db.get(`SELECT
       (SELECT COUNT(*) FROM retail_sales WHERE customer_id=?) +
@@ -285,7 +282,7 @@ export async function DELETE(request) {
       (SELECT COUNT(*) FROM loyalty_transactions WHERE customer_id=?) AS n`, [id, id, id, id]).catch(() => null);
     if (Number(referenced?.n || 0) > 0 || Number(retailReferenced?.n || 0) > 0) {
       return NextResponse.json(
-        { error: 'This customer has order, billing or credit history and cannot be deleted.' },
+        { error: 'This customer has sales or credit history and cannot be deleted.' },
         { status: 409 }
       );
     }

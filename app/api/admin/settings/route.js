@@ -93,7 +93,7 @@ async function seedMissingDefaults(db) {
 
 export async function GET(request) {
   try {
-    const auth = await requireAuth(request, { roles: ['admin', 'cashier', 'waiter', 'kitchen'] });
+    const auth = await requireAuth(request, { roles: ['admin', 'cashier'] });
     if (auth.error) return auth.error;
 
     const db = Database.getInstance();

@@ -2,7 +2,7 @@
 
 /**
  * Presentation primitives for the Reports analytics centre.
- * Same visual language as the Dashboard / Inventory / Wastage pages:
+ * Same visual language as the Dashboard and Inventory pages:
  * white cards, border-gray-200, rounded-2xl, shadow-sm, gray-900 headings,
  * gray-500 secondary text, small colour chips, semantic colour only.
  */
@@ -242,8 +242,8 @@ export function ChartCard({ title, hint, children, isEmpty, empty, className = '
 
 /* ---------------------------- chart primitives ---------------------------- */
 /*
- * Three shared wrappers cover every chart in the app (dashboard, 11 report tabs,
- * wastage). Callers pass the same `{ label, sub, value, meta }` rows they always
+ * Three shared wrappers cover every chart in the app (dashboard, report tabs,
+ * expenses). Callers pass the same `{ label, sub, value, meta }` rows they always
  * have and pick a palette key — nothing configures recharts inline.
  *
  * None of these render their own empty state: <ChartCard isEmpty> already swaps
@@ -283,7 +283,7 @@ const truncate = (s, max) => {
 
 /**
  * Area line — for anything measured against time (daily revenue, profit,
- * expenses, wastage). A continuous measure over ordered dates reads as a shape,
+ * expenses). A continuous measure over ordered dates reads as a shape,
  * which is what an area gives you and a row of separate bars does not.
  */
 export function TrendChart({ data, color = 'blue', format = 'currency', height = 200 }) {
@@ -462,7 +462,7 @@ function Badge({ value }) {
     if (/cancel|removed|void|refund|reduced|failed|declined/.test(key)) return 'bg-red-50 text-red-700 ring-1 ring-inset ring-red-200';
     if (/edit|revis|reopen|change|increased/.test(key)) return 'bg-amber-50 text-amber-700 ring-1 ring-inset ring-amber-200';
     if (/added|settled|completed|approved/.test(key)) return 'bg-emerald-50 text-emerald-700 ring-1 ring-inset ring-emerald-200';
-    if (/order|bill|kitchen|kot|payment|customer/.test(key)) return 'bg-blue-50 text-blue-700 ring-1 ring-inset ring-blue-200';
+    if (/order|sale|payment|customer/.test(key)) return 'bg-blue-50 text-blue-700 ring-1 ring-inset ring-blue-200';
     return null;
   })();
   return (
@@ -1044,22 +1044,18 @@ function recordEntityHref(link, cashier) {
   const root = cashier ? '/cashier' : '/admin';
   const id = encodeURIComponent(String(link.id ?? ''));
   switch (link.type) {
-    case 'order': return `${root}/orders/${id}`;
-    case 'bill': return `${root}/bills?bill=${id}`;
-    case 'purchase': return `${root}/purchases?purchase=${id}`;
+    case 'sale': return `${root}/retail-sales-history/${id}`;
     case 'expense': return `${root}/expenses?expense=${id}`;
-    case 'wastage': return `${root}/wastage?wastage=${id}`;
-    case 'customer': return `${root}/customers/${id}`;
-    case 'inventory': return `${root}/inventory/${id}`;
+    case 'customer': return `/admin/retail-customers/${id}`;
     case 'employee': return `${root}/employees?employee=${id}`;
-    case 'supplier': return `${root}/suppliers?supplier=${id}`;
-    case 'menu': return `${root}/products?item=${id}`;
+    case 'supplier': return '/admin/retail-suppliers';
+    case 'product': return `${root}/products?item=${id}`;
     default: return null;
   }
 }
 
 function RecordEntityLink({ link, cashier, children, onEntityClick }) {
-  if (onEntityClick && ['bill', 'order', 'purchase', 'expense'].includes(link.type)) {
+  if (onEntityClick && ['sale', 'expense'].includes(link.type)) {
     return (
       <button
         type="button"

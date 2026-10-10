@@ -225,10 +225,9 @@ const specialistPermissionForPath = (path) => Object.entries(specialistPagePermi
 
 // Header title for routes reached from inside a page rather than the sidebar.
 const aliases = [
-  ['/admin/pos', 'Billing'], ['/admin/orders', 'Sell'], ['/admin/bills', 'Sell'],
-  ['/admin/inventory', 'Inventory'], ['/admin/wastage', 'Inventory'], ['/admin/cash-', 'Finance'],
+  ['/admin/pos', 'Billing'], ['/admin/cash-', 'Finance'],
   ['/admin/finance-dashboard', 'Finance'], ['/admin/retail-journals', 'Accounting'],
-  ['/admin/analytics', 'Insights'], ['/cashier/pos', 'Billing'], ['/cashier/inventory', 'Inventory'],
+  ['/cashier/pos', 'Billing'],
 ];
 
 const pathOf = (href) => href.split('?')[0];
