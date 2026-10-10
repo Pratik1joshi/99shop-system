@@ -1,5 +1,4 @@
 import { NextResponse } from 'next/server';
-import { LEGACY_ROLE_ROUTES, PRIMARY_ROUTE, FEATURES } from './lib/deployment.js';
 
 // The one public address search engines should see, once the real domain is configured.
 const CANONICAL = (() => {
@@ -40,15 +39,6 @@ export async function middleware(request) {
     const url = request.nextUrl.clone();
     url.pathname = pathname.toLowerCase();
     return NextResponse.redirect(url, 301);
-  }
-
-  // Disabled staff-role surfaces (waiter/kitchen/cashier) are not reachable in
-  // this single-admin deployment. Redirect them to the counter sale screen.
-  if (
-    !FEATURES.staffRoleLogin &&
-    LEGACY_ROLE_ROUTES.some((r) => pathname === r || pathname.startsWith(`${r}/`))
-  ) {
-    return NextResponse.redirect(new URL(PRIMARY_ROUTE, request.url));
   }
 
   // The public landing is served by the route-group page at app/(public)/page.jsx.

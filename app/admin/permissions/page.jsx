@@ -1,7 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { Ban, Check, ChefHat, ChevronDown, ChevronRight, History, Minus, RefreshCw, RotateCcw, Save, Search, ShieldCheck, UserCog, Users, X } from 'lucide-react';
+import { Ban, Boxes, Briefcase, Calculator, Check, ChevronDown, ChevronRight, History, Minus, RefreshCw, RotateCcw, Save, Search, ShieldCheck, ShoppingCart, UserCog, Users, X } from 'lucide-react';
 import AdminLayout from '@/components/admin/admin-layout';
 import { apiJson } from '@/lib/authed-fetch';
 import { friendlyFromError, friendlyMessage } from '@/lib/friendly-message';
@@ -10,20 +10,22 @@ import { formatNepalTime } from '@/lib/time-utils';
 
 const ROLES = {
   cashier: { label: 'Cashier', description: 'Billing, customer service and day-to-day store operations.', icon: UserCog, tone: 'bg-blue-600 text-white' },
-  waiter: { label: 'Waiter', description: 'Table service, orders and guest-facing actions.', icon: Users, tone: 'bg-violet-600 text-white' },
-  kitchen: { label: 'Kitchen', description: 'Kitchen tickets, preparation and stock visibility.', icon: ChefHat, tone: 'bg-amber-500 text-white' },
+  inventory_staff: { label: 'Inventory staff', description: 'Stock counts, transfers, damage and expiry.', icon: Boxes, tone: 'bg-amber-500 text-white' },
+  purchasing_staff: { label: 'Purchasing staff', description: 'Purchase orders, goods receipts and suppliers.', icon: ShoppingCart, tone: 'bg-violet-600 text-white' },
+  accountant: { label: 'Accountant', description: 'Ledgers, banking, expenses and financial reports.', icon: Calculator, tone: 'bg-emerald-600 text-white' },
+  manager: { label: 'Manager', description: 'Store oversight, approvals and analytics.', icon: Briefcase, tone: 'bg-gray-900 text-white' },
 };
 
 const PERMISSION_MODULES = [
-  { id: 'dashboard', label: 'Dashboard', description: 'Dashboard, analytics and owner summaries.', matches: (key) => ['dashboard.view', 'analytics.view', 'summary.view'].includes(key) },
+  { id: 'dashboard', label: 'Dashboard', description: 'Dashboard, analytics and owner summaries.', matches: (key) => ['dashboard.view', 'summary.view', 'retail_analytics.view'].includes(key) || key.startsWith('operations.') },
   { id: 'reports', label: 'Reports', description: 'Reports access and every individual report.', matches: (key) => key === 'reports.view' || key.startsWith('report.') },
-  { id: 'catalog', label: 'Catalog', description: 'Product setup, categories, offers and combos.', matches: (key) => key.startsWith('menu.') || key.startsWith('promotions.') || key.startsWith('combos.') },
-  { id: 'pos_orders', label: 'Till & Sales', description: 'Till access, sales desk and sale actions.', matches: (key) => key.startsWith('pos.') || key.startsWith('order_desk.') || key.startsWith('orders.') },
-  { id: 'billing', label: 'Billing', description: 'Bills, checkout, receipts, refunds and credit actions.', matches: (key) => key.startsWith('bills.') || key.startsWith('credit.') },
-  { id: 'operations', label: 'Operations', description: 'Delivery, online orders and payment tools.', matches: (key) => key.startsWith('delivery.') || key.startsWith('online_orders.') || key.startsWith('payments.') },
-  { id: 'inventory', label: 'Inventory', description: 'Stock, movements, purchases, suppliers and wastage.', matches: (key) => key.startsWith('inventory.') || key.startsWith('purchases.') || key.startsWith('suppliers.') || key.startsWith('wastage.') },
-  { id: 'customers', label: 'Customers', description: 'Customer records and customer ledger access.', matches: (key) => key.startsWith('customers.') || key.startsWith('customer_ledger.') },
-  { id: 'finance', label: 'Finance & Accounting', description: 'Expenses, cash, opening/closing, ledgers and banking.', matches: (key) => key.startsWith('expenses.') || key.startsWith('expense_categories.') || key.startsWith('business_funding.') || key.startsWith('savings.') || key.startsWith('cash_') || key.startsWith('business_days.') || key.startsWith('corrections.') || key.startsWith('general_ledger.') || key.startsWith('finance_dashboard.') || key.startsWith('chart_of_accounts.') || key.startsWith('bank') || key.startsWith('financial_reports.') || key.startsWith('supplier_ledger.') },
+  { id: 'catalog', label: 'Catalog', description: 'Products, categories, promotions and loyalty.', matches: (key) => key.startsWith('menu.') || key.startsWith('promotions.') || key.startsWith('retail_loyalty.') },
+  { id: 'pos_orders', label: 'Till & Sales', description: 'Billing, sales, returns and store credit.', matches: (key) => key.startsWith('pos.') || key.startsWith('retail_pos.') || key.startsWith('retail_sale.') || key.startsWith('retail_return.') || key.startsWith('retail_store_credit.') },
+  { id: 'online', label: 'Online Orders', description: 'Storefront orders, payment checks and fulfilment.', matches: (key) => key.startsWith('retail_online_orders.') },
+  { id: 'inventory', label: 'Inventory & Purchasing', description: 'Stock, counts, transfers, purchases and suppliers.', matches: (key) => key.startsWith('retail_inventory.') || key.startsWith('retail_purchasing.') || key.startsWith('purchases.') || key.startsWith('suppliers.') },
+  { id: 'after_sales', label: 'After-Sales', description: 'Warranty claims, repairs and replacements.', matches: (key) => key.startsWith('warranty.') },
+  { id: 'customers', label: 'Customers', description: 'Customer records, credit and customer ledger access.', matches: (key) => key.startsWith('customers.') || key.startsWith('customer_ledger.') || key.startsWith('credit.') },
+  { id: 'finance', label: 'Finance & Accounting', description: 'Expenses, cash, opening/closing, ledgers and banking.', matches: (key) => key.startsWith('expenses.') || key.startsWith('expense_categories.') || key.startsWith('business_funding.') || key.startsWith('savings.') || key.startsWith('cash_') || key.startsWith('business_days.') || key.startsWith('general_ledger.') || key.startsWith('finance_dashboard.') || key.startsWith('chart_of_accounts.') || key.startsWith('bank') || key.startsWith('financial_reports.') || key.startsWith('supplier_ledger.') },
   { id: 'hrm', label: 'HRM & Payroll', description: 'Staff, attendance, departments, holidays and payroll.', matches: (key) => key.startsWith('hrm.') || key.startsWith('employees.') || key.startsWith('employee_performance.') || key.startsWith('payroll.') },
   { id: 'administration', label: 'Administration', description: 'Website and settings.', matches: (key) => key.startsWith('cms.') || key.startsWith('settings.') },
   { id: 'other', label: 'Other', description: 'Additional access controls.', matches: () => true },

@@ -57,11 +57,11 @@ test('Billing opens the whole catalog in the Items browser without a search', ()
   assert.doesNotMatch(billing, /!searchTerm \? \(/);
 });
 
-test('retail staff access roles exclude 99 Shop-only waiter and kitchen accounts', () => {
+test('staff access roles exclude waiter and kitchen accounts', () => {
   assert.equal(requireRetailStaffRole('cashier'), 'cashier');
   assert.equal(requireRetailStaffRole('ADMIN'), 'admin');
-  assert.throws(() => requireRetailStaffRole('waiter'), /99 Shop-only/i);
-  assert.throws(() => requireRetailStaffRole('kitchen'), /99 Shop-only/i);
+  assert.throws(() => requireRetailStaffRole('waiter'), /Choose a staff role/i);
+  assert.throws(() => requireRetailStaffRole('kitchen'), /Choose a staff role/i);
   const staffPage = source('app/admin/employees/page.jsx');
   assert.doesNotMatch(staffPage, /option value="waiter"/);
   assert.doesNotMatch(staffPage, /option value="kitchen"/);

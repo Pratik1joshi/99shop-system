@@ -21,7 +21,7 @@ test('printer payload persists every template option and serializes switches', (
   assert.equal(settingEnabled(payload.bill_show_payment), false);
 });
 
-test('retail shell keeps the 99 Shop accordion style without 99 Shop-only destinations', async () => {
+test('retail shell keeps the accordion style without removed destinations', async () => {
   const source = await readFile(new URL('../../components/erp/app-shell.jsx', import.meta.url), 'utf8');
   assert.match(source, /aria-label="Retail workspaces"/);
   assert.match(source, /name: 'People', tint: 'fuchsia'/);

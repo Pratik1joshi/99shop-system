@@ -2,7 +2,7 @@
 
 import { createContext, useContext, useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
-import { isRoleEnabled, FEATURES, PRIMARY_ROUTE } from '@/lib/deployment'
+import { isRoleEnabled, PRIMARY_ROUTE } from '@/lib/deployment'
 
 const AuthContext = createContext({})
 
@@ -158,12 +158,7 @@ export function AuthProvider({ children }) {
       window.location.assign(specialistRoutes[role])
       return
     }
-    if (FEATURES.staffRoleLogin) {
-      const routes = { waiter: '/waiter', cashier: '/cashier/dashboard', kitchen: '/kitchen' }
-      window.location.assign(routes[role] || '/login')
-      return
-    }
-    window.location.assign('/login')
+    window.location.assign(role === 'cashier' ? '/cashier/dashboard' : '/login')
   }
 
   const apiCall = async (url, options = {}) => {

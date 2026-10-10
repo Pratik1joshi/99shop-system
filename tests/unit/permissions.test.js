@@ -34,16 +34,11 @@ test.after(() => {
 
 test('defaults reproduce today\'s hardcoded behavior before any admin edit', async () => {
   await ensurePermissionCache(db);
-  assert.equal(hasPermission('cashier', 'orders.cancel'), true);
-  assert.equal(hasPermission('cashier', 'bills.void'), true);
-  assert.equal(hasPermission('admin', 'bills.void'), true); // admin always allowed
-  // Commit 317b991 deliberately widened the cashier catalog — "all defaulted on
-  // so existing cashier access is unchanged until an admin edits it". These
-  // assertions were left behind on the old defaults; they now record the
-  // intended ones.
+  assert.equal(hasPermission('cashier', 'retail_sale.discount'), true);
+  assert.equal(hasPermission('cashier', 'retail_return.post'), true);
+  assert.equal(hasPermission('cashier', 'retail_sale.price_override'), false);
+  assert.equal(hasPermission('admin', 'retail_sale.price_override'), true); // admin always allowed
   assert.equal(hasPermission('cashier', 'purchases.view'), true);
-  assert.equal(hasPermission('cashier', 'purchases.create'), true);
-  assert.equal(hasPermission('cashier', 'purchases.import'), true);
   assert.equal(hasPermission('cashier', 'suppliers.manage'), true);
   assert.equal(hasPermission('cashier', 'payroll.view'), true);
   assert.equal(hasPermission('cashier', 'payroll.advances.create'), true);
@@ -71,34 +66,27 @@ test('admin can grant a role a previously-blocked action, and it takes effect im
   assert.equal(hasPermission('cashier', 'business_days.force_close'), true);
 });
 
-test('admin can grant purchase access to a cashier without granting destructive actions', async () => {
-  // The point of this test is isolation: granting the safe purchase actions
-  // must not drag the destructive ones along. Since 317b991 the destructive
-  // ones default ON, so the admin has to switch them off first — which is
-  // exactly the edit an owner would make, and still proves the property.
+test('admin can grant purchasing access to a cashier without granting approval', async () => {
+  // Isolation: granting the receiving actions must not drag approval along.
   await setRolePermissions(db, [
-    { role: 'cashier', key: 'purchases.view', allowed: true },
-    { role: 'cashier', key: 'purchases.create', allowed: true },
-    { role: 'cashier', key: 'purchases.import', allowed: true },
-    { role: 'cashier', key: 'purchases.edit', allowed: false },
-    { role: 'cashier', key: 'purchases.void', allowed: false },
+    { role: 'cashier', key: 'retail_purchasing.po.create', allowed: true },
+    { role: 'cashier', key: 'retail_purchasing.grn.receive', allowed: true },
     { role: 'cashier', key: 'suppliers.manage', allowed: false },
   ], admin);
   invalidatePermissionCache();
   await ensurePermissionCache(db);
   assert.equal(hasPermission('cashier', 'purchases.view'), true);
-  assert.equal(hasPermission('cashier', 'purchases.create'), true);
-  assert.equal(hasPermission('cashier', 'purchases.import'), true);
-  assert.equal(hasPermission('cashier', 'purchases.edit'), false);
-  assert.equal(hasPermission('cashier', 'purchases.void'), false);
+  assert.equal(hasPermission('cashier', 'retail_purchasing.po.create'), true);
+  assert.equal(hasPermission('cashier', 'retail_purchasing.grn.receive'), true);
+  assert.equal(hasPermission('cashier', 'retail_purchasing.po.approve'), false);
   assert.equal(hasPermission('cashier', 'suppliers.manage'), false);
 });
 
 test('admin can revoke a role\'s default access', async () => {
-  await setRolePermissions(db, [{ role: 'cashier', key: 'bills.reopen', allowed: false }], admin);
+  await setRolePermissions(db, [{ role: 'cashier', key: 'retail_return.post', allowed: false }], admin);
   invalidatePermissionCache();
   await ensurePermissionCache(db);
-  assert.equal(hasPermission('cashier', 'bills.reopen'), false);
+  assert.equal(hasPermission('cashier', 'retail_return.post'), false);
 });
 
 test('payroll actions are independently configurable', async () => {
@@ -122,7 +110,7 @@ test('every permission change writes an audit row with before/after values', asy
   assert.equal(grant.new_value, 1);
   assert.equal(grant.actor_name, admin.full_name);
 
-  const revoke = rows.find((r) => r.role === 'cashier' && r.permission_key === 'bills.reopen');
+  const revoke = rows.find((r) => r.role === 'cashier' && r.permission_key === 'retail_return.post');
   assert.ok(revoke);
   assert.equal(revoke.previous_value, 1); // default was true, no row existed yet
   assert.equal(revoke.new_value, 0);
@@ -137,14 +125,14 @@ test('saving the same value again does not write a duplicate audit row', async (
 
 test('invalid role/key updates are silently ignored, valid ones in the same batch still apply', async () => {
   await setRolePermissions(db, [
-    { role: 'not_a_role', key: 'bills.void', allowed: true },
+    { role: 'not_a_role', key: 'retail_sale.price_override', allowed: true },
     { role: 'cashier', key: 'not_a_key', allowed: true },
-    { role: 'cashier', key: 'purchases.void', allowed: true },
+    { role: 'cashier', key: 'retail_sale.price_override', allowed: true },
   ], admin);
   invalidatePermissionCache();
   await ensurePermissionCache(db);
-  assert.equal(hasPermission('cashier', 'purchases.void'), true);
-  assert.equal(hasPermission('not_a_role', 'bills.void'), false);
+  assert.equal(hasPermission('cashier', 'retail_sale.price_override'), true);
+  assert.equal(hasPermission('not_a_role', 'retail_sale.price_override'), false);
 });
 
 test('non-curated permission keys are unaffected by this system (static map still governs them)', async () => {
