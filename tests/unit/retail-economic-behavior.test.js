@@ -474,8 +474,6 @@ test('adjustment, stock count and transfer use only movement-ledger effects', as
   await receiveTransfer(db, transfer.id, { receivedBy: actor.id });
   assert.equal(await getAvailableStock(db, item.variantId, { locationId: location.id }), 2);
   assert.equal(await getAvailableStock(db, item.variantId, { locationId: destination.id }), 2);
-  const legacy = await db.get(`SELECT COUNT(*) AS n FROM stock_movements WHERE reference_type LIKE 'retail_%'`).catch(() => ({ n: 0 }));
-  assert.equal(Number(legacy.n), 0);
 });
 
 test('damage, expiry, shrinkage, tester, sample and internal use are canonical movements', async () => {

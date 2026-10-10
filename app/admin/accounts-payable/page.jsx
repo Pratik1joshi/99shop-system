@@ -144,7 +144,7 @@ export default function AccountsPayablePage() {
           .filter((inv) => Number(inv.outstanding || 0) > 0.009)
           .map((inv) => ({
             date: inv.date,
-            memo: inv.invoice_number || inv.description || `Purchase #${inv.purchase_id || '—'}`,
+            memo: inv.invoice_number || inv.description || `Goods receipt #${inv.goods_receipt_id || '—'}`,
             due: Number(inv.outstanding || 0),
           }))
       : withRunningBalance(statement);
@@ -415,13 +415,13 @@ export default function AccountsPayablePage() {
                 <div className="divide-y divide-gray-100 overflow-hidden rounded-xl border border-gray-200">
                   {detail.invoices.map((inv, i) => (
                     <button
-                      key={inv.purchase_id || i}
+                      key={inv.journal_id || i}
                       type="button"
                       onClick={() => setSelectedInvoice(inv)}
                       className="flex w-full flex-wrap items-center gap-3 bg-white px-4 py-4 text-left hover:bg-gray-50 sm:px-5"
                     >
                       <span className="min-w-0 flex-1">
-                        <span className="block text-sm font-medium text-gray-900">{inv.invoice_number || inv.description || `Purchase #${inv.purchase_id || '—'}`}</span>
+                        <span className="block text-sm font-medium text-gray-900">{inv.invoice_number || inv.description || `Goods receipt #${inv.goods_receipt_id || '—'}`}</span>
                         <span className="block text-xs text-gray-400">{formatNepalDisplay(String(inv.date || '').slice(0, 10))}</span>
                       </span>
                       <span className="text-sm tabular-nums text-gray-500">{money(inv.total)}</span>
@@ -459,7 +459,7 @@ export default function AccountsPayablePage() {
           <div className="w-full max-w-md rounded-2xl bg-white overflow-hidden">
             <div className="flex items-center justify-between border-b border-gray-200 px-5 py-4">
               <div>
-                <h2 className="text-lg font-bold text-gray-900">{selectedInvoice.invoice_number || selectedInvoice.description || `Purchase #${selectedInvoice.purchase_id || '—'}`}</h2>
+                <h2 className="text-lg font-bold text-gray-900">{selectedInvoice.invoice_number || selectedInvoice.description || `Goods receipt #${selectedInvoice.goods_receipt_id || '—'}`}</h2>
                 <p className="text-sm text-gray-500">{formatNepalDisplay(String(selectedInvoice.date || '').slice(0, 10))}</p>
               </div>
               <button type="button" onClick={() => setSelectedInvoice(null)} className="rounded-lg p-2 text-gray-400 hover:bg-gray-100"><X className="h-5 w-5" /></button>
@@ -474,9 +474,9 @@ export default function AccountsPayablePage() {
                 <button type="button" disabled={outstandingTotal <= 0} onClick={openPay} className="inline-flex items-center gap-1.5 rounded-lg bg-gray-900 px-3 py-2 text-sm font-semibold text-white hover:bg-gray-800 disabled:opacity-40">
                   Pay supplier
                 </button>
-                {selectedInvoice.purchase_id && (
-                  <Link href="/admin/purchases" className="inline-flex items-center gap-1.5 rounded-lg border border-gray-300 px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50">
-                    <ExternalLink className="h-4 w-4" /> Open in Purchases
+                {selectedInvoice.goods_receipt_id && (
+                  <Link href="/admin/retail-goods-receipts" className="inline-flex items-center gap-1.5 rounded-lg border border-gray-300 px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50">
+                    <ExternalLink className="h-4 w-4" /> Open goods receipts
                   </Link>
                 )}
               </div>

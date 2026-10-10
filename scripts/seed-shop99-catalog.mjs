@@ -13,13 +13,10 @@
  * Usage:
  *   node scripts/seed-shop99-catalog.mjs              # add/update accessories
  *   node scripts/seed-shop99-catalog.mjs --dry-run    # report only
- *   node scripts/seed-shop99-catalog.mjs --replace-demo
- *       # additionally delete the inherited 99 Shop demo catalog
  */
 import Database from '../lib/db/index.js';
 
 const DRY_RUN = process.argv.includes('--dry-run');
-const REPLACE_DEMO = process.argv.includes('--replace-demo');
 
 const DEFAULT_PRICE = 99;
 
@@ -75,38 +72,12 @@ async function upsertProduct(db, product, categoryId) {
   }
   if (!DRY_RUN) {
     await db.run(
-      `INSERT INTO menu_items (name, description, category_id, base_price, barcode, unit, is_available, stock_usage)
-       VALUES (?, ?, ?, ?, ?, 'pcs', 1, 1)`,
+      `INSERT INTO menu_items (name, description, category_id, base_price, barcode, unit, is_available)
+       VALUES (?, ?, ?, ?, ?, 'pcs', 1)`,
       [product.name, product.description, categoryId, DEFAULT_PRICE, product.barcode]
     );
   }
   return 'created';
-}
-
-/**
- * Drops the inherited 99 Shop demo catalog. Sold lines keep their own
- * item_name/price snapshot in order_items, so paid bills stay readable; the
- * menu_item_id link is ON DELETE SET NULL.
- */
-async function deleteDemoCatalog(db) {
-  const keep = PRODUCTS.map((p) => p.barcode);
-  const placeholders = keep.map(() => '?').join(',');
-  const doomed = await db.all(
-    `SELECT id, name FROM menu_items WHERE barcode IS NULL OR barcode NOT IN (${placeholders})`,
-    keep
-  );
-  if (!doomed.length) return [];
-  if (!DRY_RUN) {
-    const ids = doomed.map((d) => d.id);
-    const idPlaceholders = ids.map(() => '?').join(',');
-    await db.run(`DELETE FROM menu_item_variants WHERE menu_item_id IN (${idPlaceholders})`, ids);
-    await db.run(`UPDATE inventory_items SET menu_item_id = NULL WHERE menu_item_id IN (${idPlaceholders})`, ids);
-    await db.run(`DELETE FROM menu_items WHERE id IN (${idPlaceholders})`, ids);
-    const keptCategories = CATEGORIES.map((c) => c.name);
-    const catPlaceholders = keptCategories.map(() => '?').join(',');
-    await db.run(`DELETE FROM menu_categories WHERE name NOT IN (${catPlaceholders})`, keptCategories);
-  }
-  return doomed;
 }
 
 async function main() {
@@ -125,15 +96,8 @@ async function main() {
     else updated += 1;
   }
 
-  let removed = [];
-  if (REPLACE_DEMO) removed = await deleteDemoCatalog(db);
-
   console.log(`${DRY_RUN ? '[dry-run] ' : ''}categories: ${CATEGORIES.length}`);
   console.log(`${DRY_RUN ? '[dry-run] ' : ''}products created: ${created}, updated: ${updated}`);
-  if (REPLACE_DEMO) {
-    console.log(`${DRY_RUN ? '[dry-run] ' : ''}demo items removed: ${removed.length}`);
-    for (const item of removed.slice(0, 40)) console.log(`  - ${item.name}`);
-  }
   console.log(`All items seeded at Rs ${DEFAULT_PRICE} — correct any that differ in Products.`);
 }
 

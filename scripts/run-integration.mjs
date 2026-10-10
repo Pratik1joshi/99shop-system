@@ -9,7 +9,7 @@ if (!['127.0.0.1','localhost','[::1]'].includes(url.hostname)) throw new Error('
 const client = new pg.Client({connectionString:url.href});
 await client.connect();
 try {
-  const files = ['tests/integration/production.test.js', 'tests/integration/phase06-foundation.test.js', 'tests/integration/commerce-search.test.js', 'tests/unit/retail-economic-behavior.test.js', 'tests/integration/customer-timeline.test.js', 'tests/integration/phase1g-shared.test.js', 'tests/integration/serial-return-integrity.test.js', 'tests/integration/inventory-monetary.test.js', 'tests/integration/retail-pricing.test.js', 'tests/integration/retail-merchandising.test.js', 'tests/integration/catalog-performance.test.js', 'tests/integration/retail-public-commerce.test.js', 'tests/integration/public-catalog-performance.test.js'];
+  const files = ['tests/integration/phase06-foundation.test.js', 'tests/integration/commerce-search.test.js', 'tests/unit/retail-economic-behavior.test.js', 'tests/integration/customer-timeline.test.js', 'tests/integration/phase1g-shared.test.js', 'tests/integration/serial-return-integrity.test.js', 'tests/integration/inventory-monetary.test.js', 'tests/integration/retail-pricing.test.js', 'tests/integration/retail-merchandising.test.js', 'tests/integration/catalog-performance.test.js', 'tests/integration/retail-public-commerce.test.js', 'tests/integration/public-catalog-performance.test.js'];
   files.push('tests/integration/retail-phase2d.test.js');
   const selected = process.argv.slice(2);
   if (selected.some(file => !files.includes(file))) throw new Error('Choose a registered integration suite');

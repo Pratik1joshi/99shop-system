@@ -31,8 +31,8 @@ try {
     const productId = product.rows[0].id;
     await client.query(
       `INSERT INTO menu_item_variants
-         (menu_item_id,variant_name,price_modifier,is_default,price,stock_unit,pos_stock_visible,barcode,sku,tracking_mode)
-       SELECT $1,'Standard',0,1,$2,'pcs',0,$3,$4,$5
+         (menu_item_id,variant_name,price_modifier,is_default,price,stock_unit,barcode,sku,tracking_mode)
+       SELECT $1,'Standard',0,1,$2,'pcs',$3,$4,$5
        WHERE NOT EXISTS (SELECT 1 FROM menu_item_variants WHERE menu_item_id=$1)`,
       [productId, price, barcode, sku, tracking]
     );

@@ -31,11 +31,11 @@ const client = new pg.Client({
 });
 
 const criticalTables = [
-  'users', 'menu_categories', 'menu_items', 'tables', 'customers',
-  'orders', 'order_items', 'kots', 'bills', 'bill_items', 'bill_payments',
-  'expenses', 'inventory_items', 'stock_movements', 'wastage_log',
-  'suppliers', 'purchases', 'purchase_items', 'journal_entries', 'journal_lines',
-  'business_days', 'business_day_sessions', 'salary_payments', 'savings_deposits', 'reservations',
+  'users', 'menu_categories', 'menu_items', 'menu_item_variants', 'customers',
+  'retail_sales', 'retail_sale_lines', 'retail_sale_payments', 'retail_returns',
+  'inventory_balances', 'inventory_movements', 'suppliers', 'purchase_orders', 'goods_receipts',
+  'expenses', 'journal_entries', 'journal_lines',
+  'business_days', 'business_day_sessions', 'salary_payments', 'savings_deposits',
 ];
 
 async function scalar(sql) {
@@ -75,25 +75,19 @@ try {
     }
   };
 
-  await metric('orders', `SELECT COUNT(*)::text AS rows,
-    COALESCE(SUM(total_amount), 0)::text AS total_amount,
-    COALESCE(MIN(id), 0)::text AS min_id, COALESCE(MAX(id), 0)::text AS max_id FROM orders`);
-  await metric('bills', `SELECT COUNT(*)::text AS rows,
-    COALESCE(SUM(total_amount), 0)::text AS total_amount,
-    COALESCE(MIN(id), 0)::text AS min_id, COALESCE(MAX(id), 0)::text AS max_id FROM bills`);
+  await metric('sales', `SELECT COUNT(*)::text AS rows,
+    COALESCE(SUM(grand_total), 0)::text AS grand_total,
+    COALESCE(MIN(id), 0)::text AS min_id, COALESCE(MAX(id), 0)::text AS max_id FROM retail_sales`);
   await metric('payments', `SELECT COUNT(*)::text AS rows,
-    COALESCE(SUM(amount), 0)::text AS amount FROM bill_payments`);
+    COALESCE(SUM(amount), 0)::text AS amount FROM retail_sale_payments`);
   await metric('expenses', `SELECT COUNT(*)::text AS rows,
     COALESCE(SUM(amount), 0)::text AS amount FROM expenses`);
   await metric('journal', `SELECT COUNT(*)::text AS rows,
     COALESCE(SUM(debit), 0)::text AS debit,
     COALESCE(SUM(credit), 0)::text AS credit FROM journal_lines`);
   await metric('inventory', `SELECT COUNT(*)::text AS rows,
-    COALESCE(SUM(quantity), 0)::text AS quantity,
-    COALESCE(SUM(quantity * COALESCE(cost_per_unit, 0)), 0)::text AS stock_value
-    FROM inventory_items`);
-  await metric('purchases', `SELECT COUNT(*)::text AS rows,
-    COALESCE(SUM(total), 0)::text AS total FROM purchases`);
+    COALESCE(SUM(quantity_on_hand), 0)::text AS quantity FROM inventory_balances`);
+  await metric('goods_receipts', `SELECT COUNT(*)::text AS rows FROM goods_receipts WHERE status = 'POSTED'`);
 
   const migrations = existingTables.has('schema_migrations')
     ? (await client.query('SELECT version FROM schema_migrations ORDER BY version')).rows.map((row) => row.version)
