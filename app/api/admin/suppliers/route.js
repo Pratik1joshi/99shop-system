@@ -1,8 +1,7 @@
 import { NextResponse } from 'next/server';
 import Database from '@/lib/db/index';
 import { requireAuth, handleRouteError } from '@/lib/api-guard.js';
-import { ensureLedgerSchema } from '@/lib/inventory-ledger.js';
-import { listSuppliers, mergeSuppliers, resolveSupplier } from '@/lib/purchases.js';
+import { ensureSupplierSchema, listSuppliers, resolveSupplier } from '@/lib/suppliers.js';
 import { readListParams } from '@/lib/paginate.js';
 import { redactRetailCost } from '@/lib/retail-cost-visibility.js';
 
@@ -12,7 +11,7 @@ export async function GET(request) {
     if (auth.error) return auth.error;
 
     const db = Database.getInstance();
-    await ensureLedgerSchema(db);
+    await ensureSupplierSchema(db);
 
     const q = new URL(request.url).searchParams;
     const { rows, pagination } = await listSuppliers(db, {
@@ -36,7 +35,7 @@ export async function POST(request) {
     }
 
     const db = Database.getInstance();
-    await ensureLedgerSchema(db);
+    await ensureSupplierSchema(db);
 
     const supplier = await resolveSupplier(db, data.name, data);
     return NextResponse.json({ message: 'Supplier saved.', supplier }, { status: 201 });
@@ -45,10 +44,7 @@ export async function POST(request) {
   }
 }
 
-/**
- * PUT with { action: 'merge', target_id, source_ids[] } folds duplicates into
- * one supplier. Without an action it just edits the supplier's details.
- */
+/** PUT edits a supplier's details. */
 export async function PUT(request) {
   try {
     const auth = await requireAuth(request, { roles: ['admin', 'cashier'], permission: 'suppliers.manage' });
@@ -56,15 +52,7 @@ export async function PUT(request) {
 
     const data = await request.json();
     const db = Database.getInstance();
-    await ensureLedgerSchema(db);
-
-    if (data.action === 'merge') {
-      if (auth.user.role !== 'admin') {
-        return NextResponse.json({ error: 'Only an admin can merge supplier records.' }, { status: 403 });
-      }
-      const supplier = await mergeSuppliers(db, data.target_id, data.source_ids);
-      return NextResponse.json({ message: 'Suppliers merged.', supplier });
-    }
+    await ensureSupplierSchema(db);
 
     if (!data.id) return NextResponse.json({ error: 'Which supplier should be updated?' }, { status: 400 });
     await db.run(

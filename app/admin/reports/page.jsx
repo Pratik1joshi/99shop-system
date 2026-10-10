@@ -9,7 +9,6 @@ import {
 } from 'lucide-react';
 import { DataTable } from '@/components/admin/report-kit';
 import DateInput from '@/components/ui/date-input.jsx';
-import PurchaseDrawer from '@/components/purchases/purchase-drawer';
 import ExpenseDrawer from '@/components/expenses/expense-drawer.jsx';
 import { ActionDrawer } from '@/components/erp/primitives';
 import { SaleDetail } from '@/components/commerce/sales';
@@ -92,7 +91,6 @@ function ReportsPageInner() {
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [purchaseDrawerId, setPurchaseDrawerId] = useState(null);
   const [expenseDrawer, setExpenseDrawer] = useState(null);
   const [saleDetailId, setSaleDetailId] = useState(null);
   const [tablePages, setTablePages] = useState({});
@@ -318,7 +316,6 @@ function ReportsPageInner() {
                 csvName={`${tab}-${table.id}-${currentData.range?.start || 'records'}`}
                 visibleColumnKeys={TABLE_COLUMNS[`${tab}:${table.id}`]}
                 onEntityClick={(link) => {
-                  if (link.type === 'purchase') { setPurchaseDrawerId(link.id); return true; }
                   if (link.type === 'expense') { openExpenseDrawer(link.id).catch((drawerError) => setError(drawerError.message)); return true; }
                   return false;
                 }}
@@ -328,19 +325,12 @@ function ReportsPageInner() {
                     ? (row) => openExpenseDrawer(row._record_id || row.id, row).catch((drawerError) => setError(drawerError.message))
                     : undefined}
                 toolbar={filtersBar}
-                detailContext={null}
+               
               />
             ))}
           </div>
         )}
       </main>
-      {purchaseDrawerId && (
-        <PurchaseDrawer
-          purchaseId={purchaseDrawerId}
-          onClose={() => setPurchaseDrawerId(null)}
-          onChanged={load}
-        />
-      )}
       {expenseDrawer && <ExpenseDrawer expense={expenseDrawer} category={String(expenseDrawer.category || 'Other').replace(/_/g, ' ')} onClose={() => setExpenseDrawer(null)} />}
       <ActionDrawer open={!!saleDetailId} onOpenChange={(open) => { if (!open) setSaleDetailId(null); }} title="Sale detail" description="Retail receipt and payments">
         {saleDetailId && <SaleDetail key={saleDetailId} id={saleDetailId} />}

@@ -474,7 +474,7 @@ function Badge({ value }) {
 
 /** 5. Detailed table — sticky header, searchable, sortable, CSV export, paginated. */
 export function DataTable({
-  title, columns, rows, empty, csvName, onExportAll, toolbar, detailContext,
+  title, columns, rows, empty, csvName, onExportAll, toolbar,
   visibleColumnKeys, onRowClick, onBillClick, onEntityClick, pagination: serverPagination, onPageChange, onPageSizeChange,
   pageLoading = false, tableTotals, paymentTotals: serverPaymentTotals, accentClass,
 }) {
@@ -562,7 +562,7 @@ export function DataTable({
     }
     setDetailData(null);
     setDetailError(null);
-    setDetailLoading(Boolean(detailContext));
+    setDetailLoading(false);
     setDetailRow(row);
   };
 
@@ -662,31 +662,6 @@ export function DataTable({
     };
   }, [detailRow]);
 
-  useEffect(() => {
-    if (!detailRow || !detailContext) return undefined;
-    const controller = new AbortController();
-    fetch('/api/admin/reports/details', {
-      method: 'POST',
-      signal: controller.signal,
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${localStorage.getItem('pos_token')}`,
-      },
-      body: JSON.stringify({ ...detailContext, row: detailRow }),
-    })
-      .then(async (response) => {
-        const body = await response.json();
-        if (!response.ok) throw new Error(body.error || 'The full record could not be loaded.');
-        setDetailData(body.detail);
-      })
-      .catch((error) => {
-        if (error.name !== 'AbortError') setDetailError(error.message);
-      })
-      .finally(() => {
-        if (!controller.signal.aborted) setDetailLoading(false);
-      });
-    return () => controller.abort();
-  }, [detailRow, detailContext]);
 
   /**
    * A download is the complete table, never the truncated view: when the server
@@ -903,45 +878,19 @@ export function DataTable({
 }
 
 export function RecordDetailsModal({ tableTitle, columns, row, detail, loading, error, onClose, onEntityClick }) {
-  const [nestedDetail, setNestedDetail] = useState(null);
-  const [nestedLoading, setNestedLoading] = useState(false);
-  const [nestedError, setNestedError] = useState(null);
   const headingId = `record-details-${String(tableTitle).replace(/[^a-z0-9_-]/gi, '-')}`;
   const primaryColumn = columns[0];
   const primaryValue = primaryColumn ? formatValue(row[primaryColumn.key], primaryColumn.type) : null;
-  const shownDetail = nestedDetail || detail;
-  const shownLoading = nestedLoading || loading;
-  const shownError = nestedError || error;
+  const shownDetail = detail;
+  const shownLoading = loading;
+  const shownError = error;
   const title = shownDetail?.title || 'Record details';
   const subtitle = shownDetail?.subtitle || (primaryValue != null ? `${primaryColumn.label}: ${primaryValue}` : null);
   const accent = statusAccentClass(shownDetail?.status);
 
-  const openLinkedEntity = async (link) => {
+  const openLinkedEntity = (link) => {
     if (!link?.type || link.id == null) return;
-    if (onEntityClick?.(link)) return;
-    const request = {
-      bill: { tab: 'sales', tableId: 'transactions', row: { _bill_id: link.id } },
-      order: { tab: 'orders', tableId: 'orders', row: { _order_id: link.id } },
-      purchase: { tab: 'purchases', tableId: 'purchases', row: { _record_id: link.id } },
-      expense: { tab: 'expenses', tableId: 'ledger', row: { _record_id: link.id } },
-    }[link.type];
-    if (!request) return;
-    setNestedLoading(true);
-    setNestedError(null);
-    try {
-      const response = await fetch('/api/admin/reports/details', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${localStorage.getItem('pos_token')}` },
-        body: JSON.stringify(request),
-      });
-      const body = await response.json();
-      if (!response.ok) throw new Error(body.error || 'The linked record could not be loaded.');
-      setNestedDetail(body.detail);
-    } catch (linkedError) {
-      setNestedError(linkedError.message || 'The linked record could not be loaded.');
-    } finally {
-      setNestedLoading(false);
-    }
+    onEntityClick?.(link);
   };
 
   return (

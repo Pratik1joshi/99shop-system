@@ -16,14 +16,11 @@
     "db:snapshot": "node scripts/db-upgrade-snapshot.mjs",
     "db:compare": "node scripts/compare-db-snapshots.mjs",
     "db:seed": "node scripts/seed-postgres.mjs",
-    "db:seed-sqlite-week": "node --import ./tests/unit/loader-register.mjs scripts/seed-sqlite-week-demo.mjs",
     "db:pg:init": "node scripts/migrate.mjs && node scripts/seed-postgres.mjs",
     "health": "node scripts/healthcheck.mjs",
     "test:e2e": "playwright test",
     "test:integration": "node scripts/run-integration.mjs",
     "test:unit": "node --import ./tests/unit/loader-register.mjs --test tests/unit/*.test.js",
-    "docs:renumber": "node --import ./tests/unit/loader-register.mjs scripts/renumber-documents.mjs",
-    "journals:backfill": "node --import ./tests/unit/loader-register.mjs scripts/backfill-bill-journals.mjs",
     "bank:audit": "node --import ./tests/unit/loader-register.mjs scripts/bank-audit.mjs"
   },
   "dependencies": {

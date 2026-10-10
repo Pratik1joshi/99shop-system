@@ -7,7 +7,7 @@ import { PosDatabase } from '../../lib/db/index.js';
 import { ensureAccountingSchema, postJournal } from '../../lib/accounting.js';
 import { ensureBusinessDaySchema, businessDayIdForCalendarDate } from '../../lib/business-days.js';
 import { repairExpenseBusinessDayAlignment, ensureExpenseVoidSchema } from '../../lib/expense-links.js';
-import { ensureLedgerSchema } from '../../lib/inventory-ledger.js';
+import { ensureSupplierSchema } from '../../lib/suppliers.js';
 import { buildSummaryReport } from '../../lib/summary-report.js';
 
 const dbPath = path.join(os.tmpdir(), `expense-day-align-${process.pid}-${Date.now()}.db`);
@@ -24,7 +24,7 @@ test('backdated cash expense is reattached to its expense-date business day', as
   await ensureAccountingSchema(db);
   await ensureBusinessDaySchema(db);
   await ensureExpenseVoidSchema(db);
-  await ensureLedgerSchema(db);
+  await ensureSupplierSchema(db);
 
   const yesterday = '2026-03-10';
   const today = '2026-03-11';
