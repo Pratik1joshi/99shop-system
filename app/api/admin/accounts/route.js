@@ -5,7 +5,7 @@ import { ensureAccountingSchema, listAccountsWithBalances, createAccount, update
 
 export async function GET(request) {
   try {
-    const auth = await requireAuth(request, { roles: ['admin', 'cashier'], permission: 'chart_of_accounts.access' });
+    const auth = await requireAuth(request, { roles: ['admin', 'cashier', 'accountant'], permission: 'chart_of_accounts.access' });
     if (auth.error) return auth.error;
     const db = Database.getInstance();
     await ensureAccountingSchema(db);
@@ -17,7 +17,7 @@ export async function GET(request) {
 
 export async function POST(request) {
   try {
-    const auth = await requireAuth(request, { roles: ['admin', 'cashier'], permission: 'chart_of_accounts.access' });
+    const auth = await requireAuth(request, { roles: ['admin', 'cashier', 'accountant'], permission: 'chart_of_accounts.access' });
     if (auth.error) return auth.error;
     const db = Database.getInstance();
     await ensureAccountingSchema(db);
@@ -30,7 +30,7 @@ export async function POST(request) {
 
 export async function PUT(request) {
   try {
-    const auth = await requireAuth(request, { roles: ['admin', 'cashier'], permission: 'chart_of_accounts.access' });
+    const auth = await requireAuth(request, { roles: ['admin', 'cashier', 'accountant'], permission: 'chart_of_accounts.access' });
     if (auth.error) return auth.error;
     const data = await request.json();
     if (!data.id) return NextResponse.json({ error: 'Which account?' }, { status: 400 });
@@ -45,7 +45,7 @@ export async function PUT(request) {
 
 export async function DELETE(request) {
   try {
-    const auth = await requireAuth(request, { roles: ['admin', 'cashier'], permission: 'chart_of_accounts.access' });
+    const auth = await requireAuth(request, { roles: ['admin', 'cashier', 'accountant'], permission: 'chart_of_accounts.access' });
     if (auth.error) return auth.error;
     const id = new URL(request.url).searchParams.get('id');
     if (!id) return NextResponse.json({ error: 'Which account?' }, { status: 400 });

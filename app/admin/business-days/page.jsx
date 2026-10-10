@@ -1,6 +1,6 @@
 ﻿'use client';
 
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { Fragment, useCallback, useEffect, useMemo, useState } from 'react';
 import { usePathname } from 'next/navigation';
 import { AlertTriangle, CalendarClock, CircleCheck, LockKeyhole, Printer, RefreshCw, UnlockKeyhole } from 'lucide-react';
 import AdminLayout from '@/components/admin/admin-layout';
@@ -35,7 +35,7 @@ const nextDate = (value) => {
 const formatDate = (value) => formatCalendarDate(dateOnly(value), { empty: '-' });
 const formatTime = (value) => formatCalendarDateTime(value, { empty: '-' });
 
-export default function BusinessDaysPage() {
+export default function BusinessDaysPage({ embedded = false }) {
   const isCashier = usePathname()?.startsWith('/cashier');
   const { addToast } = useToast();
   const [context, setContext] = useState(null);
@@ -152,7 +152,8 @@ export default function BusinessDaysPage() {
 
   const difference = useMemo(() => countedCash === '' || !summary || summary.cash?.hidden ? null : Number(countedCash) - Number(summary.cash?.expected_cash || 0), [countedCash, summary]);
 
-  return <AdminLayout>
+  const Layout = embedded ? Fragment : AdminLayout;
+  return <Layout>
     <header className="border-b border-gray-200 bg-white px-4 py-5 sm:px-6 lg:px-8">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div><h1 className="text-2xl font-bold text-gray-950 sm:text-3xl">Opening &amp; Closing</h1><p className="mt-1 text-sm text-gray-500">Shop business-day lifecycle and cash reconciliation.</p></div>
@@ -183,7 +184,7 @@ export default function BusinessDaysPage() {
               <div className="text-sm text-gray-600">{historicalSession ? <span className="font-semibold text-amber-700">Viewing closed session {historicalSession.session_number} — switch back to the open session to close the drawer.</span> : difference == null ? 'Enter counted cash to complete reconciliation.' : <span className="font-semibold">Difference: {Math.abs(difference) < 0.005 ? 'MATCHED' : difference < 0 ? `SHORT ${money(Math.abs(difference))}` : `OVER ${money(difference)}`}</span>}</div>
               <div className="flex flex-wrap gap-2">{!isCashier && <button type="button" onClick={() => setForceMode((value) => !value)} className="h-11 border border-gray-300 px-4 text-sm font-semibold text-gray-700 hover:bg-gray-50">{forceMode ? 'Cancel force close' : 'Force close'}</button>}<button type="button" disabled={busy || historicalSession || context?.cashPolicy?.normalCloseAllowed === false || countedCash === '' || !summary?.blockers?.canCloseNormally} onClick={() => closeDay(false)} className="inline-flex h-11 items-center gap-2 bg-gray-950 px-5 text-sm font-semibold text-white hover:bg-black disabled:cursor-not-allowed disabled:opacity-40"><LockKeyhole className="h-4 w-4" />Close Store Session</button></div>
             </div>
-            {!isCashier && forceMode && <div className="mt-4 border border-amber-300 bg-amber-50 p-4"><div className="flex gap-2 text-sm text-amber-900"><AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" /><p>Force close preserves unresolved orders, KOTs and bills. They will be explicitly carried into the next opened business day.</p></div><label className="mt-3 block"><span className="mb-1 block text-sm font-semibold text-amber-950">Required reason</span><textarea value={forceReason} onChange={(event) => setForceReason(event.target.value)} rows={2} maxLength={1000} className="w-full border border-amber-400 bg-white px-3 py-2 text-sm outline-none focus:border-amber-700" /></label><button type="button" disabled={busy || countedCash === '' || !forceReason.trim()} onClick={() => closeDay(true)} className="mt-3 inline-flex h-11 items-center gap-2 bg-amber-700 px-5 text-sm font-semibold text-white hover:bg-amber-800 disabled:opacity-40"><AlertTriangle className="h-4 w-4" />Force Close Business Day</button></div>}
+            {!isCashier && forceMode && <div className="mt-4 border border-amber-300 bg-amber-50 p-4"><div className="flex gap-2 text-sm text-amber-900"><AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" /><p>Force close keeps unfinished records and carries them into the next business day.</p></div><label className="mt-3 block"><span className="mb-1 block text-sm font-semibold text-amber-950">Required reason</span><textarea value={forceReason} onChange={(event) => setForceReason(event.target.value)} rows={2} maxLength={1000} className="w-full border border-amber-400 bg-white px-3 py-2 text-sm outline-none focus:border-amber-700" /></label><button type="button" disabled={busy || countedCash === '' || !forceReason.trim()} onClick={() => closeDay(true)} className="mt-3 inline-flex h-11 items-center gap-2 bg-amber-700 px-5 text-sm font-semibold text-white hover:bg-amber-800 disabled:opacity-40"><AlertTriangle className="h-4 w-4" />Force Close Business Day</button></div>}
           </div>
         </div>
       </>}
@@ -192,7 +193,7 @@ export default function BusinessDaysPage() {
     </main>
 
     <Dialog open={Boolean(selected)} onOpenChange={(open) => { if (!open) setSelected(null); }}><DialogContent className="sm:max-w-6xl" onClose={() => setSelected(null)}><DialogHeader><DialogTitle>Closing Report Â· {formatDate(selected?.day?.business_date)}</DialogTitle></DialogHeader>{selected?.day?.closed_at && <p className="mt-1 text-sm text-gray-500">Closed at <span className="font-semibold text-gray-800">{formatTime(selected.day.closed_at)}</span>{selected.day.closed_by_name ? ` by ${selected.day.closed_by_name}` : ''}</p>}<DayNotesPanel day={selected?.day} audit={selected?.audit || []} className="mt-4" />{selected?.summary && <div className="mt-6"><ClosingSummary summary={selected.summary} countedCash={selected.day?.counted_cash ?? ''} /></div>}<div className="mt-6 flex justify-end"><button type="button" onClick={() => window.print()} className="inline-flex h-10 items-center gap-2 border border-gray-300 px-4 text-sm font-semibold"><Printer className="h-4 w-4" />Print</button></div></DialogContent></Dialog>
-  </AdminLayout>;
+  </Layout>;
 }
 
 function OpeningForm({ context, opening, setOpening, busy, onSubmit, confirmNextDay, setConfirmNextDay }) {
@@ -248,7 +249,7 @@ function StaleBanner({ businessDate, laterBusinessDay, reason, setReason, busy, 
           </p>
         ) : (
           <>
-            <p className="mt-1 text-sm text-rose-800">New orders, expenses, payroll, and other new activity are blocked until this day is continued or the next business day is started. Existing orders and KOTs can still be completed, paid, voided, or cancelled.</p>
+            <p className="mt-1 text-sm text-rose-800">New sales, expenses, payroll and other new activity are blocked until this day is continued or the next business day is started. Unfinished records can still be completed, paid, voided or cancelled.</p>
             <label className="mt-3 block"><span className="mb-1 block text-sm font-semibold text-rose-950">Reason to continue this day</span><textarea value={reason} onChange={(event) => setReason(event.target.value)} rows={2} maxLength={500} className="w-full border border-rose-300 bg-white px-3 py-2 text-sm outline-none focus:border-rose-700" placeholder="e.g. Night shift is still settling bills" /></label>
             <button type="button" disabled={busy || !reason.trim()} onClick={onContinue} className="mt-3 inline-flex h-10 items-center gap-2 bg-rose-700 px-4 text-sm font-semibold text-white hover:bg-rose-800 disabled:opacity-40"><UnlockKeyhole className="h-4 w-4" />Continue This Existing Business Day</button>
           </>

@@ -7,6 +7,11 @@ const eslintConfig = defineConfig([
   globalIgnores([
     // Default ignores of eslint-config-next:
     ".next/**",
+    ".next-*/**",
+    ".playwright-browsers/**",
+    ".commerce-pg/**",
+    ".commerce-tmp/**",
+    "test-results/**",
     "out/**",
     "build/**",
     "next-env.d.ts",

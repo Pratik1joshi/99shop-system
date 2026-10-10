@@ -21,7 +21,7 @@ import { listDrawers, listBankAccounts } from '@/lib/accounting-cash.js';
  */
 export async function GET(request) {
   try {
-    const auth = await requireAuth(request, { roles: ['admin', 'cashier'], permission: 'general_ledger.view' });
+    const auth = await requireAuth(request, { roles: ['admin', 'cashier', 'accountant'], permission: 'general_ledger.view' });
     if (auth.error) return auth.error;
 
     const db = Database.getInstance();

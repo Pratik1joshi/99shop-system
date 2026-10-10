@@ -7,7 +7,7 @@ import { trialBalance, profitAndLoss, balanceSheet, cashFlowStatement } from '@/
 /** ?report=pnl|balance-sheet|trial-balance|cash-flow (&from&to). All derived from journals. */
 export async function GET(request) {
   try {
-    const auth = await requireAuth(request, { roles: ['admin', 'cashier'], permission: 'financial_reports.access' });
+    const auth = await requireAuth(request, { roles: ['admin', 'cashier', 'accountant'], permission: 'financial_reports.access' });
     if (auth.error) return auth.error;
 
     const db = Database.getInstance();

@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import Database from '@/lib/db/index';
 import { requireAuth, handleRouteError } from '@/lib/api-guard.js';
 import { ensureColumn } from '@/lib/db/schema-helpers.js';
+import { ensureRetailCommerceSchema } from '@/lib/retail-commerce-schema.js';
 import { normalizeMasterCategory, DEFAULT_MASTER_CATEGORY } from '@/lib/master-categories.js';
 
 /** Ensure the master-category ("food group") column exists before we read/write it. */
@@ -66,6 +67,7 @@ export async function POST(request) {
 
     const db = Database.getInstance();
     await ensureFoodGroup(db);
+    await ensureRetailCommerceSchema(db); // SQLite: online_enabled column
 
     // A category is soft-deleted, while its name remains unique in the
     // database. Creating that same name again should restore it instead of
@@ -111,8 +113,8 @@ export async function POST(request) {
 
     // Insert a brand-new category.
     const result = await db.run(`
-      INSERT INTO menu_categories (name, icon, display_order, is_active, food_group)
-      VALUES (?, ?, ?, 1, ?)
+      INSERT INTO menu_categories (name, icon, display_order, is_active, food_group, online_enabled)
+      VALUES (?, ?, ?, 1, ?, 1)
     `, [name.trim(), icon || null, order, normalizeMasterCategory(food_group)]);
 
     const category = await db.get(

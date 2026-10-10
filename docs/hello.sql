@@ -1,8 +1,14 @@
-SELECT
-    granted.rolname AS role_name,
-    member.rolname AS member_name,
-    am.admin_option
-FROM pg_auth_members am
-JOIN pg_roles granted ON granted.oid = am.roleid
-JOIN pg_roles member ON member.oid = am.member
-WHERE granted.rolname = 'thehairc_dimsum';
+GRANT USAGE, CREATE ON SCHEMA public TO "thehairc_aadharuser";
+
+GRANT ALL PRIVILEGES ON ALL TABLES IN SCHEMA public TO "thehairc_aadharuser";
+GRANT ALL PRIVILEGES ON ALL SEQUENCES IN SCHEMA public TO "thehairc_aadharuser";
+GRANT ALL PRIVILEGES ON ALL FUNCTIONS IN SCHEMA public TO "thehairc_aadharuser";
+
+ALTER DEFAULT PRIVILEGES IN SCHEMA public
+GRANT ALL ON TABLES TO "thehairc_aadharuser";
+
+ALTER DEFAULT PRIVILEGES IN SCHEMA public
+GRANT ALL ON SEQUENCES TO "thehairc_aadharuser";
+
+ALTER DEFAULT PRIVILEGES IN SCHEMA public
+GRANT ALL ON FUNCTIONS TO "thehairc_aadharuser";

@@ -207,7 +207,7 @@ export default function ReviseSettlementForm({
           value={reason}
           onChange={(e) => setReason(e.target.value)}
           rows={2}
-          placeholder="e.g. Recorded as cash but guest paid Online"
+          placeholder="e.g. Recorded as cash but customer paid Online"
           className="mt-1 w-full rounded-lg border border-indigo-200 bg-white px-2 py-2 text-sm"
         />
       </label>

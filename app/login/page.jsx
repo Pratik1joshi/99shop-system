@@ -161,7 +161,7 @@ export default function LoginPage() {
                       <span className="min-w-0">
                         <span className="block truncate text-base font-semibold">{user.username}</span>
                         <span className={`block truncate text-xs capitalize ${isSelected ? 'text-stone-200' : 'text-stone-500'}`}>
-                          {user.full_name || user.role || 'Staff'}
+                          {user.display_name || user.full_name || 'Staff'}
                         </span>
                       </span>
                     </button>

@@ -10,7 +10,7 @@ INSERT INTO users (
 ) VALUES (
   'admin',
   crypt('1234', gen_salt('bf', 12)),
-  'Restaurant Admin',
+  'Shop Admin',
   'admin',
   1,
   1

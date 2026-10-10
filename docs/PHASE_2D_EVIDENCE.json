@@ -1,0 +1,234 @@
+{
+  "date": "2026-09-27",
+  "unit": {
+    "tests": 353,
+    "passed": 353,
+    "failed": 0
+  },
+  "postgres": {
+    "suites": 14,
+    "tests": 110,
+    "passed": 110,
+    "failed": 0,
+    "phase2dTests": 12,
+    "finalPhase2dRerun": {
+      "tests": 12,
+      "passed": 12,
+      "failed": 0
+    }
+  },
+  "browser": {
+    "tests": 12,
+    "passed": 12,
+    "failed": 0,
+    "projects": [
+      "desktop",
+      "tablet",
+      "mobile"
+    ],
+    "durationSeconds": 33.4
+  },
+  "lint": {
+    "errors": 0,
+    "existingWarnings": 17
+  },
+  "migrations": [
+    {
+      "mode": "upgrade_from_108",
+      "rerun": "PASS",
+      "no_retroactive_promises": true,
+      "economics_unchanged": true,
+      "migration_files": 109
+    },
+    {
+      "mode": "fresh",
+      "rerun": "PASS",
+      "no_retroactive_promises": true,
+      "economics_unchanged": true,
+      "migration_files": 109
+    }
+  ],
+  "performance": {
+    "synthetic_skus": 25000,
+    "synthetic_posted_sales": 100000,
+    "history_days": 180,
+    "elapsed_ms": 1755,
+    "snapshot_reproducible": true,
+    "method": "RECENT_AVERAGE",
+    "backtest": {
+      "method": "RECENT_AVERAGE",
+      "mae": 0.7142857142857143,
+      "wape": 0.0006425083526085839,
+      "bias": -0.7142857142857143,
+      "observations": 14,
+      "validation_days": 14,
+      "training_days": 166,
+      "candidates": [
+        {
+          "method": "RECENT_AVERAGE",
+          "mae": 0.7142857142857143,
+          "wape": 0.0006425083526085839,
+          "bias": -0.7142857142857143,
+          "observations": 14
+        },
+        {
+          "method": "WEEKLY_SEASONAL",
+          "mae": 0.7142857142857143,
+          "wape": 0.0006425083526085839,
+          "bias": -0.7142857142857143,
+          "observations": 14
+        },
+        {
+          "method": "WEIGHTED_AVERAGE",
+          "mae": 0.7142857142857143,
+          "wape": 0.0006425083526085839,
+          "bias": -0.7142857142857143,
+          "observations": 14
+        },
+        {
+          "method": "EXPONENTIAL_SMOOTHING",
+          "mae": 0.7142860694015586,
+          "wape": 0.0006425086720394385,
+          "bias": -0.7142860694015586,
+          "observations": 14
+        }
+      ]
+    },
+    "fixture": "rolled back; no accounting assertion on synthetic rows"
+  },
+  "reconciliation": {
+    "reconciliation": {
+      "reconciled": true,
+      "generated_at": "2026-09-27T14:57:20.447Z",
+      "inventoryProjection": {
+        "name": "Inventory balance projection vs movement ledger",
+        "reconciled": true,
+        "checked": 2,
+        "differences": []
+      },
+      "inventoryValueProjection": {
+        "reconciled": true,
+        "checked": 1,
+        "differences": []
+      },
+      "checks": [
+        {
+          "name": "Inventory valuation vs inventory asset account",
+          "expected": 347.22,
+          "actual": 347.22,
+          "difference": 0,
+          "reconciled": true
+        },
+        {
+          "name": "Retail revenue vs sales journal postings",
+          "expected": 1800,
+          "actual": 1800,
+          "difference": 0,
+          "reconciled": true
+        },
+        {
+          "name": "Retail VAT vs VAT journal postings",
+          "expected": 0,
+          "actual": 0,
+          "difference": 0,
+          "reconciled": true
+        },
+        {
+          "name": "Retail COGS vs COGS journal postings",
+          "expected": 600,
+          "actual": 600,
+          "difference": 0,
+          "reconciled": true
+        },
+        {
+          "name": "Customer-tagged credit subledger vs Accounts Receivable",
+          "expected": 0,
+          "actual": 0,
+          "difference": 0,
+          "reconciled": true
+        },
+        {
+          "name": "Retail sale receivables vs Retail AR journal",
+          "expected": 0,
+          "actual": 0,
+          "difference": 0,
+          "reconciled": true
+        },
+        {
+          "name": "Supplier-tagged payable subledger vs Accounts Payable",
+          "expected": 1200,
+          "actual": 1200,
+          "difference": 0,
+          "reconciled": true
+        },
+        {
+          "name": "Store-credit transaction ledger vs customer balance projection",
+          "expected": 0,
+          "actual": 0,
+          "difference": 0,
+          "reconciled": true
+        },
+        {
+          "name": "Store-credit transaction ledger vs Store Credit Liability",
+          "expected": 0,
+          "actual": 0,
+          "difference": 0,
+          "reconciled": true
+        }
+      ]
+    },
+    "trial_balance": {
+      "lines": [
+        {
+          "code": "1010",
+          "name": "Cash on Hand",
+          "type": "asset",
+          "debit": 1800,
+          "credit": 0
+        },
+        {
+          "code": "1210",
+          "name": "Retail Inventory",
+          "type": "asset",
+          "debit": 347.22,
+          "credit": 0
+        },
+        {
+          "code": "2010",
+          "name": "Accounts Payable",
+          "type": "liability",
+          "debit": 0,
+          "credit": 1200
+        },
+        {
+          "code": "4010",
+          "name": "Sales Revenue",
+          "type": "income",
+          "debit": 0,
+          "credit": 1800
+        },
+        {
+          "code": "5043",
+          "name": "Warranty & After-Sales Expense",
+          "type": "expense",
+          "debit": 252.78,
+          "credit": 0
+        },
+        {
+          "code": "5080",
+          "name": "Cost of Goods Sold",
+          "type": "expense",
+          "debit": 600,
+          "credit": 0
+        }
+      ],
+      "totalDebit": 3000,
+      "totalCredit": 3000,
+      "balanced": true
+    }
+  },
+  "build": {
+    "status": "PASS",
+    "log": "phase2d-build-delivery.log"
+  }
+}

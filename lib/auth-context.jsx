@@ -6,6 +6,13 @@ import { isRoleEnabled, FEATURES, PRIMARY_ROUTE } from '@/lib/deployment'
 
 const AuthContext = createContext({})
 
+async function readAuthJson(response) {
+  if (!response.headers.get('content-type')?.toLowerCase().includes('application/json')) {
+    throw new Error(`Authentication endpoint returned an unexpected response (${response.status}).`)
+  }
+  return response.json()
+}
+
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(null)
   const [token, setToken] = useState(null)
@@ -39,11 +46,11 @@ export function AuthProvider({ children }) {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ token: storedToken }),
-        signal: AbortSignal.timeout(3000) // 3 second timeout
+        signal: AbortSignal.timeout(30000) // first route compilation can take longer in local development
       })
 
       if (response.ok) {
-        const data = await response.json()
+        const data = await readAuthJson(response)
         if (data.valid) {
           setToken(storedToken)
           setUser(storedUser)
@@ -55,9 +62,10 @@ export function AuthProvider({ children }) {
       }
     } catch (error) {
       console.error('Session verification failed:', error)
-      // Clear invalid session
-      localStorage.removeItem('pos_token')
-      localStorage.removeItem('pos_user')
+      // A transient network/timeout error is not proof that the saved session
+      // is invalid. Protected APIs still validate the token on every request.
+      setToken(storedToken)
+      setUser(storedUser)
     } finally {
       setLoading(false)
     }
@@ -73,7 +81,7 @@ export function AuthProvider({ children }) {
         body: JSON.stringify({ username, pin, deviceId })
       })
 
-      const data = await response.json()
+      const data = await readAuthJson(response)
 
       if (response.ok && data.success) {
         // Single-admin deployment: reject any role not enabled in this profile.
@@ -97,7 +105,7 @@ export function AuthProvider({ children }) {
         setUser(data.user)
 
         if (data.user.must_change_password || data.must_change_password) {
-          router.push('/admin/settings?changePin=1')
+          window.location.assign('/admin/settings?changePin=1')
           return { success: true, must_change_password: true }
         }
 
@@ -135,17 +143,27 @@ export function AuthProvider({ children }) {
   }
 
   const redirectByRole = (role) => {
-    // Counter deployment: admin lands directly on the fast New Sale screen.
+    // A full navigation rehydrates the saved session before the protected shell renders.
     if (role === 'admin') {
-      router.push(PRIMARY_ROUTE)
+      window.location.assign(PRIMARY_ROUTE)
+      return
+    }
+    const specialistRoutes = {
+      inventory_staff: '/admin/retail-inventory',
+      purchasing_staff: '/admin/retail-purchase-orders',
+      accountant: '/admin/retail-finance',
+      manager: '/admin/dashboard',
+    }
+    if (specialistRoutes[role]) {
+      window.location.assign(specialistRoutes[role])
       return
     }
     if (FEATURES.staffRoleLogin) {
-      const routes = { waiter: '/waiter', cashier: '/cashier', kitchen: '/kitchen' }
-      router.push(routes[role] || '/login')
+      const routes = { waiter: '/waiter', cashier: '/cashier/dashboard', kitchen: '/kitchen' }
+      window.location.assign(routes[role] || '/login')
       return
     }
-    router.push('/login')
+    window.location.assign('/login')
   }
 
   const apiCall = async (url, options = {}) => {

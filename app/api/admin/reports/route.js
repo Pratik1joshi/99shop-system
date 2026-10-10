@@ -4,11 +4,13 @@ import Database from '@/lib/db/index';
 import { resolvePeriodRange } from '@/lib/report-dates.js';
 import { requireAuth, handleRouteError } from '@/lib/api-guard.js';
 import {
-  allowedReportTabs, buildReport, ensureReportSchema, getFilterOptions,
-  dateKey, FILTER_UNAVAILABLE_REASON, REPORT_TABS, supportedFilters, parseReportTablePaging,
+  allowedReportTabs, ensureReportSchema,
+  dateKey, REPORT_TABS, parseReportTablePaging,
 } from '@/lib/reports.js';
 import { currentBusinessDay } from '@/lib/business-days.js';
 import { isPermissionAllowedSync } from '@/lib/permissions.js';
+import { buildRetailReport, getRetailReportFilterOptions, retailSupportedFilters } from '@/lib/retail-reporting.js';
+import { restrictRetailReport } from '@/lib/retail-report-visibility.js';
 
 export async function GET(request) {
   try {
@@ -87,7 +89,7 @@ export async function GET(request) {
      * range stands as the only thing left to report on.
      */
     let autoBusinessDay = false;
-    if (!filters.businessDayId && range.period === 'today') {
+    if (['sales','orders','finance'].includes(tab) && !filters.businessDayId && range.period === 'today') {
       const activeDay = await currentBusinessDay(db);
       if (activeDay) {
         filters.businessDayId = activeDay.id;
@@ -107,10 +109,11 @@ export async function GET(request) {
       if (autoBusinessDay) range.label = `Current Business Day · ${range.start}`;
     }
     const [data, options] = await Promise.all([
-      buildReport(db, tab, range, filters),
-      searchParams.get('withOptions') === '1' ? getFilterOptions(db) : Promise.resolve(null),
+      buildRetailReport(db, tab, range, filters),
+      searchParams.get('withOptions') === '1' ? getRetailReportFilterOptions(db) : Promise.resolve(null),
     ]);
 
+    const visible = restrictRetailReport(data, tab, (key) => isPermissionAllowedSync(auth.user?.role, key));
     return NextResponse.json({
       tab,
       range,
@@ -118,9 +121,9 @@ export async function GET(request) {
       allowedTabs,
       // The UI disables filters this tab cannot honour, rather than offering a
       // control that changes nothing.
-      supportedFilters: supportedFilters(tab),
-      filterUnavailableReason: FILTER_UNAVAILABLE_REASON[tab] || null,
-      ...data,
+      supportedFilters: retailSupportedFilters(tab),
+      filterUnavailableReason: null,
+      ...visible,
       ...(options ? { options } : {}),
     });
   } catch (error) {

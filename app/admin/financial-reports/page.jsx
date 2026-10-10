@@ -6,6 +6,7 @@ import AdminLayout from '@/components/admin/admin-layout';
 import { useToast } from '@/components/ui/toast';
 import { friendlyFromError } from '@/lib/friendly-message';
 import { apiJson } from '@/lib/authed-fetch';
+import Link from 'next/link';
 import { money } from '@/components/accounting/ledger-table';
 import DateInput from '@/components/ui/date-input.jsx';
 
@@ -72,7 +73,7 @@ function FinancialReportsInner({params}) {
         {loading ? (
           <div className="rounded-2xl border border-gray-200 bg-white p-10 text-center text-gray-500">Building report…</div>
         ) : tab === 'pnl' ? (
-          <PnL data={data} showOperating={params.get("focus") === "operating"} />
+          <PnL data={data} showOperating={params.get("focus") === "operating"} range={range} />
         ) : tab === 'balance-sheet' ? (
           <BalanceSheet data={data} />
         ) : tab === 'cash-flow' ? (
@@ -85,7 +86,7 @@ function FinancialReportsInner({params}) {
   );
 }
 
-function Section({ title, rows, total, tone }) {
+function Section({ title, rows, total, tone, range = {} }) {
   return (
     <div className="overflow-hidden rounded-2xl border border-gray-200 bg-white">
       <div className="border-b border-gray-200 bg-gray-50 px-5 py-3 text-sm font-semibold text-gray-900">{title}</div>
@@ -94,7 +95,7 @@ function Section({ title, rows, total, tone }) {
           {(rows || []).map((r) => (
             <tr key={r.code + r.name}>
               <td className="px-5 py-2 text-gray-500">{r.code !== '—' ? r.code : ''}</td>
-              <td className="px-5 py-2 text-gray-900">{r.name}</td>
+              <td className="px-5 py-2 text-gray-900">{r.code && r.code !== '—' ? <Link className="text-emerald-700 underline" href={`/admin/general-ledger?${new URLSearchParams({ account_code: r.code, ...(range.from ? { from: range.from } : {}), ...(range.to ? { to: range.to } : {}) })}`}>{r.name}</Link> : r.name}</td>
               <td className="px-5 py-2 text-right tabular-nums text-gray-900">{money(r.amount)}</td>
             </tr>
           ))}
@@ -108,13 +109,13 @@ function Section({ title, rows, total, tone }) {
   );
 }
 
-function PnL({ data, showOperating }) {
+function PnL({ data, showOperating, range }) {
   if (!data) return null;
   return (
     <div className="space-y-5">
-      {showOperating && <Section title="Operating expenses" rows={(data.expense || []).filter(r=>r.code !== '5010')} total={Number(data.totalExpense || 0) - Number((data.expense || []).find(r=>r.code==='5010')?.amount || 0)} tone="text-rose-700" />}
-      <Section title="Income" rows={data.income} total={data.totalIncome} tone="text-emerald-700" />
-      <Section title="Expenses" rows={data.expense} total={data.totalExpense} tone="text-rose-700" />
+      {showOperating && <Section title="Operating expenses" rows={(data.expense || []).filter(r=>r.code !== '5010')} total={Number(data.totalExpense || 0) - Number((data.expense || []).find(r=>r.code==='5010')?.amount || 0)} tone="text-rose-700" range={range} />}
+      <Section title="Income" rows={data.income} total={data.totalIncome} tone="text-emerald-700" range={range} />
+      <Section title="Expenses" rows={data.expense} total={data.totalExpense} tone="text-rose-700" range={range} />
       <div className="rounded-2xl border border-gray-900 bg-gray-900 px-5 py-4 text-white">
         <div className="flex items-center justify-between">
           <span className="text-sm font-medium">Net {data.netProfit >= 0 ? 'Profit' : 'Loss'}</span>

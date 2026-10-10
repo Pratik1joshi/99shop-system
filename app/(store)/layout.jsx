@@ -1,20 +1,28 @@
-import Link from 'next/link';
 import './storefront.css';
 import SiteHeader, { WhatsappFloat } from '@/components/storefront/site-header.jsx';
-import { InstagramIcon, TiktokIcon, WhatsappIcon } from '@/components/storefront/icons.jsx';
-import { getStorefrontCategories } from '@/lib/storefront.js';
-import { getSiteContent, whatsappLink } from '@/lib/site-content.js';
+import JsonLd from '@/components/storefront/json-ld.jsx';
+import StoreAnalytics from '@/components/storefront/store-analytics.jsx';
+import { getStorefrontCategories, isOnlineOrderingEnabled } from '@/lib/storefront.js';
+import { getSiteContent } from '@/lib/site-content.js';
+import SiteFooter from '@/components/storefront/site-footer.jsx';
+import { businessGraph, pageMetadata, siteOrigin } from '@/lib/seo.js';
 import Database from '@/lib/db/index';
 
 // The shell reads the live category list and the owner's copy, so every
 // storefront page renders per request.
 export const dynamic = 'force-dynamic';
 
+const GA_ID = /^G-[A-Z0-9]{4,20}$/;
+
+/** Site-wide defaults. Every page overrides title, description and canonical. */
 export async function generateMetadata() {
-  const content = await getSiteContent(Database.getInstance());
+  const [content, origin] = await Promise.all([getSiteContent(Database.getInstance()), siteOrigin()]);
+  const verification = String(content['seo.google_verification'] || '').replace(/[^A-Za-z0-9_-]/g, '');
   return {
-    title: `${content['shop.name']} — ${content['shop.tagline']}`,
-    description: content['shop.intro'],
+    metadataBase: new URL(origin),
+    ...pageMetadata({ origin, content, title: content['seo.home_title'], description: content['seo.home_description'], path: '/' }),
+    applicationName: content['shop.name'],
+    ...(verification ? { verification: { google: verification } } : {}),
   };
 }
 
@@ -22,83 +30,31 @@ export async function generateMetadata() {
  * Public storefront shell.
  *
  * Everything inside `.sf` is themed by `storefront.css`; the staff panels live
- * outside it and keep the plain admin styling.
+ * outside it and keep their own styling.
  */
 export default async function StoreLayout({ children }) {
-  const [categories, content] = await Promise.all([
+  const [categories, content, origin, onlineEnabled] = await Promise.all([
     getStorefrontCategories(),
     getSiteContent(Database.getInstance()),
+    siteOrigin(),
+    isOnlineOrderingEnabled(),
   ]);
-  const orderHref = whatsappLink(content, content['contact.order_message']);
+  const gaId = String(content['seo.ga_id'] || '').trim().toUpperCase();
 
   return (
     <div className="sf">
+      {/* Hoisted into <head> by React; a stylesheet link loads in parallel, unlike a CSS @import. */}
+      <link rel="preconnect" href="https://fonts.googleapis.com" />
+      <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="" />
+      <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,500;0,9..144,600;0,9..144,700;1,9..144,500;1,9..144,600&family=Quicksand:wght@500;600;700;800&display=swap" precedence="default" />
+      <JsonLd data={businessGraph(origin, content, categories)} />
+      {GA_ID.test(gaId) && <StoreAnalytics id={gaId} />}
       <div className="gingham-strip" aria-hidden />
-      <SiteHeader categories={categories} content={content} />
+      <SiteHeader categories={categories} content={content} onlineEnabled={onlineEnabled} />
 
       <main>{children}</main>
 
-      <footer>
-        <div className="wrap">
-          <div className="footer-top">
-            <div className="footer-brand">
-              <div className="name">{content['shop.name']}</div>
-              <p>{content['shop.intro']}</p>
-              <div className="footer-social">
-                <a
-                  href={content['contact.instagram_url']}
-                  target="_blank"
-                  rel="noopener"
-                  aria-label="Instagram"
-                >
-                  <InstagramIcon size={16} />
-                </a>
-                <a
-                  href={content['contact.tiktok_url']}
-                  target="_blank"
-                  rel="noopener"
-                  aria-label="TikTok"
-                >
-                  <TiktokIcon size={15} />
-                </a>
-                <a href={orderHref} target="_blank" rel="noopener" aria-label="WhatsApp">
-                  <WhatsappIcon size={15} />
-                </a>
-              </div>
-            </div>
-
-            <div className="footer-col">
-              <h4>{content['footer.shop_heading']}</h4>
-              {categories.map((category) => (
-                <Link key={category.slug} href={`/shop/${category.slug}`}>
-                  {category.name}
-                </Link>
-              ))}
-            </div>
-
-            <div className="footer-col">
-              <h4>{content['footer.reach_heading']}</h4>
-              <a href={orderHref} target="_blank" rel="noopener">
-                WhatsApp: {content['contact.phone_display']}
-              </a>
-              <a href={content['contact.instagram_url']} target="_blank" rel="noopener">
-                Instagram {content['contact.instagram_handle']}
-              </a>
-              <a href={content['contact.tiktok_url']} target="_blank" rel="noopener">
-                TikTok {content['contact.tiktok_handle']}
-              </a>
-              <span>📍 {content['shop.address']}</span>
-            </div>
-          </div>
-
-          <div className="footer-bottom">
-            <span>
-              © {new Date().getFullYear()} {content['shop.name']}. All rights reserved.
-            </span>
-            <span>{content['footer.note']}</span>
-          </div>
-        </div>
-      </footer>
+      <SiteFooter content={content} categories={categories} onlineEnabled={onlineEnabled} />
 
       <WhatsappFloat content={content} />
     </div>

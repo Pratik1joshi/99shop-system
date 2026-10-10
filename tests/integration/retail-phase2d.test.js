@@ -1,0 +1,122 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import Database from '../../lib/db/index.js';
+import { ensureAccountingSchema,accountBalance } from '../../lib/accounting.js';
+import { openBusinessDay } from '../../lib/business-days.js';
+import { getNepaliDateString } from '../../lib/time-utils.js';
+import { ensureStandardVariant } from '../../lib/menu-variants.js';
+import { getDefaultLocation } from '../../lib/retail-inventory.js';
+import { createGoodsReceipt,postGoodsReceipt } from '../../lib/retail-purchasing.js';
+import { holdSale,checkoutSale } from '../../lib/retail-sales.js';
+import { createReturn,postReturn } from '../../lib/retail-returns.js';
+import { listWarrantyClaims,saveWarrantyPolicy,createWarrantyClaim,warrantyAction,warrantyEligibility,getWarrantyClaim,searchWarrantyPurchases } from '../../lib/retail-warranty.js';
+import { skuOperations,saveOperationsPolicy,operationsDecision } from '../../lib/retail-operations.js';
+import { runRetailReconciliation } from '../../lib/retail-reconciliation.js';
+import { trialBalance } from '../../lib/accounting-reports.js';
+const db=Database.getInstance(),actor={id:1,role:'admin',full_name:'Phase 2D verifier'};
+test.after(()=>db.close());
+test('Phase 2D PostgreSQL acceptance',async t=>{
+  assert.equal(db.driver,'postgres');await ensureAccountingSchema(db);
+  const day=await openBusinessDay(db,{business_date:getNepaliDateString(),opening_cash:0},actor),location=await getDefaultLocation(db);
+  const supplier=(await db.run("INSERT INTO suppliers(name,normalized_name) VALUES ('Warranty supplier','warranty supplier')")).lastInsertRowid;
+  const customer=(await db.run("INSERT INTO customers(name,phone) VALUES ('Warranty customer','9800000200')")).lastInsertRowid;
+  const category=(await db.run("INSERT INTO menu_categories(name,display_order) VALUES ('Warranty test',1)")).lastInsertRowid;
+  const product=(await db.run("INSERT INTO menu_items(name,category_id,base_price,is_available) VALUES ('Dryer',?,300,1)",[category])).lastInsertRowid;
+  const [sku]=await ensureStandardVariant(db,product,{price:300,stockUnit:'pcs'});await db.run("UPDATE menu_item_variants SET tracking_mode='serial' WHERE id=?",[sku.id]);
+  const receipt=await createGoodsReceipt(db,{supplierId:supplier,locationId:location.id,paymentMethod:'credit',invoiceNumber:'PHASE2D',lines:[{variantId:sku.id,quantityReceived:8,unitCost:92.73,serialNumbers:Array.from({length:8},(_,i)=>'WARRANTY-'+i)}]});await postGoodsReceipt(db,receipt.id,{postedBy:1,businessDayId:day.id});
+  const p={name:'12 months',scope:'BUSINESS',duration:12,duration_unit:'MONTHS',coverage:'Motor defects',proof_required:true,replacement_rule:'ORIGINAL_EXPIRY'};
+  await saveWarrantyPolicy(db,p,1);
+  const sell=async serial=>{const lines=[{variant_id:sku.id,quantity:1,serial_numbers:[serial]}],held=await holdSale(db,{lines,customerId:customer,cashierId:1});return checkoutSale(db,held.id,{lines,customerId:customer,cashierId:1,payments:[{method:'cash',amount:300,cash_tendered:300}],idempotencyKey:'sale-'+serial});};
+  const sale=await sell('WARRANTY-0'),line=sale.lines[0];
+  const make=async(s,serial)=>createWarrantyClaim(db,{sale_line_id:s.lines[0].id,serial_number:serial,issue:'Motor failure',description:'Stopped working',proof:true,idempotency_key:'claim-'+serial},{actorId:1});
+  const action=(c,action,data={})=>warrantyAction(db,c.id,{action,...data,idempotency_key:`${c.id}-${action}-${data.status||data.repair_status||'action'}`},1);
+  const approve=async c=>{await action(c,'transition',{status:'RECEIVED',condition:'Intact'});await action(c,'inspect',{received_condition:'Intact',observed_fault:'Motor does not run',test_result:'Power verified',recommended_resolution:'REPLACED',proof:true});return action(c,'approve');};
+  let claim;
+  await t.test('snapshot survives policy edit, customer privacy and exact serial search',async()=>{
+    const before=await warrantyEligibility(db,{saleLineId:line.id,serialNumber:'WARRANTY-0',proof:true,customerId:customer});assert.equal(before.status,'COVERED');
+    await saveWarrantyPolicy(db,{...p,duration:1,coverage:'New promise'},1);
+    const after=await warrantyEligibility(db,{saleLineId:line.id,serialNumber:'WARRANTY-0',proof:true,customerId:customer});assert.equal(after.snapshot.terms,before.snapshot.terms);
+    assert.equal((await searchWarrantyPurchases(db,{query:'WARRANTY-0'}))[0].sale_line_id,line.id);
+    await assert.rejects(()=>createWarrantyClaim(db,{sale_line_id:line.id,serial_number:'WARRANTY-0',issue:'x',description:'x',idempotency_key:'unauthorized-claim'},{customerId:customer+1,selfService:true}),/not found/);
+  });
+  await t.test('same serial submissions serialize and claim creation has no journal',async()=>{
+    const before=Number((await db.get('SELECT COUNT(*) AS n FROM journal_entries')).n);
+    const results=await Promise.allSettled([make(sale,'WARRANTY-0'),createWarrantyClaim(db,{sale_line_id:line.id,serial_number:'WARRANTY-0',issue:'Other',description:'Other',proof:true,idempotency_key:'duplicate-serial-claim'},{actorId:1})]);
+    assert.equal(results.filter(r=>r.status==='fulfilled').length,1);claim=results.find(r=>r.status==='fulfilled').value;
+    assert.equal(Number((await db.get('SELECT COUNT(*) AS n FROM journal_entries')).n),before);
+    await action(claim,'note',{note:'Internal financial note',customer_note:'We will inspect your item.'});
+    const safe=await getWarrantyClaim(db,claim.id,{customerId:customer});assert.ok(!JSON.stringify(safe).includes('Internal financial'));assert.ok(!('economics' in safe));await assert.rejects(()=>getWarrantyClaim(db,claim.id,{customerId:customer+1}),/not found/);
+  });
+  await t.test('replacement replay, exact value and normal refund exclusion',async()=>{
+    await approve(claim);const revenue=await accountBalance(db,'4010'),asset=await accountBalance(db,'1210'),expense=await accountBalance(db,'5043');
+    const input={variant_id:sku.id,serial_numbers:['WARRANTY-1'],disposition:'QUARANTINE'};
+    const results=await Promise.all([action(claim,'replace',input),action(claim,'replace',input)]);assert.equal(results[0].resolution,'REPLACED');
+    assert.equal(Number(await accountBalance(db,'4010')),Number(revenue));assert.equal(Math.round((asset-await accountBalance(db,'1210'))*100),9273);assert.equal(Math.round((await accountBalance(db,'5043')-expense)*100),9273);
+    assert.equal((await db.get("SELECT status FROM inventory_serials WHERE serial_number='WARRANTY-0'")).status,'QUARANTINE');
+    assert.equal((await db.get("SELECT status FROM inventory_serials WHERE serial_number='WARRANTY-1'")).status,'SOLD');
+    const draft=await createReturn(db,{originalSaleId:sale.id,lines:[{originalSaleLineId:line.id,quantity:1,condition:'DEFECTIVE',disposition:'QUARANTINE'}]});await assert.rejects(()=>postReturn(db,draft.id,{postedBy:1,refundMethod:'cash'}),/warranty/);
+    await action(claim,'transition',{status:'RESOLVED',note:'Replacement collected'});await action(claim,'transition',{status:'CLOSED'});
+  });
+  await t.test('repair parts consume stock once and preserve original ownership',async()=>{
+    const s=await sell('WARRANTY-2'),c=await make(s,'WARRANTY-2');await approve(c);await action(c,'repair',{diagnosis:'Replace motor'});
+    const input={variant_id:sku.id,quantity:1,serial_numbers:['WARRANTY-3']};await Promise.all([action(c,'part',input),action(c,'part',input)]);
+    assert.equal(Number((await db.get("SELECT COUNT(*) AS n FROM warranty_economics WHERE claim_id=? AND kind='PART'",[c.id])).n),1);
+    await action(c,'repair_update',{repair_status:'COMPLETED',work_performed:'Motor replaced and tested'});await action(c,'transition',{status:'RESOLVED',note:'Customer collected'});await action(c,'transition',{status:'CLOSED'});
+    assert.equal((await db.get("SELECT status FROM inventory_serials WHERE serial_number='WARRANTY-2'")).status,'SOLD');
+  });
+  await t.test('canonical store credit refund and replacement race has one winner',async()=>{
+    const s=await sell('WARRANTY-4'),c=await make(s,'WARRANTY-4');await approve(c);
+    const results=await Promise.allSettled([action(c,'refund',{refund_method:'store_credit'}),action(c,'replace',{variant_id:sku.id,serial_numbers:['WARRANTY-5'],disposition:'QUARANTINE'})]);
+    assert.equal(results.filter(r=>r.status==='fulfilled').length,1);
+    const state=await getWarrantyClaim(db,c.id);assert.ok(['STORE_CREDIT','REPLACED'].includes(state.resolution));
+  });
+  await t.test('supplier service dispatch has no AP effect',async()=>{
+    const s=await sell('WARRANTY-6'),c=await make(s,'WARRANTY-6');await approve(c);const ap=await accountBalance(db,'2010');
+    await action(c,'rma',{supplier_id:supplier,grn_id:receipt.id,supplier_reference:'SUP-123'});assert.equal(await accountBalance(db,'2010'),ap);
+    await action(c,'rma_receive',{outcome:'REPLACED',replacement_serial:'SUPPLIER-CUSTOMER-NEW',note:'Supplier replaced customer-owned item'});assert.equal(await accountBalance(db,'2010'),ap);
+    await action(c,'transition',{status:'RESOLVED',note:'Customer collected supplier replacement'});await action(c,'transition',{status:'CLOSED'});
+    assert.equal((await db.get("SELECT status FROM inventory_serials WHERE serial_number='SUPPLIER-CUSTOMER-NEW'")).status,'SOLD');
+    assert.equal((await warrantyEligibility(db,{saleLineId:s.lines[0].id,serialNumber:'SUPPLIER-CUSTOMER-NEW',customerId:customer,proof:true})).status,'COVERED');
+  });
+  await t.test('forecast snapshot, bounded fallback and draft PO have no economic effect',async()=>{
+    await saveOperationsPolicy(db,sku.id,{mode:'FORECAST_ASSISTED'},1);const result=await skuOperations(db,sku.id);assert.equal(result.forecast.expected,null);
+    const before=Number((await db.get('SELECT COUNT(*) AS n FROM journal_entries')).n),movements=Number((await db.get('SELECT COUNT(*) AS n FROM inventory_movements')).n);
+    const input={action:'DRAFT_PO',snapshot_id:result.snapshot_id,quantity:10,supplier_id:supplier,unit_cost:100,reason:'Manual opening reorder',idempotency_key:'operations-draft-test'};
+    const [a,b]=await Promise.all([operationsDecision(db,input,1),operationsDecision(db,input,1)]);assert.equal(a.po_id,b.po_id);assert.equal((await db.get('SELECT status FROM purchase_orders WHERE id=?',[a.po_id])).status,'DRAFT');
+    assert.equal(Number((await db.get('SELECT COUNT(*) AS n FROM journal_entries')).n),before);assert.equal(Number((await db.get('SELECT COUNT(*) AS n FROM inventory_movements')).n),movements);
+  });
+  await t.test('retailer-owned supplier replacement preserves quantity and total carrying value',async()=>{
+    const asset=await accountBalance(db,'1210'),ap=await accountBalance(db,'2010');
+    await action(claim,'rma',{supplier_id:supplier,grn_id:receipt.id,supplier_reference:'OWNED-RMA'});
+    assert.equal(await accountBalance(db,'1210'),asset);assert.equal(await accountBalance(db,'2010'),ap);
+    const input={outcome:'REPLACED',replacement_serial:'SUPPLIER-NEW-SERIAL',note:'Supplier replacement without charge'};
+    await Promise.all([action(claim,'rma_receive',input),action(claim,'rma_receive',input)]);
+    assert.equal(await accountBalance(db,'1210'),asset);assert.equal(await accountBalance(db,'2010'),ap);
+    assert.equal((await db.get("SELECT status FROM inventory_serials WHERE serial_number='WARRANTY-0'")).status,'RETURNED_TO_SUPPLIER');
+    assert.equal((await db.get("SELECT status FROM inventory_serials WHERE serial_number='SUPPLIER-NEW-SERIAL'")).status,'QUARANTINE');
+  });
+  await t.test('cash refund and actual supplier credit use canonical documents',async()=>{
+    const s=await sell('WARRANTY-7'),c=await make(s,'WARRANTY-7');await approve(c);
+    const refunded=await action(c,'refund',{refund_method:'cash'});assert.equal(refunded.resolution,'REFUNDED');assert.ok(refunded.return_id);
+    await action(c,'rma',{supplier_id:supplier,grn_id:receipt.id,supplier_reference:'CREDIT-RMA'});
+    const grnLine=await db.get('SELECT id FROM goods_receipt_lines WHERE goods_receipt_id=?',[receipt.id]);
+    await action(c,'rma_receive',{outcome:'CREDIT',grn_line_id:grnLine.id,credit_unit_cost:92.73,note:'Supplier credit note accepted'});
+    const rma=await db.get('SELECT * FROM warranty_rmas WHERE claim_id=?',[c.id]);assert.ok(rma.purchase_return_id);
+    assert.equal((await db.get('SELECT status FROM purchase_returns WHERE id=?',[rma.purchase_return_id])).status,'POSTED');
+  });
+  await t.test('inventory, accounting and trial balance reconcile',async()=>{const result=await runRetailReconciliation(db);assert.equal(result.reconciled,true,JSON.stringify(result));assert.equal((await trialBalance(db)).balanced,true);});
+  await t.test('partial non-serial refunds preserve remaining coverage and batch RMA identity',async()=>{
+    const productId=(await db.run("INSERT INTO menu_items(name,category_id,base_price,is_available) VALUES ('Batch warranty',?,100,1)",[category])).lastInsertRowid;
+    const [batchSku]=await ensureStandardVariant(db,productId,{price:100,stockUnit:'pcs'});await db.run("UPDATE menu_item_variants SET tracking_mode='batch' WHERE id=?",[batchSku.id]);
+    const grn=await createGoodsReceipt(db,{supplierId:supplier,locationId:location.id,paymentMethod:'credit',invoiceNumber:'BATCH-2D',lines:[{variantId:batchSku.id,quantityReceived:4,unitCost:25,batches:[{batchNumber:'PHASE2D-LOT',quantity:4,expiryDate:'2099-01-01'}]}]});await postGoodsReceipt(db,grn.id,{postedBy:1,businessDayId:day.id});
+    const lines=[{variant_id:batchSku.id,quantity:2}],held=await holdSale(db,{lines,customerId:customer,cashierId:1}),s=await checkoutSale(db,held.id,{lines,customerId:customer,cashierId:1,payments:[{method:'cash',amount:200,cash_tendered:200}],idempotencyKey:'batch-warranty-sale'});
+    const claimInput={sale_line_id:s.lines[0].id,quantity:1,issue:'Defect',description:'Batch defect',proof:true};
+    const first=await createWarrantyClaim(db,{...claimInput,idempotency_key:'batch-first-claim'},{actorId:1});await approve(first);await action(first,'refund',{refund_method:'cash'});
+    const second=await createWarrantyClaim(db,{...claimInput,idempotency_key:'batch-second-claim'},{actorId:1});assert.ok(second.batch_id);await approve(second);await action(second,'repair',{diagnosis:'Replace component'});await action(second,'part',{variant_id:batchSku.id,quantity:1});
+    await action(first,'rma',{supplier_id:supplier,grn_id:grn.id,supplier_reference:'BATCH-RMA'});await action(first,'rma_receive',{outcome:'REPLACED',replacement_batch:'PHASE2D-NEW-LOT',note:'New supplier lot at carried value'});
+    const higher=await createGoodsReceipt(db,{supplierId:supplier,locationId:location.id,paymentMethod:'credit',invoiceNumber:'BATCH-COST-RISE',lines:[{variantId:batchSku.id,quantityReceived:1,unitCost:40,batches:[{batchNumber:'PHASE2D-COST-LOT',quantity:1,expiryDate:'2099-01-01'}]}]});await postGoodsReceipt(db,higher.id,{postedBy:1,businessDayId:day.id});
+    const evidence=await skuOperations(db,batchSku.id);assert.ok(evidence.signals.some(s=>s.type==='COST_INCREASE'));assert.ok(evidence.signals.some(s=>s.type==='MARGIN_PRESSURE'));assert.equal(evidence.cost_summary.latest,40);assert.ok(Array.isArray(evidence.supplier.fulfillment));
+    const filtered=await listWarrantyClaims(db,{filters:{product:'Batch warranty',issue:'Defect',from:'2000-01-01'}});assert.equal(filtered.length,2);assert.equal((await listWarrantyClaims(db,{filters:{product:'nonexistent'}})).length,0);assert.equal((await listWarrantyClaims(db,{filters:{assigned:'nobody'}})).length,0);
+    const result=await runRetailReconciliation(db);assert.equal(result.reconciled,true,JSON.stringify(result));assert.equal((await trialBalance(db)).balanced,true);
+  });
+});

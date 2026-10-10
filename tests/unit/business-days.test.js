@@ -12,7 +12,7 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
-import { PosDatabase } from '../../lib/db/index.js';
+import Database, { PosDatabase } from '../../lib/db/index.js';
 import { getNepaliDateString } from '../../lib/time-utils.js';
 import { postJournal } from '../../lib/accounting.js';
 import { reverseJournal } from '../../lib/accounting-corrections.js';
@@ -32,12 +32,19 @@ import {
 } from '../../lib/business-days.js';
 
 const dbPath = path.join(os.tmpdir(), `business-days-test-${process.pid}-${Date.now()}.db`);
-const db = new PosDatabase(dbPath);
+const usePostgres = /^postgres(ql)?:\/\//i.test(process.env.DATABASE_URL || '');
+const db = usePostgres ? Database.getInstance() : new PosDatabase(dbPath);
 
-test.after(() => {
-  try { db.close(); } catch { /* already closed */ }
-  for (const suffix of ['', '-shm', '-wal']) {
-    try { fs.unlinkSync(`${dbPath}${suffix}`); } catch { /* already gone */ }
+if (usePostgres && !(await db.get(`SELECT id FROM users WHERE id=2`))) {
+  await db.run(`INSERT INTO users (id,username,password_hash,full_name,role,is_active) VALUES (2,'phase05-cashier','test-only','Cashier One','cashier',1)`);
+}
+
+test.after(async () => {
+  try { await db.close(); } catch { /* already closed */ }
+  if (!usePostgres) {
+    for (const suffix of ['', '-shm', '-wal']) {
+      try { fs.unlinkSync(`${dbPath}${suffix}`); } catch { /* already gone */ }
+    }
   }
 });
 

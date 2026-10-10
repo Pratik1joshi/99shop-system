@@ -22,7 +22,7 @@ function newKey() {
 
 export async function GET(request) {
   try {
-    const auth = await requireAuth(request, { roles: ['admin', 'cashier'], permission: 'customer_ledger.access' });
+    const auth = await requireAuth(request, { roles: ['admin', 'cashier', 'accountant'], permission: 'customer_ledger.access' });
     if (auth.error) return auth.error;
     const db = Database.getInstance();
     await ensureAccountingSchema(db);
@@ -58,7 +58,7 @@ export async function GET(request) {
 
 export async function POST(request) {
   try {
-    const auth = await requireAuth(request, { roles: ['admin', 'cashier'], permission: 'customer_ledger.access' });
+    const auth = await requireAuth(request, { roles: ['admin', 'cashier', 'accountant'], permission: 'customer_ledger.access' });
     if (auth.error) return auth.error;
     const db = Database.getInstance();
     await ensureAccountingSchema(db);

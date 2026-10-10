@@ -155,3 +155,28 @@ test('single-day summary does not double-count day-open bridge when opening is 0
   assert.equal(summary.cash_flow.closing, 1497.5);
   assert.equal(summary.money_position.cash.closing, 1497.5);
 });
+
+test('summary counts shop (retail) sales, returns and cost of goods', async () => {
+  await ensureReportSchema(db);
+  await ensureAccountingSchema(db);
+  const day = '2000-02-01';
+  for (const code of ['4011', '5080', '1210']) {
+    await db.run(`INSERT INTO accounts (code,name,type) SELECT ?,?,? WHERE NOT EXISTS (SELECT 1 FROM accounts WHERE code=?)`,
+      [code, `Test ${code}`, code.startsWith('4') ? 'income' : code.startsWith('5') ? 'expense' : 'asset', code]);
+  }
+  await postJournal(db, { entry_date: day, memo: 'Shop sale', source_type: 'retail_sale', source_id: 9001, created_by: actor.id, lines: [
+    { code: '1010', debit: 700, credit: 0 }, { code: '4010', debit: 0, credit: 700 },
+    { code: '5080', debit: 200, credit: 0 }, { code: '1210', debit: 0, credit: 200 },
+  ] });
+  await postJournal(db, { entry_date: day, memo: 'Shop return', source_type: 'retail_return', source_id: 9001, created_by: actor.id, lines: [
+    { code: '4011', debit: 350, credit: 0 }, { code: '1010', debit: 0, credit: 350 },
+    { code: '1210', debit: 100, credit: 0 }, { code: '5080', debit: 0, credit: 100 },
+  ] });
+  const summary = await buildSummaryReport(db, { start: day, end: day });
+  assert.equal(summary.revenue.gross, 700);
+  assert.equal(summary.revenue.refunds, 350);
+  assert.equal(summary.revenue.net, 350);
+  assert.equal(summary.received.refund_cash, 350);
+  assert.equal(summary.profit.cost_of_goods, 100);
+  assert.equal(summary.quantities.returns, 1);
+});

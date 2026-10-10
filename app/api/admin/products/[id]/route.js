@@ -1,9 +1,14 @@
 import { NextResponse } from 'next/server';
+import { ensureRetailCommerceSchema } from '@/lib/retail-commerce-schema.js';
 import Database from '@/lib/db/index';
+import { lockCatalogWrite } from '@/lib/retail-catalog-lock.js';
+import { ensureProductCatalogSchema, deleteProduct } from '@/lib/product-catalog.js';
 import { requireAuth, handleRouteError } from '@/lib/api-guard.js';
-import { ensureMenuVariantsSchema, findBarcodeConflict, normalizeBarcode, replaceVariants } from '@/lib/menu-variants.js';
+import { ensureMenuVariantsSchema, ensureStandardVariant, findBarcodeConflict, normalizeBarcode, replaceVariants } from '@/lib/menu-variants.js';
 import { ensureColumn } from '@/lib/db/schema-helpers.js';
 import { ensureComboSchema } from '@/lib/combos.js';
+import { ensurePermissionCache } from '@/lib/permissions.js';
+import { assertCostWriteAllowed, commerceProductVisibility } from '@/lib/commerce-visibility.js';
 
 async function rejectComboEdit(db, id) {
   await ensureComboSchema(db);
@@ -46,10 +51,15 @@ export async function PUT(request, context) {
     const { id } = await context.params;
     const data = await request.json();
     const db = Database.getInstance();
+    await ensurePermissionCache(db);
+    assertCostWriteAllowed(auth.user.role, data);
     await ensureMenuVariantsSchema(db);
     await rejectComboEdit(db, id);
     await ensureColumn(db, 'menu_items', 'stock_usage', 'REAL DEFAULT 1');
 
+    await ensureProductCatalogSchema(db);
+    return await db.transaction(async(db)=>{
+    await lockCatalogWrite(db);
     const hasVariants = Array.isArray(data.variants) && data.variants.length > 0;
     const barcode = normalizeBarcode(data.barcode);
 
@@ -62,7 +72,9 @@ export async function PUT(request, context) {
       throw Object.assign(new Error(`Barcode ${conflict} is already used by another product.`), { status: 409 });
     }
 
-    let variants = hasVariants ? await replaceVariants(db, id, data.variants) : await replaceVariants(db, id, []);
+    let variants = hasVariants
+      ? await replaceVariants(db, id, data.variants)
+      : await ensureStandardVariant(db, id, { price: data.price || data.base_price || 0, stockUnit: data.unit });
     const defaultVariant = variants.find((v) => v.is_default) || variants[0];
     const price = defaultVariant ? defaultVariant.price : (data.price || data.base_price || 0);
     const stockUsage = hasVariants ? 1 : normalizeStockUsage(data.stock_usage);
@@ -107,7 +119,8 @@ export async function PUT(request, context) {
 
     return NextResponse.json({
       message: 'Product updated successfully',
-      product,
+      product: commerceProductVisibility(product, auth.user.role),
+    });
     });
   } catch (error) {
     return handleRouteError(error, 'Failed to update product');
@@ -185,7 +198,8 @@ export async function PATCH(request, context) {
          FROM menu_items mi WHERE mi.id = ?`,
       [id]
     );
-    return NextResponse.json({ message: 'Menu item updated successfully', product });
+    await ensurePermissionCache(db);
+    return NextResponse.json({ message: 'Menu item updated successfully', product: commerceProductVisibility(product, auth.user.role) });
   } catch (error) {
     return handleRouteError(error, 'Failed to update menu item');
   }
@@ -199,32 +213,13 @@ export async function DELETE(request, context) {
     const { id } = await context.params;
     const db = Database.getInstance();
     await rejectComboEdit(db, id);
-    await ensureColumn(db, 'inventory_items', 'pos_stock_visible', 'INTEGER DEFAULT 0');
-
-    // Deleting a menu item with order history would silently orphan those
-    // order_items (menu_item_id is ON DELETE SET NULL) and drop them out of
-    // any report that joins on menu_items. Mark it unavailable instead.
-    const ordered = await db.get('SELECT 1 AS n FROM order_items WHERE menu_item_id = ? LIMIT 1', [id]);
-    if (ordered) {
-      return NextResponse.json(
-        { error: 'This item has order history and cannot be deleted. Mark it unavailable instead to hide it from the menu.' },
-        { status: 409 }
-      );
-    }
-
-    // Clear the inventory link in the same transaction as the delete — see the
-    // note in lib/db/repositories/menu.js deleteItem(): the FK is not
-    // guaranteed on databases where menu_item_id was added by ensureColumn().
-    await db.transaction(async (tx) => {
-      await tx.run(
-        'UPDATE inventory_items SET menu_item_id = NULL, pos_stock_visible = 0, updated_at = CURRENT_TIMESTAMP WHERE menu_item_id = ?',
-        [id]
-      );
-      await tx.run('DELETE FROM menu_items WHERE id = ?', [id]);
-    });
-
+    await ensureRetailCommerceSchema(db);
+    // Products with sales, stock or order history are taken off sale instead,
+    // so reports keep them. See deleteProduct() in lib/product-catalog.js.
+    const result = await db.transaction((tx) => deleteProduct(tx, Number(id)));
     return NextResponse.json({
-      message: 'Product deleted successfully',
+      result,
+      message: result === 'deleted' ? 'Product deleted successfully' : 'This item has history, so it was hidden instead of deleted.',
     });
   } catch (error) {
     return handleRouteError(error, 'Failed to delete product');

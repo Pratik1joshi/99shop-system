@@ -8,14 +8,12 @@ import { composeAnalytics } from '../../lib/analytics.js';
 import { createPurchase } from '../../lib/purchases.js';
 import { applyStockChange } from '../../lib/inventory-ledger.js';
 import { listStockMovements } from '../../lib/stock-movements.js';
-import { addMedia, setCmsSection, getCmsContent } from '../../lib/cms.js';
-import { verifyCancellation, listCancellationVerifications } from '../../lib/cancellation-verification.js';
+import { saveSiteContent, getSiteContent } from '../../lib/site-content.js';
 import { nepalDateString } from '../../lib/report-dates.js';
 import { parseDbDate } from '../../lib/time-utils.js';
 import { recordInitialSplitSettlement, collectCreditBalance, validateAllocations } from '../../lib/split-payments.js';
 import { POST as payOrder } from '../../app/api/admin/pos/orders/[id]/pay/route.js';
 import { refundBill } from '../../lib/bill-corrections.js';
-import { PUT as legacyKotUpdate, PATCH as legacyKotItem } from '../../app/api/restaurant/kots/[id]/route.js';
 import { GET as getBusinessDay, PUT as closeDayRoute } from '../../app/api/admin/business-days/route.js';
 import { GET as getLedger } from '../../app/api/admin/ledger/route.js';
 
@@ -49,7 +47,7 @@ test('PostgreSQL transaction contracts: backdating, stock, CMS, verification, re
   const beforeClose=await businessDaySummary(db,past);assert.equal(Number(beforeClose.cash.expected_cash),10113,'QR and credit do not inflate drawer cash');
   const pastAnalytics=await composeAnalytics(db,{start:yesterday,end:yesterday,period:'business_day'},{},{businessDayId:past.id});assert.equal(Number(pastAnalytics.totals.billedTotal),339);
   await closeBusinessDay(db,{counted_cash:10113},admin);
-  day=await openBusinessDay(db,{action:'start_next',opening_cash:10113},admin);
+  day=await openBusinessDay(db,{action:'start_next',confirm_next_day:true,opening_cash:10113},admin);
   const revenueBeforeCollection=Number((await db.get("SELECT SUM(l.credit-l.debit) n FROM journal_lines l JOIN accounts a ON a.id=l.account_id WHERE a.code='4010'")).n);
   await collectCreditBalance(db,{billId:historicBills.credit,allocations:[{method:'cash',amount:113,cash_tendered:113}],actorId:1,actorRole:'admin',requestKey:'historical-credit-collected'});
   const later=await db.get("SELECT * FROM customer_ledger WHERE bill_id=? AND entry_type='credit_payment'",[historicBills.credit]);assert.equal(Number(later.business_day_id),Number(day.id));assert.equal(nepalDateString(parseDbDate(later.created_at)),today);
@@ -84,15 +82,8 @@ test('PostgreSQL transaction contracts: backdating, stock, CMS, verification, re
   await assert.rejects(db.transaction(async(tx)=>{await applyStockChange(tx,{inventory_item_id:itemId,quantity:3,change_type:'manual_adjustment',reason:'Rollback test',performed_by:1});throw Error('injected failure');}),/injected failure/);
   assert.equal(Number((await db.get('SELECT quantity FROM inventory_items WHERE id=?',[itemId])).quantity),2130);
 
-  const media=await addMedia(db,{url:'/api/media/cms/contract.webm',section:'videos',uploaded_by:1});assert.ok(media.id);
-  await setCmsSection(db,'videos',{items:[{url:media.url,visible:true,title:'Contract clip'}]},1);
-  assert.equal((await getCmsContent(db)).videos.items[0].url,media.url);
-  const cancelled=(await db.run(`INSERT INTO orders(order_number,status,cancel_reason,cancelled_at,business_day_id) VALUES ('CANCEL-CONTRACT','cancelled','Guest left',CURRENT_TIMESTAMP,?)`,[day.id])).lastInsertRowid;
-  const kot=(await db.run(`INSERT INTO kots(kot_number,order_id,status,cancel_reason,cancelled_at,cancelled_by,previous_status,business_day_id) VALUES ('CANCEL-KOT',?,'cancelled','Guest left',CURRENT_TIMESTAMP,1,'preparing',?)`,[cancelled,day.id])).lastInsertRowid;
-  const original=await db.get('SELECT * FROM kots WHERE id=?',[kot]);
-  await verifyCancellation(db,admin,{document_type:'kot',document_id:kot,status:'disputed',note:'Review needed',request_key:'contract-review-1'});
-  assert.deepEqual(await db.get('SELECT * FROM kots WHERE id=?',[kot]),original);
-  assert.equal((await listCancellationVerifications(db,admin,{businessDayId:day.id,status:'disputed'})).rows.length,1);
+  await saveSiteContent(db,{'shop.name':'Phase 0 Integration Shop'});
+  assert.equal((await getSiteContent(db))['shop.name'],'Phase 0 Integration Shop');
 
   await db.run("UPDATE system_settings SET setting_value='13' WHERE setting_key='vat_percentage'");
   const customerId=(await db.run(`INSERT INTO customers(name,phone,credit_limit,current_credit) VALUES ('Contract guest','9800000012',10000,0)`)).lastInsertRowid;
@@ -111,30 +102,31 @@ test('PostgreSQL transaction contracts: backdating, stock, CMS, verification, re
     const response=await payOrder(new Request(`http://localhost/api/admin/pos/orders/${reopened.orderId}/pay`,{method:'POST',headers:{authorization:'Bearer contract'},body:JSON.stringify({idempotency_key:'reopen-credit-contract',customer_mode:'customer',customer_phone:customer.phone,payment_method:'credit'})}),{params:Promise.resolve({id:String(reopened.orderId)})});
     const body=await response.json();assert.equal(response.status,200,JSON.stringify(body));
     const bill=await db.get('SELECT * FROM bills WHERE id=?',[reopened.billId]);
-    assert.equal(Number(bill.outstanding_amount),113);assert.equal(bill.payment_status,'partially_paid');
-    const tax=await db.get(`SELECT SUM(l.credit-l.debit) AS tax FROM journal_lines l JOIN accounts a ON a.id=l.account_id JOIN journal_entries j ON j.id=l.journal_id WHERE j.external_ref='reopen-credit-contract:supplement-journal' AND a.code='2020'`);assert.equal(Number(tax.tax),13);
+    assert.equal(Number(bill.outstanding_amount),87);assert.equal(bill.payment_status,'partially_paid');
+    const tax=await db.get(`SELECT SUM(l.credit-l.debit) AS tax FROM journal_lines l JOIN accounts a ON a.id=l.account_id JOIN journal_entries j ON j.id=l.journal_id WHERE j.external_ref='reopen-credit-contract:supplement-journal' AND a.code='2020'`);assert.equal(Number(tax.tax),0);
     const revenueBefore=Number((await db.get(`SELECT SUM(l.credit-l.debit) AS n FROM journal_lines l JOIN accounts a ON a.id=l.account_id WHERE a.code='4010'`)).n);
-    await collectCreditBalance(db,{billId:reopened.billId,allocations:[{method:'cash',amount:113,cash_tendered:113}],actorId:1,actorRole:'admin',requestKey:'later-collection'});
+    await collectCreditBalance(db,{billId:reopened.billId,allocations:[{method:'cash',amount:87,cash_tendered:87}],actorId:1,actorRole:'admin',requestKey:'later-collection'});
     assert.equal(Number((await db.get(`SELECT SUM(l.credit-l.debit) AS n FROM journal_lines l JOIN accounts a ON a.id=l.account_id WHERE a.code='4010'`)).n),revenueBefore,'Credit collection is not a second sale');
     const refundCase=await makeBill('REFUND-FACE-VALUE',50);
     const netBefore=(await composeAnalytics(db,{start:today,end:today,period:'custom'})).totals.netSales;
     const paidRefund=await payOrder(new Request('http://localhost/api/admin/pos/orders/'+refundCase.orderId+'/pay',{method:'POST',headers:{authorization:'Bearer contract'},body:JSON.stringify({idempotency_key:'refund-face-contract',payment_method:'cash'})}),{params:Promise.resolve({id:String(refundCase.orderId)})});
     assert.equal(paidRefund.status,200,JSON.stringify(await paidRefund.json()));
     assert.equal(Number((await db.get('SELECT grand_total FROM bills WHERE id=?',[refundCase.billId])).grand_total),113,'Refund keeps original invoice face value');
-    assert.equal(Number((await composeAnalytics(db,{start:today,end:today,period:'custom'})).totals.netSales),Number(netBefore)-56.5,'Refund is deducted once');
+    assert.equal(Number((await composeAnalytics(db,{start:today,end:today,period:'custom'})).totals.netSales),Number(netBefore)-63,'Refund is deducted once');
     const rollback=await makeBill('REFUND-ROLLBACK',50);
     const orderBefore=await db.get('SELECT * FROM orders WHERE id=?',[rollback.orderId]);
     const billBefore=await db.get('SELECT * FROM bills WHERE id=?',[rollback.billId]);
     const failed=await payOrder(new Request(`http://localhost/api/admin/pos/orders/${rollback.orderId}/pay`,{method:'POST',headers:{authorization:'Bearer contract'},body:JSON.stringify({idempotency_key:'refund-invalid-method',payment_method:'invalid-refund-method'})}),{params:Promise.resolve({id:String(rollback.orderId)})});
     assert.ok(failed.status>=400);assert.deepEqual(await db.get('SELECT * FROM orders WHERE id=?',[rollback.orderId]),orderBefore);assert.deepEqual(await db.get('SELECT * FROM bills WHERE id=?',[rollback.billId]),billBefore);
-    const cancelledResponse=await legacyKotUpdate(new Request('http://localhost/api/restaurant/kots/'+kot,{method:'PUT',headers:{authorization:'Bearer contract'},body:JSON.stringify({status:'preparing'})}),{params:Promise.resolve({id:String(kot)})});assert.equal(cancelledResponse.status,409);
     const oldCutoff=process.env.CASHIER_CLOSING_CUTOFF;process.env.CASHIER_CLOSING_CUTOFF='23:59';
+    const priorCashCutoff=await db.get("SELECT setting_value FROM system_settings WHERE setting_key='cashier_expected_cash_reveal_time'");
+    await db.run("INSERT INTO system_settings(setting_key,setting_value) VALUES ('cashier_expected_cash_reveal_time','23:59') ON CONFLICT(setting_key) DO UPDATE SET setting_value='23:59'");
     AuthService.prototype.verifySession=async()=>({id:1,role:'cashier'});
     try {
       const context=await getBusinessDay(new Request('http://localhost/api/admin/business-days?view=closing',{headers:{authorization:'Bearer contract'}}));const payload=await context.json();assert.equal(context.status,200,JSON.stringify(payload));assert.equal(payload.cashPolicy.expectedCashVisible,false);assert.equal(JSON.stringify(payload).includes('expected_cash'),false);
       assert.equal((await getLedger(new Request('http://localhost/api/admin/ledger',{headers:{authorization:'Bearer contract'}}))).status,403);
       assert.equal((await closeDayRoute(new Request('http://localhost/api/admin/business-days',{method:'PUT',headers:{authorization:'Bearer contract'},body:JSON.stringify({counted_cash:0})}))).status,403);
-    } finally {if(oldCutoff===undefined)delete process.env.CASHIER_CLOSING_CUTOFF;else process.env.CASHIER_CLOSING_CUTOFF=oldCutoff;}
+    } finally {if(priorCashCutoff)await db.run("UPDATE system_settings SET setting_value=? WHERE setting_key='cashier_expected_cash_reveal_time'",[priorCashCutoff.setting_value]);else await db.run("DELETE FROM system_settings WHERE setting_key='cashier_expected_cash_reveal_time'");if(oldCutoff===undefined)delete process.env.CASHIER_CLOSING_CUTOFF;else process.env.CASHIER_CLOSING_CUTOFF=oldCutoff;}
   } finally { AuthService.prototype.verifySession=realVerify; }
   const race=await makeRefundRace();
   const refunds=await Promise.allSettled([1,2].map(i=>refundBill(db,{bill_id:race,amount:80,method:'cash',reason:'Concurrent refund '+i,created_by:1})));

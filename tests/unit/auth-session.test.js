@@ -10,6 +10,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import path from 'node:path';
+import crypto from 'node:crypto';
 import { fileURLToPath } from 'node:url';
 
 process.env.DB_NAME = `auth-session-test-${process.pid}-${Date.now()}.db`;
@@ -47,12 +48,45 @@ test('a real login-issued token still verifies', async () => {
   const admin = await db.get(`SELECT id, username, full_name, role FROM users WHERE role='admin' LIMIT 1`);
   const token = 'real-session-token-under-test';
   await db.run(
-    `INSERT INTO sessions (user_id, token, expires_at) VALUES (?, ?, datetime('now', '+1 day'))`,
-    [admin.id, token]
+    `INSERT INTO sessions (user_id, token, expires_at) VALUES (?, ?, ?)`,
+    [admin.id, token, new Date(Date.now() + 86400000).toISOString().slice(0, 19).replace('T', ' ')]
   );
   const result = await auth.verifySession(token);
   assert.equal(result?.username, admin.username);
   assert.equal(result?.role, 'admin');
+
+  await auth.logout(token);
+  assert.equal(await auth.verifySession(token), null);
+});
+
+test('login issues an unpredictable bearer token and stores only its hash', async () => {
+  const admin = await db.get(`SELECT id, username FROM users WHERE role='admin' LIMIT 1`);
+  const password = `phase0-${Date.now()}`;
+  const bcrypt = (await import('bcryptjs')).default;
+  await db.run(`UPDATE users SET password_hash=? WHERE id=?`, [bcrypt.hashSync(password, 4), admin.id]);
+
+  const first = await auth.authenticate(admin.username, password);
+  const second = await auth.authenticate(admin.username, password);
+  assert.equal(first.success, true);
+  assert.match(first.token, /^[a-f0-9]{64}$/);
+  assert.notEqual(first.token, second.token);
+
+  const expectedHash = crypto.createHash('sha256').update(first.token).digest('hex');
+  const row = await db.get(`SELECT token, token_hash FROM sessions WHERE token_hash=?`, [expectedHash]);
+  assert.equal(row.token_hash, expectedHash);
+  assert.equal(row.token, expectedHash);
+  assert.notEqual(row.token, first.token);
+  await assert.rejects(
+    db.run(`INSERT INTO sessions (user_id, token, token_hash, expires_at) VALUES (?, ?, ?, ?)`, [
+      admin.id, `${expectedHash}-duplicate`, expectedHash,
+      new Date(Date.now() + 86400000).toISOString().slice(0, 19).replace('T', ' '),
+    ]),
+    /unique|duplicate/i
+  );
+  assert.equal((await auth.verifySession(first.token))?.username, admin.username);
+
+  await auth.logout(first.token);
+  assert.equal(await auth.verifySession(first.token), null);
 });
 
 test('an unknown/garbage token is rejected', async () => {

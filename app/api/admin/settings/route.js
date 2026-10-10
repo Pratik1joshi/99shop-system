@@ -147,10 +147,13 @@ export async function PUT(request) {
     if (data.cashier_expected_cash_reveal_time != null && !/^(?:[01]\d|2[0-3]):[0-5]\d$/.test(String(data.cashier_expected_cash_reveal_time))) {
       return NextResponse.json({ error: 'Cashier expected-cash reveal time must be a valid 24-hour time.' }, { status: 400 });
     }
+    if (data.sale_void_window_minutes != null && !/^\d{1,4}$/.test(String(data.sale_void_window_minutes))) {
+      return NextResponse.json({ error: 'Quick void window must be a whole number of minutes.' }, { status: 400 });
+    }
     if (data.cashier_cash_count_time != null && !/^(?:[01]\d|2[0-3]):[0-5]\d$/.test(String(data.cashier_cash_count_time))) {
       return NextResponse.json({ error: 'Cashier cash-count time must be a valid 24-hour time.' }, { status: 400 });
     }
-    const adminOnlyKeys = ['cashier_expected_cash_schedule_enabled', 'cashier_expected_cash_reveal_time', 'cashier_cash_count_schedule_enabled', 'cashier_cash_count_time'];
+    const adminOnlyKeys = ['cashier_expected_cash_schedule_enabled', 'cashier_expected_cash_reveal_time', 'cashier_cash_count_schedule_enabled', 'cashier_cash_count_time', 'sale_void_window_minutes'];
     if (auth.user.role !== 'admin' && adminOnlyKeys.some((key) => key in data)) {
       return NextResponse.json({ error: 'Only an administrator can change protected operational controls.' }, { status: 403 });
     }

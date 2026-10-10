@@ -1,3 +1,4 @@
+import { ensureCustomerMasterAudit, recordCustomerMasterChange } from '@/lib/customer-master-audit.js';
 import { NextResponse } from 'next/server';
 import Database from '@/lib/db/index';
 import { findCustomerByPhone, ensureCustomersTable, normalizePhone } from '@/lib/customers.js';
@@ -16,6 +17,12 @@ const CUSTOMER_SORTS = {
 };
 
 const CUSTOMER_SEARCH_COLUMNS = ['c.name', 'c.phone', 'c.phone_digits', 'c.email', 'c.address', 'c.notes'];
+const customerForRole = (customer, role) => {
+  if (role === 'admin' || !customer) return customer;
+  const visible = { ...customer };
+  delete visible.notes;
+  return visible;
+};
 
 function friendlyDbError(error, fallback) {
   const msg = String(error?.message || '');
@@ -36,7 +43,7 @@ function friendlyDbError(error, fallback) {
 
 export async function GET(request) {
   try {
-    const auth = await requireAuth(request, { roles: ['admin', 'cashier', 'waiter'], permission: 'customers.access' });
+    const auth = await requireAuth(request, { roles: ['admin', 'cashier', 'manager', 'waiter'], permission: 'customers.access' });
     if (auth.error) return auth.error;
 
     const db = Database.getInstance();
@@ -48,7 +55,8 @@ export async function GET(request) {
     // Phone lookup is a single-record probe used by the till — never paginated.
     if (phone) {
       const customer = await findCustomerByPhone(db, phone);
-      return NextResponse.json({ customer, customers: customer ? [customer] : [] });
+      const visible = customerForRole(customer, auth.user.role);
+      return NextResponse.json({ customer: visible, customers: visible ? [visible] : [] });
     }
 
     const { page, pageSize, exportAll, sort, dir, search } = readListParams(searchParams, { defaultDir: 'asc' });
@@ -59,7 +67,7 @@ export async function GET(request) {
     if (searchParams.get('vip') === '1') conditions.push('COALESCE(c.is_vip, 0) = 1');
     if (searchParams.get('blacklisted') === '1') conditions.push('COALESCE(c.is_blacklisted, 0) = 1');
 
-    const searchClause = buildSearch(search, CUSTOMER_SEARCH_COLUMNS);
+    const searchClause = buildSearch(search, auth.user.role === 'admin' ? CUSTOMER_SEARCH_COLUMNS : CUSTOMER_SEARCH_COLUMNS.filter((column) => column !== 'c.notes'));
     if (searchClause.clause) {
       conditions.push(searchClause.clause);
       params.push(...searchClause.params);
@@ -76,7 +84,7 @@ export async function GET(request) {
       exportAll,
     });
 
-    return NextResponse.json({ customers: rows, pagination });
+    return NextResponse.json({ customers: rows.map((row) => customerForRole(row, auth.user.role)), pagination });
   } catch (error) {
     return handleRouteError(error, 'Could not load customers. Please try again.');
   }
@@ -84,7 +92,7 @@ export async function GET(request) {
 
 export async function POST(request) {
   try {
-    const auth = await requireAuth(request, { roles: ['admin', 'cashier'], permission: 'customers.access' });
+    const auth = await requireAuth(request, { roles: ['admin', 'cashier', 'manager'], permission: 'customers.access' });
     if (auth.error) return auth.error;
 
     const data = await request.json();
@@ -117,13 +125,15 @@ export async function POST(request) {
         {
           error: 'A customer with this phone number is already saved. Please search for them or use a different number.',
           code: 'duplicate_phone',
-          customer: existing,
+          customer: customerForRole(existing, auth.user.role),
         },
         { status: 409 }
       );
     }
 
-    const result = await db.run(
+    await ensureCustomerMasterAudit(db);
+    const customer = await db.transaction(async (tx) => {
+    const result = await tx.run(
       `INSERT INTO customers (name, phone, email, address, credit_limit, is_vip, is_blacklisted, notes)
        VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
       [
@@ -131,19 +141,23 @@ export async function POST(request) {
         phone,
         data.email?.trim() || null,
         data.address?.trim() || null,
-        Number(data.credit_limit) || 0,
-        data.is_vip ? 1 : 0,
-        data.is_blacklisted ? 1 : 0,
-        data.notes?.trim() || null,
+        auth.user.role === 'admin' ? Number(data.credit_limit) || 0 : 0,
+        auth.user.role === 'admin' && data.is_vip ? 1 : 0,
+        auth.user.role === 'admin' && data.is_blacklisted ? 1 : 0,
+        auth.user.role === 'admin' ? data.notes?.trim() || null : null,
       ]
     );
 
-    const customer = await db.get('SELECT * FROM customers WHERE id = ?', [result.lastInsertRowid]);
+    const customer = await tx.get('SELECT * FROM customers WHERE id = ?', [result.lastInsertRowid]);
+
+      await recordCustomerMasterChange(tx, { after: customer, actorId: auth.user.id });
+      return customer;
+    });
 
     return NextResponse.json(
       {
         message: 'Customer saved successfully.',
-        customer,
+        customer: customerForRole(customer, auth.user.role),
       },
       { status: 201 }
     );
@@ -157,7 +171,7 @@ export async function POST(request) {
 
 export async function PUT(request) {
   try {
-    const auth = await requireAuth(request, { roles: ['admin', 'cashier'], permission: 'customers.access' });
+    const auth = await requireAuth(request, { roles: ['admin', 'cashier', 'manager'], permission: 'customers.access' });
     if (auth.error) return auth.error;
 
     const data = await request.json();
@@ -194,13 +208,17 @@ export async function PUT(request) {
         {
           error: 'Another customer already uses this phone number.',
           code: 'duplicate_phone',
-          customer: existing,
+          customer: customerForRole(existing, auth.user.role),
         },
         { status: 409 }
       );
     }
 
-    await db.run(
+    await ensureCustomerMasterAudit(db);
+    const customer = await db.transaction(async (tx) => {
+    const before = await tx.get(`SELECT * FROM customers WHERE id=?${db.driver === 'postgres' ? ' FOR UPDATE' : ''}`, [data.id]);
+    if (!before) return null;
+    await tx.run(
       `UPDATE customers
        SET name = ?, phone = ?, email = ?, address = ?, credit_limit = ?,
            is_vip = ?, is_blacklisted = ?, notes = ?
@@ -210,19 +228,24 @@ export async function PUT(request) {
         phone,
         data.email?.trim() || null,
         data.address?.trim() || null,
-        Number(data.credit_limit) || 0,
-        data.is_vip ? 1 : 0,
-        data.is_blacklisted ? 1 : 0,
-        data.notes?.trim() || null,
+        auth.user.role === 'admin' ? Number(data.credit_limit) || 0 : before.credit_limit,
+        auth.user.role === 'admin' ? data.is_vip ? 1 : 0 : before.is_vip,
+        auth.user.role === 'admin' ? data.is_blacklisted ? 1 : 0 : before.is_blacklisted,
+        auth.user.role === 'admin' ? data.notes?.trim() || null : before.notes,
         data.id,
       ]
     );
 
-    const customer = await db.get('SELECT * FROM customers WHERE id = ?', [data.id]);
+    const customer = await tx.get('SELECT * FROM customers WHERE id = ?', [data.id]);
+
+      await recordCustomerMasterChange(tx, { before, after: customer, actorId: auth.user.id, reason: data.reason });
+      return customer;
+    });
+    if (!customer) return NextResponse.json({ error: 'Customer not found.' }, { status: 404 });
 
     return NextResponse.json({
       message: 'Customer updated successfully.',
-      customer,
+      customer: customerForRole(customer, auth.user.role),
     });
   } catch (error) {
     console.error('Update customer error:', error);
@@ -233,7 +256,7 @@ export async function PUT(request) {
 
 export async function DELETE(request) {
   try {
-    const auth = await requireAuth(request, { roles: ['admin', 'cashier'], permission: 'customers.delete' });
+    const auth = await requireAuth(request, { roles: ['admin'], permission: 'customers.delete' });
     if (auth.error) return auth.error;
 
     const { searchParams } = new URL(request.url);
@@ -255,14 +278,25 @@ export async function DELETE(request) {
          (SELECT COUNT(*) FROM customer_ledger WHERE customer_id = ?) AS n`,
       [id, id, id]
     ).catch(() => null);
-    if (Number(referenced?.n || 0) > 0) {
+    const retailReferenced = await db.get(`SELECT
+      (SELECT COUNT(*) FROM retail_sales WHERE customer_id=?) +
+      (SELECT COUNT(*) FROM retail_returns WHERE customer_id=?) +
+      (SELECT COUNT(*) FROM store_credit_transactions WHERE customer_id=?) +
+      (SELECT COUNT(*) FROM loyalty_transactions WHERE customer_id=?) AS n`, [id, id, id, id]).catch(() => null);
+    if (Number(referenced?.n || 0) > 0 || Number(retailReferenced?.n || 0) > 0) {
       return NextResponse.json(
         { error: 'This customer has order, billing or credit history and cannot be deleted.' },
         { status: 409 }
       );
     }
 
-    await db.run('DELETE FROM customers WHERE id = ?', [id]);
+    await ensureCustomerMasterAudit(db);
+    await db.transaction(async (tx) => {
+      const before = await tx.get(`SELECT * FROM customers WHERE id=?${db.driver === 'postgres' ? ' FOR UPDATE' : ''}`, [id]);
+      if (!before) return;
+      await tx.run('DELETE FROM customers WHERE id = ?', [id]);
+      await recordCustomerMasterChange(tx, { before, actorId: auth.user.id });
+    });
 
     return NextResponse.json({
       message: 'Customer removed successfully.',

@@ -1,106 +1,77 @@
-# 99 Shop Retail POS — Production Install (cPanel + PostgreSQL + Node.js)
+# 99 Shop: cPanel and PostgreSQL deployment
 
-Fresh install from scratch. ~15 minutes.
+This is the current install path for a **fresh** database. It requires a cPanel
+host that provides a Node.js application service and PostgreSQL. Use a dedicated
+domain or subdomain, not a URL subpath. The application needs a long-running
+Node.js process; uploading files to `public_html` alone will not run it.
 
-## 0. Requirements
-- cPanel with **Setup Node.js App** (Node 22).
-- **PostgreSQL 14+** (cPanel → PostgreSQL Databases).
-- `psql` access (cPanel Terminal, or phpPgAdmin for the SQL files).
+## Before installation
 
-## 1. Database
-In cPanel → PostgreSQL Databases: create a database + user, grant the user **all**
-privileges on the database. Then load the schema + seed (Terminal):
+- Select Node.js 22 and create a PostgreSQL database and user. Grant that user
+  access to its database. The host may provide cPanel Application Manager or
+  CloudLinux Setup Node.js App; their setup screens differ.
+- Put the project outside `public_html`. Keep a separate persistent upload
+  directory writable by the application user.
+- Use a UTF-8 PostgreSQL database. Back up both PostgreSQL and uploads before
+  every update.
+- Run `npm ci` with the selected Node.js 22 environment.
 
-```bash
-export PGPASSWORD='your_db_password'
-psql -h localhost -U DBUSER -d DBNAME -f deploy/production_schema.sql
-psql -h localhost -U DBUSER -d DBNAME -f deploy/production_seed.sql
-```
+## Configure
 
-`production_schema.sql` is a baseline snapshot, not the final schema contract.
-`production_seed.sql` loads the Chart of Accounts, default cash drawer and bank, Kathmandu
-Momo restaurant settings, the first admin (login **PIN 984898**), floors /
-table types / tables `T-01..T-12`, unit conversions, the real menu (15
-categories, 178 items — no photos or recipe ingredient lines yet, add those
-via Admin → Products / Recipes), the ingredient master (opening stock **0**
-— the client enters real stock later) and an empty recipe shell per item. It
-also marks migrations `001`-`038` applied.
+Set production variables in the host's application settings using
+[`.env.example`](../.env.example) as a checklist. Required values are
+`NODE_ENV=production`, `APP_URL`, `NEXT_PUBLIC_SITE_URL`, `DATABASE_URL`,
+`SESSION_SECRET`, `CSRF_SECRET`, `FORCE_SECURE_COOKIES=1`, and an absolute
+`UPLOADS_DIR` outside the release directory. Set `PGSSL` to match the database
+connection. URL-encode special characters in the database password. The host
+normally supplies `PORT`; do not hard-code it.
 
-**Always run this immediately after loading both SQL files:**
+`NEXT_PUBLIC_SITE_URL` is embedded at build time. Set it to the final HTTPS
+origin **before** running `npm run build`.
+
+## Fresh database
+
+The ordered SQL files in `migrations/` are the schema source of truth. Do not
+load the old `deploy/production_schema.sql` or `deploy/production_seed.sql`:
+those are restaurant-era snapshots with old defaults and migration levels.
 
 ```bash
 npm run db:migrate
+npm run db:plan
+ADMIN_USERNAME=admin ADMIN_PASSWORD='a-unique-strong-password' npm run db:seed
+npm run build
 ```
 
-At the time of this guide the migration source of truth continues through
-`043_delivery_pricing`. The command is safe to repeat and must also run after
-every future release. Skipping it causes runtime errors such as missing KOT,
-kitchen timing, salary advance, or delivery pricing columns.
+`db:plan` must report zero pending migrations. Seed only a fresh database.
+After first login, change the initial admin password and complete business
+settings. The seed does not create demo products, stock, or sales.
 
-> Alternative for a live/existing DB: run `npm run db:migrate` (applies the
-> incremental `migrations/*.sql`) and then load only `deploy/production_seed.sql`
-> for the master data. Both paths converge on the same schema level.
+To add the two selected storefront products and their colour/size options to a
+fresh database, run `psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f deploy/basic_shop_seed.sql`
+after the commands above. This optional SQL seed is safe to rerun and does not
+create stock. Receive or count your actual stock in the app before accepting
+online orders.
 
-## 2. Upload the app
-Upload the project (without `node_modules`, `.next`, `.env`, `uploads/*`) to a
-folder **outside** `public_html` (e.g. `~/pos`). Keep `uploads/` persistent.
+## Run and verify
 
-## 3. Environment variables
-Copy `.env.example` → `.env` and set real values. Minimum required:
+Set the startup file to `server.js` and application mode to Production. Start or
+restart the Node.js application in the host panel. Verify:
 
-| Variable | Value |
-|---|---|
-| `NODE_ENV` | `production` |
-| `APP_URL` | `https://your-domain.com` (no trailing slash) |
-| `DATABASE_URL` | `postgresql://DBUSER:PASSWORD@localhost:5432/DBNAME` (URL-encode special chars, e.g. `@`→`%40`) |
-| `SESSION_SECRET` | long random string |
-| `CSRF_SECRET` | another long random string |
-| `FORCE_SECURE_COOKIES` | `1` |
-| `HOSTNAME` | `0.0.0.0` |
-| `UPLOADS_DIR` | `./uploads` (or an absolute persistent path) |
-| `PGSSL` | `false` (usually, for local cPanel Postgres) |
+1. `GET /api/health` reports a healthy database.
+2. The public home, About, and category pages load over HTTPS.
+3. Admin login and Website CMS save/preview work.
+4. A product with a variant can be sold, received, and reported on using a
+   staging database before taking real orders.
+5. Uploaded images survive a restart and a release update.
 
-Keep PostgreSQL sessions in UTC (`ALTER ROLE your_app_user SET timezone TO
-'UTC';`). The application stores operational timestamps in UTC and converts
-display and report boundaries to Nepal time (`Asia/Kathmandu`).
+## Updating an existing installation
 
-Optional: `PG_POOL_MAX=5`, `LOG_LEVEL=info`, `RATE_LIMIT_LOGIN=10`,
-`RATE_LIMIT_PUBLIC=8`. **Do not** set `PORT` — cPanel injects it.
+Back up the database and uploads, then deploy the new files. Run `npm ci`,
+`npm run db:plan`, `npm run db:migrate`, `npm run db:plan` (zero pending), and
+`npm run build`; restart the application and repeat the health and smoke checks.
+Do not run `db:seed` on a live database: it updates the admin credentials.
 
-## 4. Node.js App (cPanel → Setup Node.js App)
-- Application root: your upload folder (`~/pos`).
-- Application startup file: **`server.js`**.
-- Node version: 22. Application mode: **Production**.
-- Add the env vars from step 3 in the app's Environment Variables panel
-  (or the `.env` file is read too).
-- Click **Run NPM Install**, then in the app's terminal: `npm run build`.
-- Start / Restart the app. cPanel proxies your domain to it.
-
-## 5. Verify
-- `npm run health` (or open the site). Log in at `/login` with **admin, PIN 984898**.
-- Confirm `SELECT version FROM schema_migrations ORDER BY version DESC LIMIT 1;`
-  returns at least `043_delivery_pricing` for this release.
-- **Immediately** change the admin PIN (you are forced to on first login).
-- Settings → fill Business info, VAT/PAN, receipt paper size (58/80mm).
-
-## 6. Uploads & static
-- Menu/receipt images are written to `UPLOADS_DIR` and served via `/api/media`.
-  Keep this folder out of the release directory so redeploys don't wipe it.
-- `next.config.mjs` uses `images.unoptimized` — no `sharp`/native build needed.
-
-## 7. Backups
-Schedule a nightly dump (cPanel Cron):
-```bash
-pg_dump -h localhost -U DBUSER DBNAME | gzip > ~/backups/pos_$(date +\%F).sql.gz
-```
-Also back up the `uploads/` folder. Keep 7–30 days.
-
-## 8. Security checklist
-- [ ] Admin password changed from default.
-- [ ] `SESSION_SECRET` / `CSRF_SECRET` are unique random strings.
-- [ ] `FORCE_SECURE_COOKIES=1`, site served over HTTPS.
-- [ ] `.env` not inside `public_html`; DB user limited to its own DB.
-- [ ] `deploy/production_*.sql` not web-served.
-
-## Default login
-`admin` / PIN `984898` — **change on first sign-in.**
+The migration runner is transactional per file and records applied versions in
+`schema_migrations`. The application does not run migrations automatically on
+startup. A backup and a staging rehearsal are required before a production
+schema update. Restore-test the database and upload backups periodically.

@@ -26,6 +26,7 @@ export default defineConfig({
   },
   projects: [
     { name: 'desktop', use: { ...devices['Desktop Chrome'] } },
+    { name: 'tablet', use: { ...devices['Desktop Chrome'], viewport: { width: 834, height: 1112 }, isMobile: true, hasTouch: true } },
     { name: 'mobile', use: { ...devices['Pixel 7'] } },
   ],
 });

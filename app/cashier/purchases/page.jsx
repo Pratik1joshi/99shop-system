@@ -1,1 +1,1 @@
-export { default } from '@/app/admin/purchases/page';
+export { default } from '@/app/admin/retail-goods-receipts/page';

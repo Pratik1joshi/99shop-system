@@ -1,18 +1,20 @@
 'use client';
 
 import { Suspense, useCallback, useEffect, useMemo, useState } from 'react';
+import { useSearchParams } from 'next/navigation';
 import Link from 'next/link';
-import { usePathname, useSearchParams } from 'next/navigation';
 import AdminLayout from '@/components/admin/admin-layout';
 import {
-  Calendar, RotateCcw, Search, GitCompareArrows,
+  BarChart3, Boxes, Calendar, CalendarDays, Landmark, RotateCcw, Search,
 } from 'lucide-react';
 import { DataTable } from '@/components/admin/report-kit';
-import { orderTypeLabel } from '@/lib/order-types.js';
 import DateInput from '@/components/ui/date-input.jsx';
-import BillInvoiceModal from '@/components/admin/bill-invoice-modal.jsx';
 import PurchaseDrawer from '@/components/purchases/purchase-drawer';
 import ExpenseDrawer from '@/components/expenses/expense-drawer.jsx';
+import { ActionDrawer } from '@/components/erp/primitives';
+import { SaleDetail } from '@/components/commerce/sales';
+import { useCapabilities } from '@/lib/use-capabilities';
+import { formatCurrency } from '@/lib/currency';
 import { formatCalendarDate, formatCalendarRangeLabel } from '@/lib/calendar-system.js';
 import { useCalendarSystem } from '@/lib/calendar-context.jsx';
 import { REPORT_CATALOG as TABS, REPORT_PERIODS as PERIODS } from '@/components/admin/report-catalog.jsx';
@@ -28,19 +30,11 @@ import { REPORT_CATALOG as TABS, REPORT_PERIODS as PERIODS } from '@/components/
 // Menu category / master-category are no longer per-report filters — the
 // dedicated Category Report answers that in full instead.
 const ALL_FILTERS = ['businessDayId', 'employeeId', 'paymentMethod', 'orderType', 'search'];
+const NO_FILTERS = [];
 const TAB_FILTERS = {
-  sales: ALL_FILTERS,
-  finance: ALL_FILTERS,
-  expenses: ALL_FILTERS,
-  purchases: ['businessDayId', 'employeeId', 'paymentMethod', 'search'],
-  orders: ALL_FILTERS,
-  menu: ALL_FILTERS,
-  categories: ALL_FILTERS,
-  customers: ALL_FILTERS,
-  employees: ALL_FILTERS,
-  inventory: ['businessDayId', 'employeeId', 'search'],
-  suppliers: ['businessDayId', 'paymentMethod', 'search'],
-  changes: ['businessDayId'],
+  sales: ['businessDayId', 'employeeId', 'paymentMethod', 'search'],
+  finance: ['businessDayId', 'employeeId', 'paymentMethod', 'search'],
+  orders: ['businessDayId', 'employeeId', 'paymentMethod', 'search'],
 };
 
 const EMPTY_FILTERS = {
@@ -53,10 +47,11 @@ const controlClass = 'h-10 rounded-lg border border-gray-300 bg-white px-3 text-
 // Keep the on-screen reports glanceable. The complete columns remain available
 // in CSV exports and the row detail view.
 const TABLE_COLUMNS = {
-  'sales:transactions': ['created_at', 'bill_number', 'customer_name', 'payment', 'grand_total'],
+  'sales:transactions': ['created_at', 'sale_number', 'customer_name', 'payment', 'grand_total'],
   'finance:ledger': ['spent_on', 'description', 'category', 'supplier', 'payment_method', 'amount'],
   'expenses:ledger': ['spent_on', 'description', 'category', 'supplier', 'payment_method', 'amount'],
-  'orders:orders': ['created_at', 'order_number', 'status', 'order_type', 'order_value'],
+  'orders:transactions': ['created_at', 'sale_number', 'customer_name', 'payment', 'grand_total'],
+  'finance:transactions': ['created_at', 'sale_number', 'customer_name', 'payment', 'grand_total'],
   'orders:voided-bills': ['voided_at', 'bill_number', 'status', 'payment_method', 'reason', 'grand_total'],
   'menu:detail': ['name', 'category_name', 'quantity', 'revenue', 'profit', 'margin'],
   'categories:category-summary': ['category', 'master_category', 'quantity', 'revenue', 'profit', 'share'],
@@ -85,9 +80,9 @@ function tabFromSearchParams(searchParams) {
  * Reading the URL up front + aborting the previous fetch closes that race.
  */
 function ReportsPageInner() {
+  const { can, role, loading: capabilitiesLoading } = useCapabilities();
   const { calendarSystem } = useCalendarSystem();
   const searchParams = useSearchParams();
-  const pathname = usePathname();
   const [tab, setTab] = useState(() => tabFromSearchParams(searchParams));
   const [periods, setPeriods] = useState(() => ({ [tabFromSearchParams(searchParams)]: searchParams.get('period') || 'today' }));
   const [customRanges, setCustomRanges] = useState(() => ({ [tabFromSearchParams(searchParams)]: { start: searchParams.get('startDate') || '', end: searchParams.get('endDate') || '' } }));
@@ -97,9 +92,9 @@ function ReportsPageInner() {
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [invoiceBillId, setInvoiceBillId] = useState(null);
   const [purchaseDrawerId, setPurchaseDrawerId] = useState(null);
   const [expenseDrawer, setExpenseDrawer] = useState(null);
+  const [saleDetailId, setSaleDetailId] = useState(null);
   const [tablePages, setTablePages] = useState({});
   const [tablePageSizes, setTablePageSizes] = useState({});
 
@@ -108,7 +103,7 @@ function ReportsPageInner() {
   const custom = customRanges[tab] || { start: '', end: '' };
   const filters = filterSets[tab] || EMPTY_FILTERS;
   const searchDraft = searchDrafts[tab] ?? filters.search ?? '';
-  const supported = TAB_FILTERS[tab] || ALL_FILTERS;
+  const supported = TAB_FILTERS[tab] || NO_FILTERS;
   const activeTab = TABS.find((item) => item.id === tab) || TABS[0];
   const activeFilterCount = supported.filter((key) => Boolean(filters[key])).length;
 
@@ -245,6 +240,7 @@ function ReportsPageInner() {
       setSearchDraft={setSearchDraft}
       activeFilterCount={activeFilterCount}
       resetFilters={resetFilters}
+      periodEnabled={tab !== 'inventory'}
     />
   );
 
@@ -264,20 +260,25 @@ function ReportsPageInner() {
           <div className="flex shrink-0 flex-wrap items-center gap-2 sm:justify-end">
             <p className="flex items-center gap-1.5 text-xs font-medium text-gray-500">
               <Calendar className="h-3.5 w-3.5" />
-              {currentData?.range ? formatCalendarRangeLabel(currentData.range) : 'Select the reporting period below'}
+              {tab === 'inventory' ? 'Current snapshot' : currentData?.range ? formatCalendarRangeLabel(currentData.range) : 'Select the reporting period below'}
             </p>
-            <Link
-              href={`${pathname.startsWith('/cashier') ? '/cashier' : '/admin'}/reports/compare?left=${tab}&period=${period}${period === 'custom' ? `&startDate=${encodeURIComponent(custom.start)}&endDate=${encodeURIComponent(custom.end)}` : ''}`}
-              className="inline-flex h-10 items-center gap-2 rounded-lg border border-gray-300 bg-white px-3 text-sm font-semibold text-gray-700 shadow-sm transition-[transform,background-color,border-color] duration-150 active:scale-[0.97] hover:border-gray-400 hover:bg-gray-50"
-            >
-              <GitCompareArrows className="h-4 w-4" />
-              Compare report
-            </Link>
           </div>
         </div>
       </header>
 
       <main className="min-h-screen space-y-5 bg-gray-50 p-4 sm:p-6 lg:p-8">
+        <section aria-label="Retail report library" className="rounded-2xl border border-gray-200 bg-white p-4 shadow-sm">
+          <div className="flex items-center justify-between gap-3"><h2 className="text-sm font-bold text-gray-950">Retail report library</h2><span className="text-xs text-gray-500">Scroll for more reports →</span></div>
+          <nav aria-label="Choose a report" className="mt-3 flex min-w-0 gap-2 overflow-x-auto pb-2">
+            {TABS.filter((report) => !capabilitiesLoading && can(`report.${report.id}.view`)).map((report) => <Link key={report.id} href={`?tab=${report.id}`} title={report.label} aria-current={tab === report.id ? 'page' : undefined} className={`inline-flex shrink-0 items-center gap-2 rounded-lg border px-3 py-2 text-sm transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-pink-600 ${tab === report.id ? 'border-pink-400 bg-pink-50 font-bold text-pink-900' : 'border-gray-200 text-gray-700 hover:border-pink-300 hover:bg-pink-50/60'}`}><report.icon className="h-4 w-4" aria-hidden />{report.shortLabel}</Link>)}
+          </nav>
+          <nav aria-label="Other report areas" className="mt-2 flex min-w-0 gap-2 overflow-x-auto border-t border-gray-100 pt-3 pb-1">{[
+            { label: 'Retail analytics', href: '/admin/retail-analytics', permission: 'retail_analytics.view', adminOnly: true, icon: BarChart3 },
+            { label: 'Inventory reports', href: '/admin/retail-inventory-reports', permission: 'retail_inventory.view', adminOnly: true, icon: Boxes },
+            { label: 'Financial statements', href: `${role === 'cashier' ? '/cashier' : '/admin'}/financial-reports`, permission: 'financial_reports.access', icon: Landmark },
+            { label: 'Daily summary', href: `${role === 'cashier' ? '/cashier' : '/admin'}/summary-report`, permission: 'reports.view', icon: CalendarDays },
+          ].filter((item) => !capabilitiesLoading && can(item.permission) && (!item.adminOnly || role !== 'cashier')).map((item) => <Link key={item.href} href={item.href} className="inline-flex shrink-0 items-center gap-2 rounded-lg border border-gray-200 px-3 py-2 text-sm font-medium text-gray-700 hover:border-pink-300 hover:bg-pink-50/60"><item.icon className="h-4 w-4" aria-hidden />{item.label}</Link>)}</nav>
+        </section>
         {/* Period controls must stay visible even when the fetch race leaves no rows yet. */}
         {(!currentData || customMissing || !recordTables.length) && (
           <section className="rounded-2xl border border-gray-200 bg-white shadow-sm">{filtersBar}</section>
@@ -287,6 +288,14 @@ function ReportsPageInner() {
 
         {currentData && !customMissing && (
           <div className={`space-y-5 transition-opacity ${loading ? 'opacity-60' : ''}`}>
+            {currentData.notes?.map((note) => <p key={note} className="rounded-lg border border-amber-200 bg-amber-50 px-4 py-2 text-sm text-amber-900">{note}</p>)}
+            {!!currentData.kpis?.length && <section aria-label="Report totals" className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+              {currentData.kpis.map((item) => <div key={item.key} className="rounded-xl border border-gray-200 bg-white p-4">
+                <p className="text-xs font-semibold text-gray-500">{item.label}</p>
+                <strong className="mt-1 block text-xl tabular-nums text-gray-950">{formatCurrency(item.value)}</strong>
+                {item.hint && <p className="mt-1 text-xs text-gray-500">{item.hint}</p>}
+              </div>)}
+            </section>}
             {!recordTables.length ? (
               <EmptyMessage>No {activeTab.label.toLowerCase()} records match this period and these filters.</EmptyMessage>
             ) : null}
@@ -308,26 +317,23 @@ function ReportsPageInner() {
                 onExportAll={() => fetchFullTable(table.id)}
                 csvName={`${tab}-${table.id}-${currentData.range?.start || 'records'}`}
                 visibleColumnKeys={TABLE_COLUMNS[`${tab}:${table.id}`]}
-                onBillClick={(billId) => setInvoiceBillId(billId)}
                 onEntityClick={(link) => {
-                  if (link.type === 'bill') { setInvoiceBillId(link.id); return true; }
                   if (link.type === 'purchase') { setPurchaseDrawerId(link.id); return true; }
                   if (link.type === 'expense') { openExpenseDrawer(link.id).catch((drawerError) => setError(drawerError.message)); return true; }
                   return false;
                 }}
-                onRowClick={tab === 'purchases'
-                  ? (row) => setPurchaseDrawerId(row._record_id || row.id)
-                  : (tab === 'expenses' || (tab === 'finance' && table.id === 'ledger'))
+                onRowClick={['sales', 'orders', 'finance'].includes(tab)
+                  ? (row) => { if (row._record_id) setSaleDetailId(row._record_id); }
+                  : tab === 'expenses'
                     ? (row) => openExpenseDrawer(row._record_id || row.id, row).catch((drawerError) => setError(drawerError.message))
                     : undefined}
                 toolbar={filtersBar}
-                detailContext={tab === 'purchases' ? null : { tab, tableId: table.id, range: currentData.range, filters }}
+                detailContext={null}
               />
             ))}
           </div>
         )}
       </main>
-      {invoiceBillId && <BillInvoiceModal billId={invoiceBillId} onClose={() => setInvoiceBillId(null)} />}
       {purchaseDrawerId && (
         <PurchaseDrawer
           purchaseId={purchaseDrawerId}
@@ -336,6 +342,9 @@ function ReportsPageInner() {
         />
       )}
       {expenseDrawer && <ExpenseDrawer expense={expenseDrawer} category={String(expenseDrawer.category || 'Other').replace(/_/g, ' ')} onClose={() => setExpenseDrawer(null)} />}
+      <ActionDrawer open={!!saleDetailId} onOpenChange={(open) => { if (!open) setSaleDetailId(null); }} title="Sale detail" description="Retail receipt and payments">
+        {saleDetailId && <SaleDetail key={saleDetailId} id={saleDetailId} />}
+      </ActionDrawer>
     </AdminLayout>
   );
 }
@@ -361,11 +370,11 @@ export default function ReportsPage() {
 
 function ReportFilters({
   period, setPeriod, custom, setCustom, filters, setFilter, supported, options,
-  searchDraft, setSearchDraft, activeFilterCount, resetFilters,
+  searchDraft, setSearchDraft, activeFilterCount, resetFilters, periodEnabled,
 }) {
   const enabled = (key) => supported.includes(key);
   return <div className="space-y-4 p-4 sm:p-5">
-    <div>
+    {periodEnabled && <div>
       <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-gray-400">Period</p>
       <div className="flex flex-wrap gap-2">
         {PERIODS.map((item) => <button key={item.id} type="button" onClick={() => setPeriod(item.id)} className={`rounded-lg px-3 py-2 text-sm font-medium ${period === item.id ? 'bg-gray-900 text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'}`}>{item.label}</button>)}
@@ -375,7 +384,7 @@ function ReportFilters({
           <DateInput value={custom.end} onChange={(value) => setCustom({ ...custom, end: value })} className={controlClass} />
         </div>}
       </div>
-    </div>
+    </div>}
 
     <div className="flex flex-wrap items-center gap-2 border-t border-gray-100 pt-4">
       {enabled('businessDayId') && <select value={filters.businessDayId} onChange={(event) => setFilter('businessDayId', event.target.value)} className={controlClass}>
@@ -393,10 +402,6 @@ function ReportFilters({
           const label = typeof method === 'string' ? method : method.label;
           return <option key={value} value={value}>{label}</option>;
         })}
-      </select>}
-      {enabled('orderType') && <select value={filters.orderType} onChange={(event) => setFilter('orderType', event.target.value)} className={controlClass}>
-        <option value="">All order types</option>
-        {(options?.orderTypes || []).map((type) => <option key={type} value={type}>{orderTypeLabel(type)}</option>)}
       </select>}
       {enabled('search') && <form onSubmit={(event) => { event.preventDefault(); setFilter('search', searchDraft.trim()); }} className="relative min-w-[210px] flex-1">
         <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />

@@ -15,6 +15,7 @@
 
 # next.js
 /.next/
+/.next-production/
 /out/
 
 # production
@@ -64,3 +65,20 @@ POS_Distribution*
 # local tooling
 tmp-*.mjs
 tmp-*.js
+/.tmp/
+/.claude/
+
+# Disposable Commerce verification artifacts
+.commerce-pg/
+.commerce-tmp/
+.next-commerce/
+.next-commerce-final/
+.playwright-browsers/
+test-results/
+commerce-debug.png
+commerce-*.log
+.next-phase1*/
+.next-phase2*/
+phase1c-*.log
+phase1d-*.log
+phase2d-*.log

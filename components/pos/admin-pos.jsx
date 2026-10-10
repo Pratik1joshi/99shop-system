@@ -631,8 +631,10 @@ export default function AdminPos() {
     const map = new Map();
     for (const product of products) {
       if (product.barcode) map.set(String(product.barcode), { product, variant: null });
+      for (const code of product.extra_barcodes || []) map.set(String(code), { product, variant: null });
       for (const variant of product.variants || []) {
         if (variant.barcode) map.set(String(variant.barcode), { product, variant });
+        for (const code of variant.extra_barcodes || []) map.set(String(code), { product, variant });
       }
     }
     return map;

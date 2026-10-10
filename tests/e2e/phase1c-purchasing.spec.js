@@ -1,0 +1,127 @@
+import { test, expect } from '@playwright/test';
+
+test('purchase order is submitted, approved and partially received', async ({ page }) => {
+  test.setTimeout(120_000);
+  await page.goto('/login');
+  await page.locator('#admin-pin').fill(process.env.E2E_ADMIN_PIN || 'KmTestOnly123');
+  await page.getByRole('button', { name: /^Sign in$/i }).click();
+  await expect(page).toHaveURL(/\/admin\/dashboard/);
+  await page.goto('/admin/retail-purchase-orders');
+  await expect(page.getByRole('heading', { name: 'Purchase orders' })).toBeVisible();
+  await page.getByRole('button', { name: 'Create PO' }).click();
+  const create = page.getByRole('dialog', { name: 'Create purchase order' });
+  await create.getByLabel('Supplier').fill('E2E Supplier');
+  await create.getByRole('button', { name: 'E2E Supplier' }).click();
+  await create.getByLabel('Find SKU or barcode').fill('E2E-STANDARD');
+  await create.getByRole('button', { name: /E2E Everyday Item/ }).click();
+  await create.getByLabel('Qty').fill('2');
+  await create.getByLabel('Unit cost').fill('60');
+  await create.getByRole('button', { name: 'Create draft PO' }).click();
+  const detail = page.getByRole('dialog', { name: 'Purchase order' });
+  await expect(detail.getByText('DRAFT')).toBeVisible();
+  await detail.getByRole('button', { name: 'Submit for approval' }).click();
+  await expect(detail.getByText('PENDING APPROVAL')).toBeVisible();
+  await detail.getByRole('button', { name: 'Approve' }).click();
+  await expect(detail.getByText('APPROVED')).toBeVisible();
+  const receiveLink = detail.getByRole('link', { name: 'Receive goods' });
+  const poId = (await receiveLink.getAttribute('href')).match(/po=(\d+)/)[1];
+  await receiveLink.click();
+  await expect(page.getByRole('heading', { name: 'Purchases' })).toBeVisible();
+  await expect(page.getByLabel('Purchase order (optional)')).toHaveValue(poId);
+  await page.getByPlaceholder('Scan or type a barcode and press Enter').fill('990000000001');
+  await page.getByPlaceholder('Scan or type a barcode and press Enter').press('Enter');
+  await page.getByLabel('Receiving quantity for E2E Everyday Item').fill('1');
+  await page.getByPlaceholder('Invoice or reference number').fill(`P1C-${Date.now()}`);
+  await page.getByRole('button', { name: 'Review goods receipt' }).click();
+  await expect(page.getByRole('region', { name: 'Receipt review' })).toContainText('Short');
+  await page.getByRole('button', { name: 'Post Goods Receipt' }).click();
+  await expect(page.getByText(/posted — stock and accounting updated/)).toBeVisible();
+  await page.goto('/admin/retail-purchase-orders');
+  await page.getByLabel('Operational status').selectOption('PARTIALLY_RECEIVED');
+  await expect(page.locator('tbody')).toContainText('PARTIALLY RECEIVED');
+});
+
+test('owner reviews and posts a supplier return against a receipt', async ({ page }) => {
+  await page.goto('/login');
+  await page.locator('#admin-pin').fill(process.env.E2E_ADMIN_PIN || 'KmTestOnly123');
+  await page.getByRole('button', { name: /^Sign in$/i }).click();
+  await expect(page).toHaveURL(/\/admin\/dashboard/);
+  await page.goto('/admin/retail-purchase-returns');
+  await expect(page.getByRole('heading', { name: 'Supplier returns', exact: true })).toBeVisible();
+  const receipt = page.getByLabel('Original posted receipt');
+  await expect(receipt.locator('option')).not.toHaveCount(1);
+  await receipt.selectOption({ index: 1 });
+  await expect(page.getByLabel(/Return quantity for/).first()).toBeVisible();
+  await page.getByLabel(/Return quantity for/).first().fill('1');
+  await page.getByLabel('Reason').fill('E2E defective unit');
+  await page.getByRole('button', { name: 'Review return' }).click();
+  await expect(page.getByText(/unit\(s\) leave inventory/)).toBeVisible();
+  await page.getByRole('button', { name: 'Post supplier return' }).click();
+  await expect(page.getByText(/Inventory and supplier balance have been updated/)).toBeVisible();
+});
+
+test('replenishment groups a selected SKU into a draft purchase order', async ({ page }) => {
+  test.setTimeout(90_000);
+  await page.goto('/login');
+  await page.locator('#admin-pin').fill(process.env.E2E_ADMIN_PIN || 'KmTestOnly123');
+  await page.getByRole('button', { name: /^Sign in$/i }).click();
+  await expect(page).toHaveURL(/\/admin\/dashboard/);
+  const token = await page.evaluate(() => localStorage.getItem('pos_token'));
+  const headers = { Authorization: `Bearer ${token}` };
+  const createdProduct = await page.request.post('/api/admin/commerce/products', { headers, data: { name: `Replenishment fixture ${Date.now()}`, price: 100 } });
+  expect(createdProduct.ok()).toBe(true);
+  const id = (await createdProduct.json()).id;
+  const detail = await (await page.request.get(`/api/admin/commerce/products?id=${id}`, { headers })).json();
+  const product = detail.product;
+  const configured = await page.request.put('/api/admin/commerce/products', { headers, data: { ...product,
+    variants: product.variants.map(variant => ({ ...variant, reorder_point: 10, reorder_quantity: 25 })) } });
+  expect(configured.ok(), await configured.text()).toBe(true);
+  await page.goto('/admin/retail-replenishment');
+  await expect(page.getByRole('heading', { name: 'Replenishment' })).toBeVisible();
+  await expect(page.getByText(/approved incoming quantity/).first()).toBeVisible();
+  const row = page.locator('tbody tr').filter({ hasText: product.name });
+  await row.locator('input[type=checkbox]').check();
+  await row.getByLabel('Search supplier').fill('E2E Supplier');
+  await row.getByRole('button', { name: 'E2E Supplier', exact: true }).click();
+  await row.locator('input[type=number]').first().fill('25');
+  await row.getByLabel(`Unit cost for ${product.name}`).fill('25');
+  await page.getByRole('button', { name: /Create 1 draft PO/ }).click();
+  await expect(page.getByText(/Created 1 draft purchase order/)).toBeVisible();
+});
+
+test('supplier command center connects retail receipts and payables', async ({ page }) => {
+  await page.goto('/login');
+  await page.locator('#admin-pin').fill(process.env.E2E_ADMIN_PIN || 'KmTestOnly123');
+  await page.getByRole('button', { name: /^Sign in$/i }).click();
+  await expect(page).toHaveURL(/\/admin\/dashboard/);
+  await page.goto('/admin/retail-suppliers');
+  await expect(page.getByRole('heading', { name: 'Suppliers', exact: true })).toBeVisible();
+  await page.getByLabel('Search supplier name or contact').fill('E2E Supplier');
+  await page.getByRole('button', { name: 'E2E Supplier', exact: true }).click();
+  const detail = page.getByRole('dialog', { name: 'Supplier command center' });
+  await expect(detail.getByText('Open invoices')).toBeVisible();
+  await detail.getByRole('button', { name: 'Receipts' }).click();
+  await expect(detail.getByText(/GRN-/).first()).toBeVisible();
+  await detail.getByRole('button', { name: 'Products' }).click();
+  await expect(detail.getByText('E2E Everyday Item')).toBeVisible();
+});
+
+test('supplier payment allocates a partial amount to a selected invoice', async ({ page }) => {
+  await page.goto('/login');
+  await page.locator('#admin-pin').fill(process.env.E2E_ADMIN_PIN || 'KmTestOnly123');
+  await page.getByRole('button', { name: /^Sign in$/i }).click();
+  await expect(page).toHaveURL(/\/admin\/dashboard/);
+  await page.goto('/admin/retail-suppliers');
+  await page.getByLabel('Search supplier name or contact').fill('E2E Supplier');
+  await page.getByRole('button', { name: 'E2E Supplier', exact: true }).click();
+  const detail = page.getByRole('dialog', { name: 'Supplier command center' });
+  await detail.getByRole('button', { name: 'Pay supplier' }).click();
+  await expect(detail.getByText('Review supplier payment')).toBeVisible();
+  await detail.getByLabel('Amount').fill('1');
+  const reference = `E2E-PAY-${Date.now()}`;
+  await detail.getByLabel('Payment reference').fill(reference);
+  await detail.getByRole('button', { name: 'Post payment' }).click();
+  await expect(detail.getByText('Review supplier payment')).toBeHidden();
+  await detail.getByRole('button', { name: 'Payments' }).click();
+  await expect(detail.getByRole('row').filter({ hasText: reference }).getByText('Rs 1.00', { exact: true })).toBeVisible();
+});

@@ -5,6 +5,8 @@ import AdminLayout from '@/components/admin/admin-layout';
 import { useToast } from '@/components/ui/toast';
 import { friendlyFromError } from '@/lib/friendly-message';
 import { apiJson } from '@/lib/authed-fetch';
+import Link from 'next/link';
+import { accountingSource } from '@/lib/accounting-source-registry';
 import LedgerTable, { money } from '@/components/accounting/ledger-table';
 import { formatNepalDate } from '@/lib/time-utils';
 import DateInput from '@/components/ui/date-input.jsx';
@@ -25,8 +27,11 @@ export default function GeneralLedgerPage() {
     apiJson('/api/admin/ledger?view=meta')
       .then((d) => {
         setAccounts(d.accounts || []);
-        const firstWithBalance = (d.accounts || []).find((a) => Number(a.balance) !== 0) || (d.accounts || [])[1];
+        const query = new URLSearchParams(window.location.search);
+        const firstWithBalance = (d.accounts || []).find((a) => a.code === query.get('account_code')) ||
+          (d.accounts || []).find((a) => Number(a.balance) !== 0) || (d.accounts || [])[1];
         if (firstWithBalance) setAccountId(String(firstWithBalance.id));
+        if (query.get('from') || query.get('to')) setRange({ from: query.get('from') || '', to: query.get('to') || '' });
       })
       .catch((e) => addToast(friendlyFromError(e, 'load_failed')));
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -94,6 +99,8 @@ export default function GeneralLedgerPage() {
                   <div>
                     <span className="text-sm font-semibold text-gray-900">#{j.id} · {j.memo || 'Journal'}</span>
                     {j.source_type && <span className="ml-2 rounded bg-gray-100 px-1.5 py-0.5 text-[10px] uppercase text-gray-500">{j.source_type}</span>}
+                    {accountingSource(j).href && <Link className="ml-2 text-xs text-emerald-700 underline" href={accountingSource(j).href}>Source evidence</Link>}
+                    <Link className="ml-2 text-xs text-emerald-700 underline" href={`/admin/retail-journals/${j.id}`}>Journal detail</Link>
                   </div>
                   <span className="text-xs text-gray-500">{formatNepalDate(j.entry_date)}{j.created_by_name ? ` · ${j.created_by_name}` : ''}</span>
                 </div>

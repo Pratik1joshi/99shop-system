@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import AdminLayout from '@/components/admin/admin-layout';
 import { ArrowDownLeft, ArrowUpRight, Lock, Unlock, X } from 'lucide-react';
 import { useToast } from '@/components/ui/toast';
@@ -13,7 +13,7 @@ import PaginationControls from '@/components/ui/pagination-controls.jsx';
 
 const emptyMove = { amount: '', movement_type: '', reason: '', bank_account_id: '' };
 
-export default function CashDrawerPage() {
+export default function CashDrawerPage({ embedded = false }) {
   const { addToast } = useToast();
   const [data, setData] = useState({
     drawers: [],
@@ -170,8 +170,9 @@ export default function CashDrawerPage() {
     }
   };
 
+  const Layout = embedded ? Fragment : AdminLayout;
   return (
-    <AdminLayout>
+    <Layout>
       <header className="border-b border-gray-200 bg-white px-4 py-5 sm:px-6 lg:px-8">
         <h1 className="text-2xl font-bold text-gray-900 sm:text-3xl">Cash Drawer</h1>
         <p className="mt-1 text-sm text-gray-500">
@@ -485,7 +486,7 @@ export default function CashDrawerPage() {
         </div>
       )}
       {selectedMovement && <MovementDetail row={selectedMovement} onClose={() => setSelectedMovement(null)} />}
-    </AdminLayout>
+    </Layout>
   );
 }
 

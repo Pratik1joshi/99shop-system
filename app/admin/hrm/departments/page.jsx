@@ -57,7 +57,7 @@ export default function DepartmentsPage() {
           <div className="mb-6 flex flex-col gap-3 sm:mb-8 sm:flex-row sm:items-center sm:justify-between">
             <div>
               <h1 className="text-2xl font-bold text-gray-800 sm:text-3xl">Departments</h1>
-              <p className="mt-1 text-gray-700">Group staff by department — Kitchen, Service, Management.</p>
+              <p className="mt-1 text-gray-700">Group staff by department — Sales Floor, Stockroom, Management.</p>
             </div>
             {canManage && (
               <button onClick={openCreate} className="flex items-center gap-2 rounded-lg bg-gray-900 px-6 py-3 text-white hover:bg-gray-800">
@@ -73,7 +73,7 @@ export default function DepartmentsPage() {
                 <form onSubmit={submit} noValidate className="space-y-4">
                   <label className="block">
                     <span className="mb-1 block text-sm font-medium text-gray-700">Department name *</span>
-                    <input autoFocus value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} className="h-11 w-full rounded-lg border border-gray-300 px-3 text-gray-900" placeholder="e.g. Kitchen" />
+                    <input autoFocus value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} className="h-11 w-full rounded-lg border border-gray-300 px-3 text-gray-900" placeholder="e.g. Sales Floor" />
                   </label>
                   <label className="block">
                     <span className="mb-1 block text-sm font-medium text-gray-700">Description</span>
@@ -126,7 +126,7 @@ export default function DepartmentsPage() {
               </tbody>
             </table>
             {!loading && departments.length === 0 && (
-              <div className="py-12 text-center"><Building2 className="mx-auto mb-4 h-12 w-12 text-gray-400" /><p className="text-gray-700">No departments yet. Add one like Kitchen or Service.</p></div>
+              <div className="py-12 text-center"><Building2 className="mx-auto mb-4 h-12 w-12 text-gray-400" /><p className="text-gray-700">No departments yet. Add one like Sales Floor or Stockroom.</p></div>
             )}
           </div>
         </div>

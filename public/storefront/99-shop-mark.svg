@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-labelledby="title">
+  <title id="title">99 Shop</title>
+  <rect width="512" height="512" rx="124" fill="#D6316F"/>
+  <circle cx="256" cy="256" r="210" fill="none" stroke="#FFE1EC" stroke-width="12"/>
+  <text x="256" y="325" fill="#FFFFFF" font-family="Arial,Helvetica,sans-serif" font-size="250" font-weight="800" letter-spacing="-22" text-anchor="middle">99</text>
+</svg>

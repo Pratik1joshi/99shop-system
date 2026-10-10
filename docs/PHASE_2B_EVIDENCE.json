@@ -1,0 +1,82 @@
+{
+  "verified_date": "2026-09-27",
+  "timezone": "Asia/Kathmandu",
+  "verdict": "PASS: implementation and local acceptance; production deployment not exercised",
+  "unit": {
+    "passed": 344,
+    "failed": 0,
+    "skipped": 0
+  },
+  "integration": {
+    "passed": 98,
+    "failed": 0,
+    "files": 13,
+    "final_targeted_passed": 21,
+    "targeted_included_in_total": true
+  },
+  "browser": {
+    "desktop_passed": 9,
+    "mobile_passed": 9,
+    "failed": 0,
+    "retries": 0,
+    "phase2b_cases": 10,
+    "regression_cases": 8
+  },
+  "build": {
+    "passed": true,
+    "generated_pages": 287
+  },
+  "lint": {
+    "errors": 0,
+    "warnings": 17
+  },
+  "migrations": [
+    {
+      "mode": "upgrade_from_104",
+      "rerun": "PASS",
+      "publication_off": true,
+      "economics_unchanged": true,
+      "migration_files": 106
+    },
+    {
+      "mode": "fresh",
+      "rerun": "PASS",
+      "publication_off": true,
+      "economics_unchanged": true,
+      "migration_files": 106
+    }
+  ],
+  "reconciliation": {
+    "reconciled": true,
+    "checks": 9,
+    "inventory_projection_differences": 0,
+    "trial_balanced": true,
+    "total_debit": 73040,
+    "total_credit": 73040,
+    "inventory_valuation": 56690,
+    "missing_serial_return_events": 0
+  },
+  "performance": {
+    "skus": 26000,
+    "products": 1001,
+    "high_variant_skus": 1000,
+    "local_ms": {
+      "catalog": 120,
+      "search": 107,
+      "category": 86,
+      "brand": 85,
+      "attribute": 140,
+      "price_range": 99,
+      "detail": 68,
+      "cart_quote": 222,
+      "order_queue": 45,
+      "customer_history": 0,
+      "large_product_first_page": 66,
+      "large_product_last_page": 67
+    },
+    "history_fixture": "2,000 synthetic cancelled orders; no economic postings",
+    "note": "Representative local timings, not a production SLA"
+  },
+  "deployment_verified": false,
+  "multi_branch_implemented": false
+}

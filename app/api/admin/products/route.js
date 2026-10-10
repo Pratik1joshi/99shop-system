@@ -1,10 +1,36 @@
 import { NextResponse } from 'next/server';
 import Database from '@/lib/db/index';
 import { requireAuth, handleRouteError } from '@/lib/api-guard.js';
-import { ensureMenuVariantsSchema, findBarcodeConflict, getVariantsByMenuItemIds, normalizeBarcode, replaceVariants } from '@/lib/menu-variants.js';
+import { ensureMenuVariantsSchema, ensureStandardVariant, findBarcodeConflict, getVariantsByMenuItemIds, normalizeBarcode, replaceVariants } from '@/lib/menu-variants.js';
 import { ensureColumn } from '@/lib/db/schema-helpers.js';
 import { comboAvailableOn, ensureComboSchema, getCombosForMenuItems } from '@/lib/combos.js';
 import { sortCombosFirst } from '@/lib/promotion-display.js';
+import { ensureProductCatalogSchema } from '@/lib/product-catalog.js';
+import { isPermissionAllowedSync, ensurePermissionCache } from '@/lib/permissions.js';
+import { assertCostWriteAllowed, commerceProductVisibility } from '@/lib/commerce-visibility.js';
+import { lockCatalogWrite } from '@/lib/retail-catalog-lock.js';
+
+/** Every non-primary barcode, grouped by owner, so POS can scan on manufacturer/supplier/alternate codes too. */
+async function getExtraBarcodes(db) {
+  const rows = await db.all(
+    `SELECT menu_item_id, variant_id, barcode, barcode_type
+     FROM product_barcodes WHERE is_primary = 0`
+  );
+  const byItem = new Map();
+  const byVariant = new Map();
+  for (const row of rows) {
+    if (row.variant_id) {
+      const list = byVariant.get(row.variant_id) || [];
+      list.push(row.barcode);
+      byVariant.set(row.variant_id, list);
+    } else if (row.menu_item_id) {
+      const list = byItem.get(row.menu_item_id) || [];
+      list.push(row.barcode);
+      byItem.set(row.menu_item_id, list);
+    }
+  }
+  return { byItem, byVariant };
+}
 
 async function syncInventoryLink(db, menuItemId, inventoryItemId, posStockVisible) {
   await ensureColumn(db, 'inventory_items', 'pos_stock_visible', 'INTEGER DEFAULT 0');
@@ -43,6 +69,7 @@ export async function GET(request) {
     const db = Database.getInstance();
     await ensureMenuVariantsSchema(db);
     await ensureComboSchema(db);
+    await ensureProductCatalogSchema(db);
     await ensureColumn(db, 'inventory_items', 'pos_stock_visible', 'INTEGER DEFAULT 0');
     await ensureMenuStockUsageColumn(db);
 
@@ -64,8 +91,13 @@ export async function GET(request) {
 
     const variantsByItem = await getVariantsByMenuItemIds(db, products.map((p) => p.id));
     const combosByItem = await getCombosForMenuItems(db, products.map((p) => p.id));
+    const extraBarcodes = await getExtraBarcodes(db);
     for (const product of products) {
       product.variants = variantsByItem.get(product.id) || [];
+      product.extra_barcodes = extraBarcodes.byItem.get(product.id) || [];
+      for (const variant of product.variants) {
+        variant.extra_barcodes = extraBarcodes.byVariant.get(variant.id) || [];
+      }
       const combo = combosByItem.get(Number(product.id));
       product.is_combo = combo ? 1 : Number(product.is_combo || 0);
       product.combo = combo ? {
@@ -79,6 +111,13 @@ export async function GET(request) {
       ? products.filter((product) => !product.combo || comboAvailableOn(product.combo, channel))
       : products;
 
+    await ensurePermissionCache(db);
+    if (!isPermissionAllowedSync(auth.user.role, 'retail_sale.view_cost')) {
+      for (const product of visibleProducts) {
+        delete product.cost;
+        for (const variant of product.variants || []) { delete variant.cost; delete variant.unit_cost; delete variant.purchase_cost; }
+      }
+    }
     return NextResponse.json({ products: sortCombosFirst(visibleProducts) });
   } catch (error) {
     return handleRouteError(error, 'Could not load the menu. Please try again.');
@@ -92,6 +131,8 @@ export async function POST(request) {
 
     const data = await request.json();
     const db = Database.getInstance();
+    await ensurePermissionCache(db);
+    assertCostWriteAllowed(auth.user.role, data);
     await ensureMenuVariantsSchema(db);
     await ensureMenuStockUsageColumn(db);
 
@@ -100,6 +141,9 @@ export async function POST(request) {
     const stockUsage = hasVariants ? 1 : normalizeStockUsage(data.stock_usage);
     const barcode = normalizeBarcode(data.barcode);
 
+    await ensureProductCatalogSchema(db);
+    return await db.transaction(async(db)=>{
+    await lockCatalogWrite(db);
     const conflict = await findBarcodeConflict(db, [
       barcode,
       ...(data.variants || []).map((v) => normalizeBarcode(v.barcode)),
@@ -135,6 +179,8 @@ export async function POST(request) {
       variants = await replaceVariants(db, menuItemId, data.variants);
       const defaultVariant = variants.find((v) => v.is_default) || variants[0];
       if (defaultVariant) await db.run('UPDATE menu_items SET base_price = ? WHERE id = ?', [defaultVariant.price, menuItemId]);
+    } else {
+      variants = await ensureStandardVariant(db, menuItemId, { price, stockUnit: data.unit });
     }
 
     const product = await db.get(`
@@ -148,8 +194,9 @@ export async function POST(request) {
 
     return NextResponse.json({
       message: 'Product created successfully',
-      product,
+      product: commerceProductVisibility(product, auth.user.role),
     }, { status: 201 });
+    });
   } catch (error) {
     return handleRouteError(error, 'Failed to create product');
   }

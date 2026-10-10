@@ -1,7 +1,5 @@
-'use client';
+import RetailBillingPage from '@/components/pos/retail-billing-page';
 
-import WalkInBilling from '@/components/billing/walk-in-billing';
-
-export default function CashierBillingPage() {
-  return <WalkInBilling variant="cashier" />;
+export default function CashierBilling() {
+  return <RetailBillingPage businessDaysPath="/cashier/business-days" />;
 }

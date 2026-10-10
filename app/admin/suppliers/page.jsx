@@ -33,6 +33,7 @@ import {
   adminFieldStackClass,
 } from '@/components/ui/admin-form';
 import { useCapabilities } from '@/lib/use-capabilities.js';
+import SupplierFormModal from '@/components/purchases/supplier-form-modal';
 
 /** Rough duplicate sniff: same first word, or one name contained in the other. */
 function looksDuplicated(suppliers) {
@@ -204,84 +205,6 @@ export default function SuppliersPage() {
         <SupplierDetail supplier={detail} canViewPurchases={canViewPurchases} onClose={() => setDetail(null)} />
       )}
     </AdminLayout>
-  );
-}
-
-function SupplierFormModal({ supplier, onClose, onSaved }) {
-  const { addToast } = useToast();
-  const [saving, setSaving] = useState(false);
-  const [form, setForm] = useState({
-    name: supplier?.name || '',
-    phone: supplier?.phone || '',
-    email: supplier?.email || '',
-    address: supplier?.address || '',
-    notes: supplier?.notes || '',
-  });
-
-  async function submit() {
-    if (!form.name.trim()) {
-      addToast(friendlyMessage('validation', { description: 'A supplier needs a name.' }));
-      return;
-    }
-    setSaving(true);
-    try {
-      if (supplier?.id) {
-        await apiJson('/api/admin/suppliers', { method: 'PUT', body: JSON.stringify({ ...form, id: supplier.id }) });
-      } else {
-        await apiJson('/api/admin/suppliers', { method: 'POST', body: JSON.stringify(form) });
-      }
-      addToast(friendlyMessage('save_success', { description: `${form.name} saved.` }));
-      onSaved?.();
-      onClose();
-    } catch (error) {
-      addToast(friendlyFromError(error, 'save_failed'));
-    } finally {
-      setSaving(false);
-    }
-  }
-
-  return (
-    <Dialog open onOpenChange={(open) => !open && onClose()}>
-      <DialogContent onClose={onClose} className={adminDialogMd}>
-        <DialogHeader>
-          <DialogTitle>{supplier ? `Edit ${supplier.name}` : 'Add supplier'}</DialogTitle>
-        </DialogHeader>
-        <div className={`mt-6 ${adminFieldStackClass}`}>
-          {[
-            { key: 'name', label: 'Name', required: true },
-            { key: 'phone', label: 'Phone' },
-            { key: 'email', label: 'Email', type: 'email' },
-            { key: 'address', label: 'Address' },
-          ].map((f) => (
-            <AdminField key={f.key} label={f.label} required={f.required}>
-              <input
-                type={f.type || 'text'}
-                autoFocus={f.key === 'name'}
-                value={form[f.key]}
-                onChange={(e) => setForm((p) => ({ ...p, [f.key]: e.target.value }))}
-                className={adminInputClass}
-              />
-            </AdminField>
-          ))}
-          <AdminField label="Notes">
-            <textarea
-              rows={3}
-              value={form.notes}
-              onChange={(e) => setForm((p) => ({ ...p, notes: e.target.value }))}
-              className={adminTextareaClass}
-            />
-          </AdminField>
-        </div>
-        <DialogFooter>
-          <button type="button" onClick={onClose} className={adminBtnSecondary}>
-            Cancel
-          </button>
-          <button type="button" disabled={saving} onClick={submit} className={adminBtnPrimary}>
-            {saving ? 'Saving…' : 'Save'}
-          </button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
   );
 }
 

@@ -91,6 +91,7 @@ const CHART_COLORS = {
   emerald: '#059669',
   amber: '#d97706',
   red: '#be123c',
+  pink: '#d6316f',
 };
 
 const AXIS_TICK = { fontSize: 11, fill: '#9ca3af' };

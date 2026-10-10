@@ -42,7 +42,7 @@ export default function AdminCustomers() {
   // Was gated on the URL, which let a cashier who opened /admin/customers
   // directly see a button the route rejects. Now gated on the permission the
   // route actually checks, so the two can never disagree.
-  const { can } = useCapabilities();
+  const { can, role } = useCapabilities();
   const [customers, setCustomers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -489,7 +489,7 @@ export default function AdminCustomers() {
                 />
               </div>
 
-              <div>
+              {role === 'admin' && <div>
                 <label className="block text-sm font-medium text-gray-900 mb-1">Credit Limit</label>
                 <input
                   type="text"
@@ -531,7 +531,7 @@ export default function AdminCustomers() {
                     className="w-full rounded-lg border border-stone-200 px-3 py-2"
                   />
                 </div>
-              </div>
+              </div>}
 
               <div className="flex gap-3 pt-4">
                 <button

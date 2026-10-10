@@ -38,7 +38,7 @@ export default function EmployeesPage() {
   const [formData, setFormData] = useState({
     username: '',
     full_name: '',
-    role: 'waiter',
+    role: 'cashier',
     pin: '',
     email: '',
     phone: '',
@@ -127,7 +127,7 @@ export default function EmployeesPage() {
         setFormData({
           username: '',
           full_name: '',
-          role: 'waiter',
+          role: 'cashier',
           pin: '',
           email: '',
           phone: '',
@@ -310,8 +310,6 @@ export default function EmployeesPage() {
   const roleColors = {
     admin: 'bg-purple-100 text-purple-800',
     cashier: 'bg-blue-100 text-blue-800',
-    waiter: 'bg-green-100 text-green-800',
-    kitchen: 'bg-orange-100 text-orange-800',
   };
 
   const ActionButtons = ({ employee }) => (
@@ -399,7 +397,7 @@ export default function EmployeesPage() {
                 setFormData({
                   username: '',
                   full_name: '',
-                  role: 'waiter',
+                  role: 'cashier',
                   pin: '',
                   email: '',
                   phone: '',
@@ -475,9 +473,11 @@ export default function EmployeesPage() {
                         className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-gray-400 text-gray-900"
                         disabled={editingEmployee?.is_primary_admin}
                       >
-                        <option value="waiter">Waiter</option>
                         <option value="cashier">Cashier</option>
-                        <option value="kitchen">Kitchen</option>
+                        <option value="inventory_staff">Inventory Staff</option>
+                        <option value="purchasing_staff">Purchasing Staff</option>
+                        <option value="accountant">Accountant</option>
+                        <option value="manager">Manager</option>
                         <option value="admin">Admin</option>
                       </select>
                       {editingEmployee?.is_primary_admin && (
@@ -537,7 +537,7 @@ export default function EmployeesPage() {
                           value={formData.position}
                           onChange={(e) => setFormData({ ...formData, position: e.target.value })}
                           className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-gray-400 text-gray-900"
-                          placeholder="e.g. Head Waiter"
+                          placeholder="e.g. Store Manager"
                         />
                       </div>
                       <div>

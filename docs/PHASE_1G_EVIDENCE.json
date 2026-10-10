@@ -1,0 +1,584 @@
+{
+  "date": "2026-09-26",
+  "phase": "1G",
+  "acceptance": "FAIL",
+  "production_grade": false,
+  "phase2_started": false,
+  "tests": {
+    "unit": {
+      "passed": 335,
+      "failed": 0
+    },
+    "postgresql_integration": {
+      "passed": 47,
+      "failed": 0,
+      "suites": 6
+    },
+    "browser_full": {
+      "total": 114,
+      "passed": 68,
+      "failed": 37,
+      "flaky": 3,
+      "did_not_run": 6,
+      "log": ".commerce-tmp/phase1g-browser-full.log"
+    },
+    "browser_retail_recheck": {
+      "total": 57,
+      "passed": 55,
+      "failed": 0,
+      "flaky": 2,
+      "log": ".commerce-tmp/phase1g-browser-recheck.log",
+      "server": "production build, localhost:3018",
+      "fixture_changes": [
+        "Canonical GRN received missing serial prerequisites",
+        "Unique payment reference and exact customer correction selectors",
+        "RATE_LIMIT_LOGIN=1000 for test server process only"
+      ],
+      "limits": "Not the full requested six-persona acceptance matrix."
+    },
+    "browser_shared": {
+      "passed": 3,
+      "failed": 0
+    },
+    "browser_source_journal": {
+      "passed": 3,
+      "failed": 0
+    },
+    "cash_review_browser": {
+      "status": "PASS",
+      "session_id": 2,
+      "counted_cash": 704,
+      "review_journals_added": 0,
+      "serious_critical_accessibility_violations": 0,
+      "same_day_reopened": true
+    }
+  },
+  "migrations": {
+    "checks": [
+      {
+        "mode": "fresh",
+        "status": "PASS",
+        "migrations": 99,
+        "upgrade_from": null,
+        "existing_customer_preserved": false
+      },
+      {
+        "mode": "upgrade",
+        "status": "PASS",
+        "migrations": 99,
+        "upgrade_from": "098",
+        "existing_customer_preserved": true
+      }
+    ]
+  },
+  "build": {
+    "status": "PASS",
+    "static_pages": 267,
+    "output": ".next-phase1g-final",
+    "log": ".commerce-tmp/phase1g-build-final.log",
+    "environment_note": "One system-temp scan EPERM; final rerun passed with workspace TEMP/TMP."
+  },
+  "lint": {
+    "errors": 0,
+    "warnings": 17,
+    "log": ".commerce-tmp/phase1g-lint-final.log"
+  },
+  "reconciliation": {
+    "reconciliation": {
+      "reconciled": false,
+      "generated_at": "2026-09-26T06:49:27.751Z",
+      "inventoryProjection": {
+        "name": "Inventory balance projection vs movement ledger",
+        "reconciled": true,
+        "checked": 9,
+        "differences": []
+      },
+      "checks": [
+        {
+          "name": "Inventory valuation vs inventory asset account",
+          "expected": 39752.6,
+          "actual": 39938.02,
+          "difference": 185.42,
+          "reconciled": false
+        },
+        {
+          "name": "Retail revenue vs sales journal postings",
+          "expected": 6150,
+          "actual": 6150,
+          "difference": 0,
+          "reconciled": true
+        },
+        {
+          "name": "Retail VAT vs VAT journal postings",
+          "expected": 0,
+          "actual": 0,
+          "difference": 0,
+          "reconciled": true
+        },
+        {
+          "name": "Retail COGS vs COGS journal postings",
+          "expected": 2441.19,
+          "actual": 2441.19,
+          "difference": 0,
+          "reconciled": true
+        },
+        {
+          "name": "Customer-tagged credit subledger vs Accounts Receivable",
+          "expected": 1200,
+          "actual": 1200,
+          "difference": 0,
+          "reconciled": true
+        },
+        {
+          "name": "Retail sale receivables vs Retail AR journal",
+          "expected": 1200,
+          "actual": 1200,
+          "difference": 0,
+          "reconciled": true
+        },
+        {
+          "name": "Supplier-tagged payable subledger vs Accounts Payable",
+          "expected": 41012,
+          "actual": 41012,
+          "difference": 0,
+          "reconciled": true
+        },
+        {
+          "name": "Store-credit transaction ledger vs customer balance projection",
+          "expected": 350,
+          "actual": 350,
+          "difference": 0,
+          "reconciled": true
+        },
+        {
+          "name": "Store-credit transaction ledger vs Store Credit Liability",
+          "expected": 350,
+          "actual": 350,
+          "difference": 0,
+          "reconciled": true
+        }
+      ]
+    },
+    "trial_balance": {
+      "lines": [
+        {
+          "code": "1010",
+          "name": "Cash on Hand",
+          "type": "asset",
+          "debit": 704,
+          "credit": 0
+        },
+        {
+          "code": "1020",
+          "name": "Bank",
+          "type": "asset",
+          "debit": 1690,
+          "credit": 0
+        },
+        {
+          "code": "1210",
+          "name": "Retail Inventory",
+          "type": "asset",
+          "debit": 39938.02,
+          "credit": 0
+        },
+        {
+          "code": "1300",
+          "name": "Accounts Receivable",
+          "type": "asset",
+          "debit": 1200,
+          "credit": 0
+        },
+        {
+          "code": "2010",
+          "name": "Accounts Payable",
+          "type": "liability",
+          "debit": 0,
+          "credit": 41012
+        },
+        {
+          "code": "2030",
+          "name": "Store Credit Liability",
+          "type": "liability",
+          "debit": 0,
+          "credit": 350
+        },
+        {
+          "code": "4010",
+          "name": "Sales Revenue",
+          "type": "income",
+          "debit": 0,
+          "credit": 6150
+        },
+        {
+          "code": "4011",
+          "name": "Sales Returns",
+          "type": "income",
+          "debit": 2550,
+          "credit": 0
+        },
+        {
+          "code": "5040",
+          "name": "Wastage / Inventory Loss",
+          "type": "expense",
+          "debit": 240,
+          "credit": 0
+        },
+        {
+          "code": "5042",
+          "name": "Inventory Gain / Adjustment",
+          "type": "expense",
+          "debit": 0,
+          "credit": 480.3
+        },
+        {
+          "code": "5060",
+          "name": "Cash Over / Short",
+          "type": "expense",
+          "debit": 0,
+          "credit": 2
+        },
+        {
+          "code": "5070",
+          "name": "Discounts & Write-offs",
+          "type": "expense",
+          "debit": 350,
+          "credit": 0
+        },
+        {
+          "code": "5080",
+          "name": "Cost of Goods Sold",
+          "type": "expense",
+          "debit": 1441.86,
+          "credit": 0
+        },
+        {
+          "code": "5090",
+          "name": "Purchase Price Variance",
+          "type": "expense",
+          "debit": 0,
+          "credit": 119.58
+        }
+      ],
+      "totalDebit": 48113.88,
+      "totalCredit": 48113.88,
+      "balanced": true
+    },
+    "bank_reconciliation": {
+      "status": "NOT_VERIFIED",
+      "reason": "No seeded bank statement/match acceptance fixture was executed."
+    },
+    "period_cross_module": {
+      "status": "NOT_VERIFIED",
+      "reason": "Full Overview/Insights/Reports/P&L/AR/AP/Inventory/Registers period proof remains."
+    }
+  },
+  "serial_return_trace": [
+    {
+      "return_line_id": 7,
+      "return_id": 7,
+      "original_sale_line_id": 55,
+      "quantity": "1.000",
+      "unit_cogs": "92.7300",
+      "status": "POSTED"
+    },
+    {
+      "return_line_id": 11,
+      "return_id": 11,
+      "original_sale_line_id": 73,
+      "quantity": "1.000",
+      "unit_cogs": "92.7300",
+      "status": "POSTED"
+    },
+    {
+      "return_line_id": 15,
+      "return_id": 15,
+      "original_sale_line_id": 91,
+      "quantity": "1.000",
+      "unit_cogs": "92.7300",
+      "status": "POSTED"
+    }
+  ],
+  "performance_concurrent": {
+    "fixture": {
+      "skus": 25000,
+      "movements": 1000000,
+      "customers": 25000,
+      "sales": 100000,
+      "loyalty_events": 100000,
+      "customer_audit_events": 100000
+    },
+    "samples": 7,
+    "results": [
+      {
+        "name": "movement_first_page",
+        "samples_ms": [
+          233.41,
+          103.27,
+          115.11,
+          125.43,
+          197.31,
+          110.78,
+          121.03
+        ],
+        "median_ms": 121.03
+      },
+      {
+        "name": "movement_sku_search",
+        "samples_ms": [
+          1739.94,
+          798.04,
+          593.2,
+          572.39,
+          672.88,
+          681.05,
+          814.53
+        ],
+        "median_ms": 681.05
+      },
+      {
+        "name": "stock_search",
+        "samples_ms": [
+          1414.38,
+          1304.87,
+          1275.59,
+          1202.53,
+          1327.57,
+          1252.31,
+          1350.09
+        ],
+        "median_ms": 1304.87
+      },
+      {
+        "name": "exact_barcode",
+        "samples_ms": [
+          88.81,
+          101.7,
+          90.07,
+          87.48,
+          91.62,
+          85.97,
+          80.98
+        ],
+        "median_ms": 88.81
+      },
+      {
+        "name": "customer_timeline_100k_events",
+        "samples_ms": [
+          149.31,
+          117.31,
+          112.13,
+          126.11,
+          127.47,
+          128.96,
+          141.81
+        ],
+        "median_ms": 127.47
+      },
+      {
+        "name": "transaction_explorer_first_page",
+        "samples_ms": [
+          151.66,
+          133.14,
+          123.75,
+          164.34,
+          151.15,
+          158.52,
+          163.19
+        ],
+        "median_ms": 151.66
+      },
+      {
+        "name": "transaction_explorer_exact_sale",
+        "samples_ms": [
+          111.04,
+          172.75,
+          148.39,
+          111.76,
+          96.84,
+          91.35,
+          72.68
+        ],
+        "median_ms": 111.04
+      },
+      {
+        "name": "audit_first_page_100k",
+        "samples_ms": [
+          149.41,
+          104.98,
+          70.42,
+          83.78,
+          91.98,
+          75.81,
+          84.4
+        ],
+        "median_ms": 84.4
+      },
+      {
+        "name": "audit_search_100k",
+        "samples_ms": [
+          145.74,
+          146.41,
+          140.85,
+          70.9,
+          81.09,
+          109.56,
+          79.09
+        ],
+        "median_ms": 109.56
+      }
+    ]
+  },
+  "blockers": [
+    "Repeated serial sale/return cycles suppress subsequent inventory restoration; inventory valuation is Rs 185.42 below GL after browser transactions.",
+    "Searchable Settings Center and policy inventory remain incomplete.",
+    "Six-persona Team & Role Center and full server authorization/export matrix remain incomplete.",
+    "Unified Insights/report catalog, metric registry and approved analysis views remain incomplete.",
+    "Registers, Expenses and Banking modernization and bank attention remain incomplete.",
+    "Full source detail and bidirectional drill coverage, common-period reconciliation and bank reconciliation remain incomplete.",
+    "Complete accessibility, device, persona and performance acceptance remains incomplete."
+  ],
+  "workspaces": {
+    "Overview": "BLOCKED",
+    "Sell": "BLOCKED",
+    "Catalog": "BLOCKED",
+    "Inventory": "BLOCKED",
+    "Purchasing": "BLOCKED",
+    "Customers": "BLOCKED",
+    "Suppliers": "BLOCKED",
+    "Finance": "BLOCKED",
+    "Insights": "BLOCKED",
+    "Control": "BLOCKED"
+  },
+  "performance_quiet": {
+    "fixture": {
+      "skus": 25000,
+      "movements": 1000000,
+      "customers": 25000,
+      "sales": 100000,
+      "loyalty_events": 100000,
+      "customer_audit_events": 100000
+    },
+    "samples": 7,
+    "results": [
+      {
+        "name": "movement_first_page",
+        "samples_ms": [
+          112.27,
+          81.72,
+          75.86,
+          74.97,
+          81.14,
+          78.16,
+          167.99
+        ],
+        "median_ms": 81.14
+      },
+      {
+        "name": "movement_sku_search",
+        "samples_ms": [
+          510.96,
+          541.49,
+          420.82,
+          429.69,
+          444.85,
+          445.92,
+          447.71
+        ],
+        "median_ms": 445.92
+      },
+      {
+        "name": "stock_search",
+        "samples_ms": [
+          658.18,
+          636.36,
+          622.77,
+          663.22,
+          639.43,
+          632.04,
+          640.54
+        ],
+        "median_ms": 639.43
+      },
+      {
+        "name": "exact_barcode",
+        "samples_ms": [
+          58.43,
+          58.11,
+          55.28,
+          54.59,
+          60.03,
+          56.77,
+          56.87
+        ],
+        "median_ms": 56.87
+      },
+      {
+        "name": "customer_timeline_100k_events",
+        "samples_ms": [
+          88.42,
+          74.6,
+          73.18,
+          72.2,
+          72.88,
+          69.19,
+          77.17
+        ],
+        "median_ms": 73.18
+      },
+      {
+        "name": "transaction_explorer_first_page",
+        "samples_ms": [
+          125.03,
+          100.16,
+          107.86,
+          100.09,
+          157.15,
+          88.84,
+          98.08
+        ],
+        "median_ms": 100.16
+      },
+      {
+        "name": "transaction_explorer_exact_sale",
+        "samples_ms": [
+          55.6,
+          63.43,
+          58.87,
+          55.2,
+          141.09,
+          56.99,
+          59.94
+        ],
+        "median_ms": 58.87
+      },
+      {
+        "name": "audit_first_page_100k",
+        "samples_ms": [
+          78.87,
+          62.07,
+          72.42,
+          68.01,
+          62.53,
+          132.19,
+          68.62
+        ],
+        "median_ms": 68.62
+      },
+      {
+        "name": "audit_search_100k",
+        "samples_ms": [
+          50.18,
+          44.38,
+          134.24,
+          46.53,
+          47.22,
+          51.11,
+          51.46
+        ],
+        "median_ms": 50.18
+      }
+    ],
+    "conditions": "After build and browser activity completed; local server processes remained idle. Not a controlled before/after regression comparison."
+  }
+}

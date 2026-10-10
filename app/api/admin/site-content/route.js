@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import Database from '@/lib/db/index';
+import { getStorefrontCategories } from '@/lib/storefront.js';
 import { requireAuth, handleRouteError } from '@/lib/api-guard.js';
 import {
   CONTENT_DEFAULTS,
@@ -21,8 +22,8 @@ export async function GET(request) {
     if (auth.error) return auth.error;
 
     const db = Database.getInstance();
-    const stored = await getStoredSiteContent(db);
-    return NextResponse.json({ groups: CONTENT_GROUPS, defaults: CONTENT_DEFAULTS, stored });
+    const [stored, categories] = await Promise.all([getStoredSiteContent(db), getStorefrontCategories()]);
+    return NextResponse.json({ groups: CONTENT_GROUPS, defaults: CONTENT_DEFAULTS, stored, previewCategoryPath: categories[0] ? `/shop/${categories[0].slug}` : null });
   } catch (error) {
     return handleRouteError(error, 'Could not load the website content.');
   }

@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import Database from '@/lib/db/index';
 import bcrypt from 'bcryptjs';
-import { getPrimaryAdminId } from '@/lib/employees.js';
+import { getPrimaryAdminId, requireRetailStaffRole } from '@/lib/employees.js';
 import { ensurePayrollSchema } from '@/lib/payroll.js';
 import { ensureHrmSchema } from '@/lib/hrm.js';
 import { requireAuth } from '@/lib/api-guard.js';
@@ -49,6 +49,7 @@ export async function POST(request) {
     if (auth.error) return auth.error;
 
     const data = await request.json();
+    data.role = requireRetailStaffRole(data.role);
     if (auth.user.role !== 'admin' && data.role === 'admin') {
       return NextResponse.json({ error: 'Only an administrator can create another administrator.' }, { status: 403 });
     }
@@ -100,6 +101,7 @@ export async function POST(request) {
     }, { status: 201 });
   } catch (error) {
     console.error('Create employee error:', error);
+    if (error?.status) return NextResponse.json({ error: error.message }, { status: error.status });
     return NextResponse.json(
       { error: 'Failed to create employee' },
       { status: 500 }
@@ -113,6 +115,7 @@ export async function PUT(request) {
     if (auth.error) return auth.error;
 
     const data = await request.json();
+    data.role = requireRetailStaffRole(data.role);
     const db = Database.getInstance();
     await ensurePayrollSchema(db);
     await ensureHrmSchema(db);
@@ -187,6 +190,7 @@ export async function PUT(request) {
     });
   } catch (error) {
     console.error('Update employee error:', error);
+    if (error?.status) return NextResponse.json({ error: error.message }, { status: error.status });
     return NextResponse.json(
       { error: 'Failed to update employee' },
       { status: 500 }

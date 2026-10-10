@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import Database from '@/lib/db/index';
 import bcrypt from 'bcryptjs';
-import { getPrimaryAdminId, isPrimaryAdmin } from '@/lib/employees.js';
+import { getPrimaryAdminId, isPrimaryAdmin, requireRetailStaffRole } from '@/lib/employees.js';
 import { requireAuth, handleRouteError } from '@/lib/api-guard.js';
 import { ensureHrmSchema } from '@/lib/hrm.js';
 
@@ -25,6 +25,7 @@ export async function PUT(request, { params }) {
 
     const { id } = await params;
     const data = await request.json();
+    if (data.role !== undefined) data.role = requireRetailStaffRole(data.role);
     const db = Database.getInstance();
     await ensureHrmSchema(db);
 
@@ -127,6 +128,7 @@ export async function PUT(request, { params }) {
     });
   } catch (error) {
     console.error('Update employee error:', error);
+    if (error?.status) return NextResponse.json({ error: error.message }, { status: error.status });
     return NextResponse.json(
       { error: 'Could not update this employee. Please try again.' },
       { status: 500 }

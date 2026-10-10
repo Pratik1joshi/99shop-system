@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import { AlertTriangle, Banknote, ChevronDown, ChevronUp, CircleCheck, CreditCard, ReceiptText, Utensils } from 'lucide-react';
+import { AlertTriangle, Banknote, ChevronDown, ChevronUp, CircleCheck, CreditCard, ReceiptText } from 'lucide-react';
 import PanelLink from '@/components/admin/panel-link.jsx';
 import { financialToneClass } from '@/lib/financial-tone';
 import DenominationTable, { CASH_DENOMINATIONS, emptyDenominationCounts } from '@/components/business-days/denomination-table.jsx';
@@ -70,6 +70,7 @@ export default function ClosingSummary({
   const difference = hasCount ? Number(displayCounted) - expected : null;
   const state = difference == null ? null : Math.abs(difference) < 0.005 ? 'MATCHED' : difference < 0 ? 'SHORT' : 'OVER';
   const sales = summary?.sales || {};
+  const retail = summary?.retail || {};
   const collections = summary?.collections || {};
   const breakdown = viewingHistorical
     ? (viewedSession?.cash_breakdown || {})
@@ -115,7 +116,32 @@ export default function ClosingSummary({
 
   return (
     <div className="space-y-0">
-      <Section icon={ReceiptText} title="Sales summary">
+      <Section icon={ReceiptText} title="Sales">
+        <p className="mb-4 text-xs text-gray-500">Completed sales and posted returns for this business day, in store and online. Physical cash is reconciled from journal lines below.</p>
+        <div className="grid grid-cols-2 gap-x-4 gap-y-5 sm:grid-cols-4 xl:grid-cols-7">
+          <Metric label="Sales" value={retail.gross_sales} tone="positive" />
+          <Metric label="Returns" value={retail.refunds} />
+          <Metric label="Net Sales" value={retail.net_sales} tone="positive" />
+          <Metric label="Tax" value={retail.tax} />
+          <Metric label="Unpaid on Credit" value={retail.open_credit} />
+          <Metric label="Completed Sales" value={retail.completed_sales} money={false} />
+          <Metric label="Items Sold" value={sales.items_sold} money={false} />
+        </div>
+        {!!retail.payments?.length && <div className="mt-4 flex flex-wrap gap-4 border-t border-gray-100 pt-3 text-sm">{retail.payments.map((row) => <span key={row.method}><strong className="capitalize">{row.method}</strong> {amount(row.amount)}</span>)}</div>}
+        {!!summary?.operations?.top_items?.length && (
+          <div className="mt-4 border-t border-gray-100 pt-3">
+            <p className="mb-2 text-xs font-semibold uppercase text-gray-500">Top-selling items</p>
+            <div className="flex flex-wrap gap-x-6 gap-y-2">
+              {summary.operations.top_items.map((item) => (
+                <span key={item.name} className="text-sm">
+                  <strong>{item.name}</strong> <span className="text-gray-500">{count(item.quantity)} sold</span>
+                </span>
+              ))}
+            </div>
+          </div>
+        )}
+      </Section>
+      {Number(sales.completed_bills) > 0 && <Section icon={ReceiptText} title="Older bills">
         <div className="grid grid-cols-2 gap-x-4 gap-y-5 sm:grid-cols-3 xl:grid-cols-6">
           <Metric label="Gross Billed Sales" value={sales.gross_sales} tone="positive" />
           <Metric label="Discounts" value={sales.discounts} />
@@ -126,9 +152,7 @@ export default function ClosingSummary({
           <Metric label="Refunds" value={sales.refunds} />
           <Metric label="Voided Sales (bill value)" value={sales.voided_bill_value} />
           <Metric label="Finalized Bills" value={sales.completed_bills} money={false} />
-          <Metric label="Orders Completed" value={summary?.orders?.completed} money={false} />
           <Metric label="Average Net Bill" value={sales.average_bill} tone="positive" />
-          <Metric label="Items Sold" value={sales.items_sold} money={false} />
         </div>
         {!!sales.channels?.length && (
           <div className="mt-5 flex flex-wrap gap-x-6 gap-y-2 border-t border-gray-100 pt-4">
@@ -143,7 +167,7 @@ export default function ClosingSummary({
             ))}
           </div>
         )}
-      </Section>
+      </Section>}
 
       <Section icon={CreditCard} title="Payment collection summary">
         <p className="mb-4 text-xs text-gray-500">Whole business-day totals across all store sessions. Active settlement rows only; voided payments are removed.</p>
@@ -153,7 +177,7 @@ export default function ClosingSummary({
           <Metric label="Credit Sales (not cash)" value={collections.credit_sales} tone="positive" />
           <Metric label="Active Money Collected" value={collections.total_collected} />
           <Metric label="Refunds Returned" value={collections.refunds} />
-          <Metric label="Cash Returned for Voided Bills" value={collections.void_returns} />
+          <Metric label="Cash Returned for Voided Sales" value={collections.void_returns} />
           <Metric label="Net Money Retained" value={collections.net_collected} />
         </div>
       </Section>
@@ -285,7 +309,7 @@ export default function ClosingSummary({
               <CashLine label="Money Exchange Cash In" value={breakdown.money_exchange_in} sign="+" />
               <CashLine label="Cash Expenses" value={breakdown.cash_expenses} sign="-" />
               <CashLine label="Cash Refunds" value={breakdown.cash_refunds} sign="-" />
-              <CashLine label="Cash Returned for Voided Bills" value={breakdown.void_returns} sign="-" />
+              <CashLine label="Cash Returned for Voided Sales" value={breakdown.void_returns} sign="-" />
               <CashLine label="Supplier Payments" value={breakdown.supplier_payments} sign="-" />
               <CashLine label="Money Exchange Cash Out" value={breakdown.money_exchange_out} sign="-" />
               <CashLine label="Other Cash Out" value={breakdown.other_cash_out} sign="-" />
@@ -322,33 +346,8 @@ export default function ClosingSummary({
           <Metric label="Cash Expenses" value={summary?.outflows?.cash_expenses} />
           <Metric label="Online Expenses" value={summary?.outflows?.online_expenses} />
           <Metric label="Refunds Returned" value={summary?.outflows?.refunds} />
-          <Metric label="Cash Returned for Voided Bills" value={summary?.outflows?.cash_void_returns} />
+          <Metric label="Cash Returned for Voided Sales" value={summary?.outflows?.cash_void_returns} />
         </div>
-      </Section>
-
-      <Section icon={Utensils} title="Orders, kitchen and floor">
-        <div className="grid grid-cols-2 gap-x-4 gap-y-5 sm:grid-cols-4 lg:grid-cols-8">
-          <Metric label="Orders Created" value={summary?.orders?.created} money={false} />
-          <Metric label="Completed" value={summary?.orders?.completed} money={false} />
-          <Metric label="Open Orders" value={summary?.orders?.open} money={false} />
-          <Metric label="Cancelled" value={summary?.orders?.cancelled} money={false} />
-          <Metric label="KOTs Generated" value={summary?.kots?.generated} money={false} />
-          <Metric label="KOTs Completed" value={summary?.kots?.completed} money={false} />
-          <Metric label="Active KOTs" value={summary?.kots?.active} money={false} />
-          <Metric label="Tables Served" value={summary?.operations?.tables_served} money={false} />
-        </div>
-        {!!summary?.operations?.top_items?.length && (
-          <div className="mt-5 border-t border-gray-100 pt-4">
-            <p className="mb-2 text-xs font-semibold uppercase text-gray-500">Top-selling items</p>
-            <div className="flex flex-wrap gap-x-6 gap-y-2">
-              {summary.operations.top_items.map((item) => (
-                <span key={item.name} className="text-sm">
-                  <strong>{item.name}</strong> <span className="text-gray-500">{count(item.quantity)} sold</span>
-                </span>
-              ))}
-            </div>
-          </div>
-        )}
       </Section>
 
       <Section icon={summary?.blockers?.canCloseNormally ? CircleCheck : AlertTriangle} title="Issues before closing">

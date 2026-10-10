@@ -1,18 +1,11 @@
-import { Geist, Geist_Mono } from 'next/font/google'
 import './globals.css'
-import { AuthProvider } from '@/lib/auth-context'
-import { ToastProvider } from '@/components/ui/toast'
-import { ConfirmProvider } from '@/components/ui/confirm'
+import AppProviders from '@/components/app-providers'
 import { SHOP } from '@/lib/shop-info.js'
-import { CalendarSystemProvider } from '@/lib/calendar-context.jsx'
-
-const _geist = Geist({ subsets: ["latin"] });
-const _geistMono = Geist_Mono({ subsets: ["latin"] });
 
 const SITE_DESCRIPTION = `${SHOP.tagline}. Call ${SHOP.phoneDisplay}.`
 
 // Bump `v` whenever the favicon assets change to bust browser/CDN caches.
-const ICON_VERSION = 'km-2'
+const ICON_VERSION = '99shop-1'
 
 export const metadata = {
   metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL || SHOP.siteUrl),
@@ -24,8 +17,11 @@ export const metadata = {
   applicationName: SHOP.name,
   manifest: `/site.webmanifest?v=${ICON_VERSION}`,
   icons: {
-    icon: [{ url: `/images/brand/icon-192.png?v=${ICON_VERSION}`, type: 'image/png', sizes: '192x192' }],
-    apple: [{ url: `/images/brand/apple-icon.png?v=${ICON_VERSION}`, type: 'image/png', sizes: '180x180' }],
+    icon: [
+      { url: `/images/brand/favicon/icon-32.png?v=${ICON_VERSION}`, type: 'image/png', sizes: '32x32' },
+      { url: `/images/brand/favicon/icon-192.png?v=${ICON_VERSION}`, type: 'image/png', sizes: '192x192' },
+    ],
+    apple: [{ url: `/images/brand/favicon/apple-touch-icon.png?v=${ICON_VERSION}`, type: 'image/png', sizes: '180x180' }],
     shortcut: [{ url: `/images/brand/favicon/favicon.ico?v=${ICON_VERSION}`, type: 'image/x-icon' }],
   },
   openGraph: {
@@ -33,13 +29,13 @@ export const metadata = {
     siteName: SHOP.name,
     title: `${SHOP.name} | ${SHOP.tagline}`,
     description: SITE_DESCRIPTION,
-    images: [{ url: SHOP.logo, alt: `${SHOP.name} logo` }],
+    images: [{ url: SHOP.logo || '/storefront/99-shop-by-shahana-logo.jpg', alt: `${SHOP.name} logo` }],
   },
   twitter: {
     card: 'summary_large_image',
     title: SHOP.name,
     description: SITE_DESCRIPTION,
-    images: [SHOP.logo],
+    images: [SHOP.logo || '/storefront/99-shop-by-shahana-logo.jpg'],
   },
   appleWebApp: {
     capable: true,
@@ -67,15 +63,7 @@ export default function RootLayout({ children }) {
         }} />
       </head>
       <body className={`font-sans antialiased`}>
-        <AuthProvider>
-          <CalendarSystemProvider>
-            <ToastProvider>
-              <ConfirmProvider>
-                {children}
-              </ConfirmProvider>
-            </ToastProvider>
-          </CalendarSystemProvider>
-        </AuthProvider>
+        <AppProviders>{children}</AppProviders>
       </body>
     </html>
   )

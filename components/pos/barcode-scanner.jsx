@@ -15,7 +15,9 @@ export default function BarcodeScanner({ onDetected, onClose }) {
   const hasDetectedRef = useRef(false);
   // Held in a ref so inline parent callbacks don't restart the camera on every render.
   const handlersRef = useRef({ onDetected, onClose });
-  handlersRef.current = { onDetected, onClose };
+  useEffect(() => {
+    handlersRef.current = { onDetected, onClose };
+  }, [onDetected, onClose]);
 
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);

@@ -5,6 +5,7 @@ import { ensureLedgerSchema } from '@/lib/inventory-ledger.js';
 import { ensureAccountingSchema } from '@/lib/accounting.js';
 import { supplierOpenInvoices, supplierStatement } from '@/lib/accounting-suppliers.js';
 import { normalizePaymentMethod } from '@/lib/payment-allocations.js';
+import { redactRetailCost } from '@/lib/retail-cost-visibility.js';
 
 const round2 = (value) => Math.round((Number(value) || 0) * 100) / 100;
 
@@ -13,6 +14,8 @@ export async function GET(request, { params }) {
   try {
     const auth = await requireAuth(request, { roles: ['admin', 'cashier'], permission: 'suppliers.view' });
     if (auth.error) return auth.error;
+    const financialAuth = await requireAuth(request, { roles: ['admin', 'cashier'], permission: 'retail_purchasing.view_cost' });
+    if (financialAuth.error) return financialAuth.error;
     const { id } = await params;
     const supplierId = Number(id);
     if (!Number.isInteger(supplierId) || supplierId < 1) {
@@ -99,7 +102,7 @@ export async function GET(request, { params }) {
       0
     ));
 
-    return NextResponse.json({
+    return NextResponse.json(redactRetailCost({
       supplier,
       summary: {
         total_spend: round2(livePurchases.reduce((sum, row) => sum + Number(row.total || 0), 0)),
@@ -115,7 +118,7 @@ export async function GET(request, { params }) {
       ledger,
       payments,
       open_invoices: openInvoices,
-    });
+    }, auth.user.role, 'retail_purchasing.view_cost'));
   } catch (error) {
     return handleRouteError(error, 'Could not load the supplier profile.');
   }

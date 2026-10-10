@@ -4,6 +4,7 @@ import { requireAuth, handleRouteError } from '@/lib/api-guard.js';
 import { ensureLedgerSchema } from '@/lib/inventory-ledger.js';
 import { listSuppliers, mergeSuppliers, resolveSupplier } from '@/lib/purchases.js';
 import { readListParams } from '@/lib/paginate.js';
+import { redactRetailCost } from '@/lib/retail-cost-visibility.js';
 
 export async function GET(request) {
   try {
@@ -18,7 +19,7 @@ export async function GET(request) {
       ...readListParams(q, { defaultDir: 'asc' }),
       includeArchived: q.get('include_archived') === '1',
     });
-    return NextResponse.json({ suppliers: rows, pagination });
+    return NextResponse.json({ suppliers: redactRetailCost(rows, auth.user.role, 'retail_purchasing.view_cost'), pagination });
   } catch (error) {
     return handleRouteError(error, 'Failed to load suppliers');
   }

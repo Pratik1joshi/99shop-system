@@ -14,6 +14,7 @@ import { ensurePromotionSchema, evaluatePromotion, recordPromotionRedemption } f
 import { createComboSnapshot } from '@/lib/combos.js';
 import { ensureMenuVariantsSchema } from '@/lib/menu-variants.js';
 import { normalizePaymentMethod } from '@/lib/payment-allocations.js';
+import { RESTAURANT_MODE } from '@/lib/deployment.js';
 
 async function loadSettingsRates(db) {
   const rows = await db.all('SELECT setting_key, setting_value FROM system_settings');
@@ -87,6 +88,9 @@ async function existingSale(db, idempotencyKey) {
 }
 
 export async function POST(request) {
+  if (RESTAURANT_MODE === 'RETAIL') {
+    return NextResponse.json({ error: 'Legacy restaurant billing is read-only in Retail mode. Use /api/admin/retail-sales.' }, { status: 410 });
+  }
   try {
     const auth = await requireAuth(request, { roles: ['admin', 'cashier'], permission: 'bills.pay' });
     if (auth.error) return auth.error;

@@ -7,8 +7,10 @@ import { supplierPayables, supplierStatement, supplierLedgerHistory, liabilityLe
 
 export async function GET(request) {
   try {
-    const auth = await requireAuth(request, { roles: ['admin', 'cashier'], permission: 'supplier_ledger.access' });
+    const auth = await requireAuth(request, { roles: ['admin', 'cashier', 'accountant'], permission: 'supplier_ledger.access' });
     if (auth.error) return auth.error;
+    const costAuth = await requireAuth(request, { roles: ['admin', 'cashier', 'accountant'], permission: 'retail_purchasing.view_cost' });
+    if (costAuth.error) return costAuth.error;
     const db = Database.getInstance();
     await ensureAccountingSchema(db);
     const q = new URL(request.url).searchParams;
@@ -42,8 +44,10 @@ export async function GET(request) {
 
 export async function POST(request) {
   try {
-    const auth = await requireAuth(request, { roles: ['admin', 'cashier'], permission: 'supplier_ledger.access' });
+    const auth = await requireAuth(request, { roles: ['admin', 'cashier', 'accountant'], permission: 'supplier_ledger.access' });
     if (auth.error) return auth.error;
+    const costAuth = await requireAuth(request, { roles: ['admin', 'cashier', 'accountant'], permission: 'retail_purchasing.view_cost' });
+    if (costAuth.error) return costAuth.error;
     const db = Database.getInstance();
     await ensureAccountingSchema(db);
     const journal_id = await paySupplier(db, { ...(await request.json()), created_by: auth.user?.id || null });

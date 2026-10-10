@@ -66,7 +66,7 @@ export default function DesignationsPage() {
           <div className="mb-6 flex flex-col gap-3 sm:mb-8 sm:flex-row sm:items-center sm:justify-between">
             <div>
               <h1 className="text-2xl font-bold text-gray-800 sm:text-3xl">Designations</h1>
-              <p className="mt-1 text-gray-700">Job titles staff can be assigned — Waiter, Head Chef, Shift Lead.</p>
+              <p className="mt-1 text-gray-700">Job titles staff can be assigned — Cashier, Store Manager, Stock Keeper.</p>
             </div>
             {canManage && (
               <button onClick={openCreate} className="flex items-center gap-2 rounded-lg bg-gray-900 px-6 py-3 text-white hover:bg-gray-800">
@@ -82,7 +82,7 @@ export default function DesignationsPage() {
                 <form onSubmit={submit} noValidate className="space-y-4">
                   <label className="block">
                     <span className="mb-1 block text-sm font-medium text-gray-700">Designation name *</span>
-                    <input autoFocus value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} className="h-11 w-full rounded-lg border border-gray-300 px-3 text-gray-900" placeholder="e.g. Head Waiter" />
+                    <input autoFocus value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} className="h-11 w-full rounded-lg border border-gray-300 px-3 text-gray-900" placeholder="e.g. Store Manager" />
                   </label>
                   <label className="block">
                     <span className="mb-1 block text-sm font-medium text-gray-700">Department</span>
@@ -144,7 +144,7 @@ export default function DesignationsPage() {
               </tbody>
             </table>
             {!loading && designations.length === 0 && (
-              <div className="py-12 text-center"><Contact className="mx-auto mb-4 h-12 w-12 text-gray-400" /><p className="text-gray-700">No designations yet. Add one like Waiter or Head Chef.</p></div>
+              <div className="py-12 text-center"><Contact className="mx-auto mb-4 h-12 w-12 text-gray-400" /><p className="text-gray-700">No designations yet. Add one like Cashier or Store Manager.</p></div>
             )}
           </div>
         </div>

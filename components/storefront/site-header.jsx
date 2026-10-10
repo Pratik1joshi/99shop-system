@@ -1,10 +1,14 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { LOGO_IMAGE } from '@/lib/storefront-links.js';
-import { InstagramIcon, TiktokIcon, WhatsappIcon } from './icons.jsx';
+import { LOGO_IMAGE, categoryHref } from '@/lib/storefront-links.js';
+import { toPublicImageUrl } from '@/lib/public-image-url.js';
+import { WhatsappIcon } from './icons.jsx';
+import { readBag } from '@/lib/store-bag.js';
+
+const MOBILE_CATEGORY_LIMIT = 8;
 
 /** Same link the server builds; duplicated here so the header stays a client component. */
 function waHref(content, message) {
@@ -12,14 +16,27 @@ function waHref(content, message) {
   return `https://wa.me/${number}?text=${encodeURIComponent(message)}`;
 }
 
-/**
- * Storefront header: brand, category nav, socials, WhatsApp CTA and the
- * dark-mode toggle. Client-side only for the mobile panel and the toggle —
- * the category list and the copy are resolved on the server and passed in.
- */
-export default function SiteHeader({ categories = [], content = {} }) {
+/** Storefront header with compact primary navigation and a category menu. */
+export default function SiteHeader({ categories = [], content = {}, onlineEnabled = false }) {
   const pathname = usePathname();
   const [menuOpen, setMenuOpen] = useState(false);
+  const [categoriesOpen, setCategoriesOpen] = useState(false);
+  const categoriesRef = useRef(null);
+  useEffect(() => {
+    const closeOutside = (event) => { if (!categoriesRef.current?.contains(event.target)) setCategoriesOpen(false); };
+    const closeEscape = (event) => { if (event.key === 'Escape') setCategoriesOpen(false); };
+    document.addEventListener('pointerdown', closeOutside);
+    document.addEventListener('keydown', closeEscape);
+    return () => { document.removeEventListener('pointerdown', closeOutside); document.removeEventListener('keydown', closeEscape); };
+  }, []);
+  const [bagCount, setBagCount] = useState(0);
+  useEffect(() => {
+    const update = () => setBagCount(readBag().reduce((sum, line) => sum + line.quantity, 0));
+    update();
+    window.addEventListener('shop-bag-change', update);
+    window.addEventListener('storage', update);
+    return () => { window.removeEventListener('shop-bag-change', update); window.removeEventListener('storage', update); };
+  }, []);
   const [dark, setDark] = useState(() => {
     if (typeof document === 'undefined') return false;
     return document.documentElement.classList.contains('dark');
@@ -29,8 +46,8 @@ export default function SiteHeader({ categories = [], content = {} }) {
 
   const links = [
     { href: '/', label: 'Home' },
-    ...categories.map((c) => ({ href: `/shop/${c.slug}`, label: c.name })),
-    { href: '/about', label: 'About' },
+    { href: '/store', label: 'All products' },
+    { href: '/contact', label: 'Contact' },
   ];
 
   function toggleTheme() {
@@ -48,36 +65,43 @@ export default function SiteHeader({ categories = [], content = {} }) {
     <Link
       key={link.href}
       href={link.href}
-      className={pathname === link.href ? 'active' : undefined}
+      className={pathname === link.href || (link.href === '/store' && (pathname.startsWith('/products/') || pathname.startsWith('/store/product/') || pathname.startsWith('/store/category/'))) ? 'active' : undefined}
+      aria-current={pathname === link.href ? 'page' : undefined}
       onClick={() => setMenuOpen(false)}
     >
       {link.label}
     </Link>
   );
 
+  const categoryLink = (category, close) => {
+    const href = categoryHref(category, onlineEnabled);
+    return <Link key={category.slug} href={href} aria-current={pathname === href ? 'page' : undefined} onClick={close}>{category.name}{category.productCount > 0 && <small>{category.productCount}</small>}</Link>;
+  };
+  const allCategoriesLink = (close) => <Link className="category-all" href="/categories" aria-current={pathname === '/categories' ? 'page' : undefined} onClick={close}>See all {categories.length} categories →</Link>;
+  // A long list reads better in columns; a short one stays a single list.
+  const menuColumns = categories.length > 16 ? 3 : categories.length > 6 ? 2 : 1;
+
+  const categoryMenu = (mobile = false) => mobile ? (
+    <div className="mobile-categories">
+      <span>Categories</span>
+      <div>{categories.slice(0, MOBILE_CATEGORY_LIMIT).map((category) => categoryLink(category, () => setMenuOpen(false)))}</div>
+      {categories.length > MOBILE_CATEGORY_LIMIT && allCategoriesLink(() => setMenuOpen(false))}
+    </div>
+  ) : (
+    <div className={`category-menu${pathname.startsWith('/shop/') || pathname.startsWith('/store/category/') || pathname === '/categories' ? ' active' : ''}`} ref={categoriesRef}>
+      <button className="category-trigger" type="button" aria-expanded={categoriesOpen} aria-controls="store-category-menu" onClick={() => setCategoriesOpen((open) => !open)}>
+        Categories <svg aria-hidden="true" viewBox="0 0 16 16" width="14" height="14" fill="none"><path d="m3.5 6 4.5 4 4.5-4" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" /></svg>
+      </button>
+      {categoriesOpen && <div className="category-popover" id="store-category-menu" style={{ '--menu-cols': menuColumns }}>
+        <div className="category-popover-grid">{categories.map((category) => categoryLink(category, () => setCategoriesOpen(false)))}</div>
+        {allCategoriesLink(() => setCategoriesOpen(false))}
+      </div>}
+    </div>
+  );
+
   const socials = (
     <>
-      <a
-        className="icon-btn"
-        href={content['contact.instagram_url']}
-        target="_blank"
-        rel="noopener"
-        aria-label="Instagram"
-      >
-        <InstagramIcon size={16} />
-      </a>
-      <a
-        className="icon-btn"
-        href={content['contact.tiktok_url']}
-        target="_blank"
-        rel="noopener"
-        aria-label="TikTok"
-      >
-        <TiktokIcon size={15} />
-      </a>
-      <a className="btn btn-pink btn-small" href={orderHref} target="_blank" rel="noopener">
-        {content['home.cta_primary']}
-      </a>
+      {onlineEnabled ? <Link className="btn btn-pink btn-small" href="/store/cart">Bag{bagCount > 0 ? ` (${bagCount})` : ''}</Link> : <a className="btn btn-pink btn-small" href={orderHref} target="_blank" rel="noopener">{content['home.cta_primary']}</a>}
     </>
   );
 
@@ -86,7 +110,7 @@ export default function SiteHeader({ categories = [], content = {} }) {
       <div className="navrow wrap">
         <Link className="brand" href="/">
           {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src={LOGO_IMAGE} alt={`${content['shop.name']} logo`} />
+          <img src={toPublicImageUrl(content['shop.logo']) || LOGO_IMAGE} alt={`${content['shop.name']} logo`} />
           <span className="brandtext">
             <span className="name">{content['shop.short_name']}</span>
             <br />
@@ -94,7 +118,7 @@ export default function SiteHeader({ categories = [], content = {} }) {
           </span>
         </Link>
 
-        <nav className="links">{links.map(navLink)}</nav>
+        <nav className="links" aria-label="Main">{navLink(links[0])}{categoryMenu()}{links.slice(1).map(navLink)}</nav>
 
         <div className="nav-cta">
           {socials}
@@ -118,7 +142,7 @@ export default function SiteHeader({ categories = [], content = {} }) {
             className="menu-toggle"
             type="button"
             onClick={() => setMenuOpen((open) => !open)}
-            aria-label="Open menu"
+            aria-label={menuOpen ? 'Close menu' : 'Open menu'}
             aria-expanded={menuOpen}
           >
             <svg
@@ -137,7 +161,7 @@ export default function SiteHeader({ categories = [], content = {} }) {
       </div>
 
       <div className={`mobile-panel${menuOpen ? ' open' : ''}`}>
-        <nav>{links.map(navLink)}</nav>
+        <nav aria-label="Main">{navLink(links[0])}{categoryMenu(true)}{links.slice(1).map(navLink)}</nav>
         <div className="mp-actions wrap">{socials}</div>
       </div>
     </header>

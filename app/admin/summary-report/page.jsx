@@ -37,32 +37,33 @@ export default function SummaryReportPage(){
           rangeText={`${formatNepalDisplay(d.range.start)} - ${formatNepalDisplay(d.range.end)}`}
           generatedText={`Generated ${formatNepalDateTime(d.generated_at)} NPT`}
         />
-        <ReportGroup title="Money In" note="Everything the restaurant earned and collected in this period." tint="emerald">
+        <ReportGroup title="Money In" note="Everything the shop sold and collected in this period, in store and online." tint="emerald">
         <div className="grid gap-5 lg:grid-cols-2 xl:grid-cols-3">
-          <Section highlight tint="emerald" title="Restaurant Revenue" note="Menu value less discounts plus charges gives the finalized bill total. The ledger total is shown separately so any posting difference is visible rather than hidden." rows={[
-            line('Product Value',d.revenue.subtotal),
+          <Section highlight tint="emerald" title="Sales Revenue" note="Goods value less discounts plus tax and charges gives the receipt total. The ledger total is shown separately so any posting difference is visible rather than hidden." rows={[
+            line('Goods Value',d.revenue.subtotal),
             line('Discounts',d.revenue.discounts,'-'),
             line('Tax / VAT',d.revenue.tax,d.revenue.tax?'+':''),
-            line('Service / Extra Charges',d.revenue.service_charge,d.revenue.service_charge?'+':''),
+            ...(d.revenue.service_charge?[line('Extra Charges',d.revenue.service_charge,'+')]:[]),
             ...(d.revenue.other_bill_adjustments?[line('Delivery / Rounding / Other',Math.abs(d.revenue.other_bill_adjustments),d.revenue.other_bill_adjustments>0?'+':'-')]:[]),
-            line('Finalized Bill Total',d.revenue.finalized_bill_total),
+            line('Receipt Total',d.revenue.finalized_bill_total),
             line('Cash Sales Posted',d.revenue.cash),
             line('Bank / Online Sales Posted',d.revenue.bank),
             line('Credit Sales Posted',d.revenue.credit),
+            ...(d.revenue.store_credit?[line('Paid with Store Credit',d.revenue.store_credit)]:[]),
             ...(d.revenue.ledger_bill_difference?[line('Ledger Posting Difference',Math.abs(d.revenue.ledger_bill_difference),d.revenue.ledger_bill_difference>0?'+':'-')]:[]),
             line('Sales Posted to Ledger',d.revenue.gross),
-            line(`Refunds (${d.revenue.refund_count||0})`,d.revenue.refunds,'-'),
-            line(`Voided Bills (${d.revenue.void_count||0})`,d.revenue.voids,'-'),
+            line(`Returns & Refunds (${d.revenue.refund_count||0})`,d.revenue.refunds,'-'),
+            ...(d.revenue.voids?[line(`Voided Sales (${d.revenue.void_count||0})`,d.revenue.voids,'-')]:[]),
             line('Net Revenue',d.revenue.net),
           ]}/>
-          <Section highlight tint="sky" title="Payment Received" note="Net received is the money retained after cash/bank refunds and void reversals." rows={[line('Gross Collected',d.received.gross_total),line('Cash Refunds / Void Returns',d.received.refund_cash+d.received.void_cash,'-'),line('Bank Refunds / Void Returns',d.received.refund_bank+d.received.void_bank,'-'),line('Net Cash Retained',d.received.cash),line('Net Bank Retained',d.received.bank),line('Net Received',d.received.total)]}/>
-          <Section title="Customer Ledger Payments" rows={[line('Cash Received',d.ledger.cash),line('Bank Received',d.ledger.bank),line('Total Received',d.ledger.cash+d.ledger.bank)]}/>
+          <Section highlight tint="sky" title="Payment Received" note="Net received is the money kept after cash/bank refunds and voided sales. Store credit is not money, so it is left out here." rows={[line('Gross Collected',d.received.gross_total),line('Cash Refunds / Voids',d.received.refund_cash+d.received.void_cash,'-'),line('Bank Refunds / Voids',d.received.refund_bank+d.received.void_bank,'-'),line('Net Cash Retained',d.received.cash),line('Net Bank Retained',d.received.bank),line('Net Received',d.received.total)]}/>
+          <Section title="Credit Collected from Customers" rows={[line('Cash Received',d.ledger.cash),line('Bank Received',d.ledger.bank),line('Total Received',d.ledger.cash+d.ledger.bank)]}/>
         </div>
         <div className="mt-5"><DigitalReceipts tint="sky" data={d.digital||{}}/></div>
         </ReportGroup>
         <ReportGroup title="Money Out" note="Everything paid out — stock, running costs and wages." tint="pink">
         <div className="grid gap-5 lg:grid-cols-2 xl:grid-cols-3">
-          <Section title="Total Purchase" rows={[line('Business Cash',d.purchases.cash),line('Business Bank / Online',d.purchases.bank),line('Owner / Business Funding',d.purchases.funding),line('Supplier Credit',d.purchases.credit),line('Total Purchase',d.purchases.total)]}/>
+          <Section title="Stock Purchases" note="Goods received from suppliers, less purchase returns, by how they were paid." rows={[line('Business Cash',d.purchases.cash),line('Business Bank / Online',d.purchases.bank),line('Owner / Business Funding',d.purchases.funding),line('Supplier Credit',d.purchases.credit),line('Total Purchase',d.purchases.total)]}/>
           <Section title="Total Expense" rows={[line('Business Cash',d.expenses.cash),line('Business Bank / Online',d.expenses.bank),line('Owner / Business Funding',d.expenses.funding),line('Credit Expense',d.expenses.credit),line('Total Expense',d.expenses.total)]}/>
           <Section title="Total Salary Paid" rows={[line('Cash / bank paid now',d.salary.cash+d.salary.bank),line('Advance deductions',d.salary.advance_deductions),line('Gross salary expense',d.salary.total)]}/>
         </div>
@@ -73,23 +74,23 @@ export default function SummaryReportPage(){
           <Account highlight tint="amber" title="Cash Ledger Balance" data={d.accounts.cash} cash/>
           <CashFlowCard tint="amber" data={d.cash_flow||{}} showDetails={false}/>
           <CountedCash tint="violet" data={d.closing||{}} showNotes={false}/>
-          <Section title="Recorded Cash Movements" note="Manual drawer deposits and withdrawals recorded through Cash In / Cash Out. These are cash transfers, not restaurant sales or operating expenses." rows={[line('Cash In',d.cash_register.cash_in),line('Cash Out',d.cash_register.cash_out),line('Savings Deposit',d.cash_register.deposit)]}/>
+          <Section title="Recorded Cash Movements" note="Manual drawer deposits and withdrawals recorded through Cash In / Cash Out. These are cash transfers, not shop sales or operating expenses." rows={[line('Cash In',d.cash_register.cash_in),line('Cash Out',d.cash_register.cash_out),line('Savings Deposit',d.cash_register.deposit)]}/>
           <Account title="Cash in Bank / Online" data={d.accounts.bank}/>
           <Section title="Savings / Deposits" note="Transfers to savings are cash movements, not business expenses." rows={[line('From Cash',d.savings.cash),line('From Online',d.savings.online),line('Total Saved',d.savings.total)]}/>
           <ExchangeCard data={d.exchange}/>
           <Section title="Net Exchange" note="Positive means net income from exchange fees." rows={[line('Total Impact',d.exchange.net)]}/>
         </div>
         </ReportGroup>
-        <ReportGroup title="Profitability" note="What is left after cost of food and running the place." tint="indigo">
+        <ReportGroup title="Profitability" note="What is left after the cost of the goods sold and running the shop." tint="indigo">
         <div className="grid gap-5 lg:grid-cols-2 xl:grid-cols-3">
-          <Section highlight tint="blue" title="Profit & Loss" note="Refunds reduce revenue. Refunded food remains in food cost because a refund does not restore consumed stock; a void does." rows={[line('Net Revenue after Refunds / Voids',d.profit.revenue,'',d.profit.revenue<0?'negative':'positive'),line('Estimated Food Cost',d.profit.food_cost,'-'),line('Estimated Gross Profit',d.profit.gross),line('Operating Expenses & Salary',d.profit.operating,'-'),line('Estimated Net Profit',d.profit.net,d.profit.net>=0?'+':'')]}/>
-          <Section title="Sales - Expense" note="Net revenue minus operating expenses & salary, without subtracting food cost." rows={[line('Net Revenue',d.profit.revenue,'',d.profit.revenue<0?'negative':'positive'),line('Operating Expenses & Salary',d.profit.operating,'-'),line('Result',d.profit.revenue-d.profit.operating,'',(d.profit.revenue-d.profit.operating)<0?'negative':'positive')]}/>
+          <Section highlight tint="blue" title="Profit & Loss" note="Returns reduce revenue. Cost of goods sold is what the sold stock cost you; returned goods put back on the shelf are taken off it again." rows={[line('Net Revenue after Returns',d.profit.revenue,'',d.profit.revenue<0?'negative':'positive'),line('Cost of Goods Sold',d.profit.cost_of_goods,'-'),line('Gross Profit',d.profit.gross),line('Operating Expenses & Salary',d.profit.operating,'-'),line('Net Profit',d.profit.net,d.profit.net>=0?'+':'')]}/>
+          <Section title="Sales - Expense" note="Net revenue minus operating expenses & salary, without subtracting the cost of goods." rows={[line('Net Revenue',d.profit.revenue,'',d.profit.revenue<0?'negative':'positive'),line('Operating Expenses & Salary',d.profit.operating,'-'),line('Result',d.profit.revenue-d.profit.operating,'',(d.profit.revenue-d.profit.operating)<0?'negative':'positive')]}/>
         </div>
         </ReportGroup>
         <ReportGroup title="Category Breakdown" note="Where the sales and the purchases actually came from." tint="emerald">
-        <div className="grid gap-5 lg:grid-cols-2"><Category title="Menu Sales by Category (before bill discounts and refunds)" rows={d.sale_categories}/><Category title="Purchase Category" rows={d.purchase_categories}/></div>
+        <div className="grid gap-5 lg:grid-cols-2"><Category title="Sales by Category (before discounts and returns)" rows={d.sale_categories}/><Category title="Purchases by Category" rows={d.purchase_categories}/></div>
         </ReportGroup>
-        <QuantitySummary items={{'Sold Item Quantity':d.quantities.sold,'Purchase Quantity':d.quantities.purchased,Bills:d.quantities.bills,Orders:d.quantities.orders,KOTs:d.quantities.kots,'Expense Records':d.quantities.expenses,'Salary Records':d.quantities.salary,'Savings Records':d.quantities.savings}}/>
+        <QuantitySummary items={{'Items Sold':d.quantities.sold,'Items Purchased':d.quantities.purchased,Sales:d.quantities.sales,Returns:d.quantities.returns,'Expense Records':d.quantities.expenses,'Salary Records':d.quantities.salary,'Savings Records':d.quantities.savings}}/>
       </div>}
     </main>
   </AdminLayout>

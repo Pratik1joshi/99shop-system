@@ -1,0 +1,17 @@
+import { test,expect } from '@playwright/test';
+test('merchant selects 82 cosmetics variants and previews a bulk price increase',async({page})=>{
+  test.setTimeout(180000);
+  await page.goto('/login');await page.locator('#admin-pin').fill(process.env.E2E_ADMIN_PIN||'KmTestOnly123');await page.getByRole('button',{name:/^Sign in$/i}).click();await expect(page).toHaveURL(/\/admin\/dashboard/);
+  const name=`Luxe acceptance ${Date.now()}`;
+  const created=await page.evaluate(async name=>{const response=await fetch('/api/admin/commerce/products',{method:'POST',headers:{Authorization:`Bearer ${localStorage.getItem('pos_token')}`,'Content-Type':'application/json'},body:JSON.stringify({name,price:500})});return {status:response.status,...await response.json()};},name);
+  expect(created.status).toBe(201);
+  await page.goto('/admin/products/merchandising');await page.getByLabel('Find merchandising product').fill(name);await page.getByRole('button',{name,exact:true}).click();
+  await page.getByText('Generate a variant matrix',{exact:true}).click();await page.getByLabel('SKU prefix').fill(`L${created.id}`);await page.getByLabel('Default retail price').fill('500');
+  await page.getByLabel('Attributes — one per line').fill(`Shade: ${Array.from({length:50},(_,i)=>`Shade ${i+1}`).join(', ')}\nFinish: Matte, Gloss`);
+  await page.getByRole('button',{name:'Propose combinations'}).click();await expect(page.getByText('100 of 100 selected',{exact:true})).toBeVisible();
+  for(let i=83;i<=100;i++)await page.getByLabel(`Select variant ${i}`,{exact:true}).uncheck();
+  await page.getByRole('button',{name:'Generate missing internal barcodes'}).click(); await expect(page.getByLabel('Barcode row 1',{exact:true})).toHaveValue(/^INT-/); await page.getByLabel('Change reason',{exact:true}).fill('Launch 82 stocked shade combinations');await page.getByRole('button',{name:'Preview 82 changes'}).click();
+  const drawer=page.getByRole('dialog',{name:'Review catalog changes'});await expect(drawer.getByText('82 new · 0 updated')).toBeVisible();await drawer.getByRole('button',{name:'Confirm catalog changes'}).click();await expect(page.getByText('82 SKUs saved.',{exact:true})).toBeVisible();
+  // The original Standard SKU is retained; select the 82 new matrix SKUs only.
+  await page.getByLabel('Select variant 1',{exact:true}).uncheck();await page.getByRole('button',{name:'Apply to selected grid rows'}).click();await page.getByLabel('Change reason',{exact:true}).fill('Five percent retail update');await page.getByRole('button',{name:'Preview 82 changes'}).click();await expect(drawer.getByText('0 new · 82 updated')).toBeVisible();await drawer.getByRole('button',{name:'Confirm catalog changes'}).click();await expect(drawer).not.toBeVisible(); await expect(page.getByLabel('Retail row 2',{exact:true})).toHaveValue(/^525(?:\\.00)?$/); const saved=await page.evaluate(async id=>{const response=await fetch('/api/admin/commerce/merchandising?product_id='+id,{headers:{Authorization:'Bearer '+localStorage.getItem('pos_token')}});return response.json();},created.id); expect(saved.rows.filter(row=>Number(row.price)===525)).toHaveLength(82); await page.goto('/admin/products/labels?ids='+saved.rows.filter(row=>row.barcode).map(row=>row.id).join(',')); await expect(page.getByRole('button',{name:'Print 82 labels'})).toBeEnabled(); await expect(page.getByLabel('Label preview').locator('svg')).toHaveCount(82);
+});

@@ -21,8 +21,11 @@ test('printer payload persists every template option and serializes switches', (
   assert.equal(settingEnabled(payload.bill_show_payment), false);
 });
 
-test('sidebar groups use one-open-at-a-time accordion state', async () => {
-  const source = await readFile(new URL('../../components/admin/admin-layout.jsx', import.meta.url), 'utf8');
-  assert.match(source, /prev\[label\] \? \{\} : \{ \[label\]: true \}/);
-  assert.doesNotMatch(source, /\{ \.\.\.prev, \[label\]: !prev\[label\] \}/);
+test('retail shell keeps the restaurant accordion style without restaurant-only destinations', async () => {
+  const source = await readFile(new URL('../../components/erp/app-shell.jsx', import.meta.url), 'utf8');
+  assert.match(source, /aria-label="Retail workspaces"/);
+  assert.match(source, /name: 'People', tint: 'fuchsia'/);
+  assert.match(source, /name: 'Accounting', tint: 'emerald'/);
+  // Restaurant workflows, and shared pages still reading restaurant facts, stay out of the Retail nav.
+  assert.doesNotMatch(source, /href: '\/(admin|cashier)\/(kot|kots|tables|table-management|waiter-requests|recipes|kitchen-analytics|leads|reservations|bills|orders|wastage|inventory\/dashboard|finance-dashboard|corrections|previous-day-activity|suppliers)'/);
 });

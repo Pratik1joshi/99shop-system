@@ -55,6 +55,7 @@ export default function SettingsPage() {
     receipt_footer: '', receipt_paper_size: '80', qr_ordering_enabled: true, online_order_minimum_amount: 500,
     cashier_expected_cash_schedule_enabled: true, cashier_expected_cash_reveal_time: '20:30',
     cashier_cash_count_schedule_enabled: false, cashier_cash_count_time: '14:00',
+    sale_void_window_minutes: 30,
     delivery_pricing_enabled: false, delivery_pricing_mode: 'fixed', delivery_fixed_fee: 0,
     delivery_distance_bands: [], delivery_per_km_rate: 0, delivery_minimum_fee: 0, delivery_max_distance_km: 0,
     bank_qr_image: '', esewa_qr_image: '',
@@ -94,6 +95,7 @@ export default function SettingsPage() {
             cashier_expected_cash_reveal_time: /^(?:[01]\d|2[0-3]):[0-5]\d$/.test(String(d.cashier_expected_cash_reveal_time || '')) ? d.cashier_expected_cash_reveal_time : '20:30',
             cashier_cash_count_schedule_enabled: String(d.cashier_cash_count_schedule_enabled ?? 'false') === 'true',
             cashier_cash_count_time: /^(?:[01]\d|2[0-3]):[0-5]\d$/.test(String(d.cashier_cash_count_time || '')) ? d.cashier_cash_count_time : '14:00',
+            sale_void_window_minutes: d.sale_void_window_minutes === undefined || d.sale_void_window_minutes === '' ? 30 : Number(d.sale_void_window_minutes),
             bank_qr_image: d.bank_qr_image || '', esewa_qr_image: d.esewa_qr_image || '',
             delivery_pricing_enabled: String(d.delivery_pricing_enabled ?? 'false') === 'true',
             delivery_pricing_mode: d.delivery_pricing_mode || 'fixed',
@@ -132,7 +134,9 @@ export default function SettingsPage() {
             cashier_expected_cash_reveal_time: s.cashier_expected_cash_reveal_time,
             cashier_cash_count_schedule_enabled: s.cashier_cash_count_schedule_enabled ? 'true' : 'false',
             cashier_cash_count_time: s.cashier_cash_count_time,
+            sale_void_window_minutes: String(Math.min(1440, Math.max(0, Math.floor(Number(s.sale_void_window_minutes) || 0)))),
           } : {
+            sale_void_window_minutes: undefined,
             cashier_expected_cash_schedule_enabled: undefined,
             cashier_expected_cash_reveal_time: undefined,
             cashier_cash_count_schedule_enabled: undefined,
@@ -240,6 +244,10 @@ export default function SettingsPage() {
                   <Field label="VAT rate (%)"><input type="number" step="any" value={s.vat_percentage} onChange={(e) => set({ vat_percentage: e.target.value })} className={INPUT} /></Field>
                   <Field label="Service charge (%)"><input type="number" step="any" value={s.service_charge_percentage} onChange={(e) => set({ service_charge_percentage: e.target.value })} className={INPUT} /></Field>
                 </Grid>
+                <Field label="Quick void window (minutes)">
+                  <input type="number" min="0" max="1440" step="1" disabled={currentUser?.role !== 'admin'} value={s.sale_void_window_minutes} onChange={(e) => set({ sale_void_window_minutes: e.target.value })} className={INPUT} />
+                  <p className="mt-2 text-xs text-gray-500">How long after checkout a sale can be voided in one step with a manager or owner PIN. Set 0 to switch quick void off; Return always stays available.{currentUser?.role !== 'admin' ? ' Only the owner can change this.' : ''}</p>
+                </Field>
                 <p className="text-xs text-gray-400">Cash drawers and the single Online bank balance are managed from their accounting modules.</p>
               </Panel>
             )}

@@ -5,7 +5,7 @@ import { ensureSplitPaymentSchema } from '@/lib/split-payments.js';
 
 export async function GET(request, { params }) {
   try {
-    const auth = await requireAuth(request, { roles: ['admin', 'cashier'], permission: 'customer_ledger.access' });
+    const auth = await requireAuth(request, { roles: ['admin', 'cashier', 'accountant'], permission: 'customer_ledger.access' });
     if (auth.error) return auth.error;
     const { id } = await params;
     const db = Database.getInstance();

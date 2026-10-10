@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import AdminLayout from '@/components/admin/admin-layout';
-import { ArrowLeft, Phone, Mail, MapPin, CreditCard, History, Receipt, ShoppingBag, Loader2, Tag } from 'lucide-react';
+import { ArrowLeft, Phone, Mail, MapPin, CreditCard, History, Receipt, ShoppingBag, Loader2, Tag, Wallet, Star } from 'lucide-react';
 import { formatNepalDateTime } from '@/lib/report-dates.js';
 import { formatCurrency } from '@/lib/currency';
 import CreditTimeline from '@/components/profiles/credit-timeline';
@@ -47,6 +47,13 @@ export default function CustomerProfilePage() {
   const [busy, setBusy] = useState(false);
   const keyRef = useRef(newKey());
 
+  const [capabilities, setCapabilities] = useState({});
+  const [scAdjust, setScAdjust] = useState(null); // { amount, reason } | null
+  const [scBusy, setScBusy] = useState(false);
+  const [lpAdjust, setLpAdjust] = useState(null); // { points, reason } | null
+  const [lpBusy, setLpBusy] = useState(false);
+  useEffect(() => { apiJson('/api/auth/capabilities').then((d) => setCapabilities(d.capabilities || {})).catch(() => {}); }, []);
+
   const load = useCallback(async () => {
     setLoading(true);
     setError('');
@@ -87,7 +94,7 @@ export default function CustomerProfilePage() {
     );
   }
 
-  const { customer, summary, orders, bills, ledger, payments, outstanding_bills } = data;
+  const { customer, summary, orders, bills, ledger, payments, outstanding_bills, store_credit_balance, store_credit_transactions, loyalty_balance, loyalty_transactions, loyalty_tier } = data;
   const orderBasePath = customersPath().startsWith('/cashier') ? '/cashier/orders' : '/admin/orders';
   const timeline = buildCustomerCreditTimeline({ customer, bills, ledger });
   const exportsByTab = {
@@ -121,6 +128,16 @@ export default function CustomerProfilePage() {
       headers: ['When (NPT)', 'Bill', 'Method', 'Amount', 'Reference'],
       rows: payments.map((p) => [formatNepalDateTime(p.created_at), p.bill_number || '—', [p.method, p.provider].filter(Boolean).join(' · '), formatCurrency(p.amount), p.reference || '—']),
     },
+    store_credit: {
+      label: 'Store credit',
+      headers: ['When (NPT)', 'Type', 'Amount', 'Balance after', 'Reason'],
+      rows: store_credit_transactions.map((t) => [formatNepalDateTime(t.created_at), String(t.type || '').toLowerCase(), formatCurrency(t.amount), formatCurrency(t.balance_after), t.reason || '—']),
+    },
+    loyalty: {
+      label: 'Loyalty points',
+      headers: ['When (NPT)', 'Type', 'Points', 'Balance after', 'Reason'],
+      rows: loyalty_transactions.map((t) => [formatNepalDateTime(t.created_at), String(t.type || '').toLowerCase(), t.points, t.balance_after, t.reason || '—']),
+    },
   };
   const activeExport = exportsByTab[tab];
 
@@ -149,6 +166,38 @@ export default function CustomerProfilePage() {
       await load();
     } catch (error) { addToast(friendlyFromError(error, 'save_failed')); }
     finally { setBusy(false); }
+  };
+
+  const submitStoreCreditAdjust = async () => {
+    if (!(Number(scAdjust.amount) !== 0)) { addToast(friendlyMessage('validation', { description: 'Enter a non-zero amount.' })); return; }
+    if (!scAdjust.reason?.trim()) { addToast(friendlyMessage('validation', { description: 'A reason is required.' })); return; }
+    setScBusy(true);
+    try {
+      await apiJson(`/api/admin/customers/${id}/store-credit/adjust`, {
+        method: 'POST',
+        body: JSON.stringify({ amount: Number(scAdjust.amount), reason: scAdjust.reason }),
+      });
+      addToast(friendlyMessage('save_success', { description: 'Store credit adjusted.' }));
+      setScAdjust(null);
+      await load();
+    } catch (error) { addToast(friendlyFromError(error, 'save_failed')); }
+    finally { setScBusy(false); }
+  };
+
+  const submitLoyaltyAdjust = async () => {
+    if (!(Number(lpAdjust.points) !== 0)) { addToast(friendlyMessage('validation', { description: 'Enter a non-zero points amount.' })); return; }
+    if (!lpAdjust.reason?.trim()) { addToast(friendlyMessage('validation', { description: 'A reason is required.' })); return; }
+    setLpBusy(true);
+    try {
+      await apiJson(`/api/admin/retail-loyalty/${id}/adjust`, {
+        method: 'POST',
+        body: JSON.stringify({ points: Number(lpAdjust.points), reason: lpAdjust.reason }),
+      });
+      addToast(friendlyMessage('save_success', { description: 'Loyalty points adjusted.' }));
+      setLpAdjust(null);
+      await load();
+    } catch (error) { addToast(friendlyFromError(error, 'save_failed')); }
+    finally { setLpBusy(false); }
   };
 
   return (
@@ -185,16 +234,32 @@ export default function CustomerProfilePage() {
               <Stat label="Lifetime spent" value={formatCurrency(customer.total_spent)} />
               <Stat label="Visits" value={String(customer.total_visits || 0)} />
               <Stat label="Open invoices" value={String(summary.outstanding_invoices)} />
+              <Stat label="Store credit" value={formatCurrency(store_credit_balance || 0)} tone={store_credit_balance > 0 ? 'green' : undefined} />
+              <Stat label="Loyalty points" value={`${loyalty_balance || 0}${loyalty_tier ? ` · ${loyalty_tier}` : ''}`} tone={loyalty_balance > 0 ? 'green' : undefined} />
             </div>
           </div>
-          {summary.outstanding_credit > 0 && (
+          {(summary.outstanding_credit > 0 || capabilities['retail_store_credit.adjust'] || capabilities['retail_loyalty.adjust']) && (
             <div className="mt-4 flex flex-wrap gap-2 border-t border-gray-100 pt-4">
-              <button type="button" onClick={() => openPay('pay')} className="inline-flex items-center gap-1.5 rounded-lg bg-gray-900 px-3 py-2 text-sm font-semibold text-white hover:bg-gray-800">
-                Receive payment
-              </button>
-              <button type="button" onClick={() => openPay('writeoff')} className="inline-flex items-center gap-1.5 rounded-lg border border-amber-300 bg-amber-50 px-3 py-2 text-sm font-semibold text-amber-800 hover:bg-amber-100">
-                <Tag className="h-4 w-4" /> Give discount
-              </button>
+              {summary.outstanding_credit > 0 && (
+                <>
+                  <button type="button" onClick={() => openPay('pay')} className="inline-flex items-center gap-1.5 rounded-lg bg-gray-900 px-3 py-2 text-sm font-semibold text-white hover:bg-gray-800">
+                    Receive payment
+                  </button>
+                  <button type="button" onClick={() => openPay('writeoff')} className="inline-flex items-center gap-1.5 rounded-lg border border-amber-300 bg-amber-50 px-3 py-2 text-sm font-semibold text-amber-800 hover:bg-amber-100">
+                    <Tag className="h-4 w-4" /> Give discount
+                  </button>
+                </>
+              )}
+              {capabilities['retail_store_credit.adjust'] && (
+                <button type="button" onClick={() => setScAdjust({ amount: '', reason: '' })} className="inline-flex items-center gap-1.5 rounded-lg border border-emerald-300 bg-emerald-50 px-3 py-2 text-sm font-semibold text-emerald-800 hover:bg-emerald-100">
+                  <Wallet className="h-4 w-4" /> Adjust store credit
+                </button>
+              )}
+              {capabilities['retail_loyalty.adjust'] && (
+                <button type="button" onClick={() => setLpAdjust({ points: '', reason: '' })} className="inline-flex items-center gap-1.5 rounded-lg border border-amber-300 bg-amber-50 px-3 py-2 text-sm font-semibold text-amber-800 hover:bg-amber-100">
+                  <Star className="h-4 w-4" /> Adjust loyalty points
+                </button>
+              )}
             </div>
           )}
         </div>
@@ -206,6 +271,8 @@ export default function CustomerProfilePage() {
             { id: 'bills', label: `Bills (${bills.length})`, icon: Receipt },
             { id: 'ledger', label: 'Credit ledger', icon: CreditCard },
             { id: 'payments', label: `Payments (${payments.length})`, icon: CreditCard },
+            { id: 'store_credit', label: `Store credit (${store_credit_transactions.length})`, icon: Wallet },
+            { id: 'loyalty', label: `Loyalty (${loyalty_transactions.length})`, icon: Star },
           ].map((t) => (
             <button
               key={t.id}
@@ -300,6 +367,36 @@ export default function CustomerProfilePage() {
               ])}
             />
           )}
+          {tab === 'store_credit' && (
+            <SimpleTable
+              empty="No store credit activity."
+              headers={['When (NPT)', 'Type', 'Amount', 'Balance after', 'Reason']}
+              rows={store_credit_transactions.map((t) => [
+                formatNepalDateTime(t.created_at),
+                <span key="type" className="capitalize">{String(t.type || '').toLowerCase()}</span>,
+                <span key="amt" className={Number(t.amount) >= 0 ? 'text-emerald-700' : 'text-red-600'}>
+                  {Number(t.amount) >= 0 ? '+' : ''}{formatCurrency(t.amount)}
+                </span>,
+                formatCurrency(t.balance_after),
+                t.reason || '—',
+              ])}
+            />
+          )}
+          {tab === 'loyalty' && (
+            <SimpleTable
+              empty="No loyalty activity."
+              headers={['When (NPT)', 'Type', 'Points', 'Balance after', 'Reason']}
+              rows={loyalty_transactions.map((t) => [
+                formatNepalDateTime(t.created_at),
+                <span key="type" className="capitalize">{String(t.type || '').toLowerCase()}</span>,
+                <span key="pts" className={Number(t.points) >= 0 ? 'text-emerald-700' : 'text-red-600'}>
+                  {Number(t.points) >= 0 ? '+' : ''}{t.points}
+                </span>,
+                t.balance_after,
+                t.reason || '—',
+              ])}
+            />
+          )}
         </div>
       </div>
 
@@ -364,6 +461,52 @@ export default function CustomerProfilePage() {
       )}
 
       {invoiceBillId ? <BillInvoiceModal billId={invoiceBillId} onClose={() => setInvoiceBillId(null)} /> : null}
+
+      {scAdjust && (
+        <div className="fixed inset-0 z-[70] flex items-center justify-center bg-black/50 p-4">
+          <div className="w-full max-w-md rounded-2xl bg-white p-6">
+            <h3 className="mb-1 text-lg font-bold text-gray-900">Adjust store credit — {customer.name}</h3>
+            <p className="mb-4 text-sm text-gray-500">Current balance {formatCurrency(store_credit_balance || 0)}. Positive amount issues credit, negative amount reduces it.</p>
+            <div className="space-y-3">
+              <Field label="Amount (+/-)">
+                <input type="number" step="any" value={scAdjust.amount} onChange={(e) => setScAdjust((f) => ({ ...f, amount: e.target.value }))} className={INPUT} />
+              </Field>
+              <Field label="Reason">
+                <input value={scAdjust.reason} onChange={(e) => setScAdjust((f) => ({ ...f, reason: e.target.value }))} className={INPUT} placeholder="required" />
+              </Field>
+            </div>
+            <div className="mt-6 flex gap-3">
+              <button disabled={scBusy} onClick={submitStoreCreditAdjust} className="flex-1 rounded-lg bg-gray-900 px-4 py-2.5 text-sm font-medium text-white hover:opacity-90 disabled:opacity-50">
+                {scBusy ? 'Saving…' : 'Apply adjustment'}
+              </button>
+              <button type="button" onClick={() => setScAdjust(null)} className="flex-1 rounded-lg bg-gray-200 px-4 py-2.5 text-sm font-medium text-gray-700 hover:bg-gray-300">Cancel</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {lpAdjust && (
+        <div className="fixed inset-0 z-[70] flex items-center justify-center bg-black/50 p-4">
+          <div className="w-full max-w-md rounded-2xl bg-white p-6">
+            <h3 className="mb-1 text-lg font-bold text-gray-900">Adjust loyalty points — {customer.name}</h3>
+            <p className="mb-4 text-sm text-gray-500">Current balance {loyalty_balance || 0} points. Positive issues points, negative reduces them.</p>
+            <div className="space-y-3">
+              <Field label="Points (+/-)">
+                <input type="number" step="1" value={lpAdjust.points} onChange={(e) => setLpAdjust((f) => ({ ...f, points: e.target.value }))} className={INPUT} />
+              </Field>
+              <Field label="Reason">
+                <input value={lpAdjust.reason} onChange={(e) => setLpAdjust((f) => ({ ...f, reason: e.target.value }))} className={INPUT} placeholder="required" />
+              </Field>
+            </div>
+            <div className="mt-6 flex gap-3">
+              <button disabled={lpBusy} onClick={submitLoyaltyAdjust} className="flex-1 rounded-lg bg-gray-900 px-4 py-2.5 text-sm font-medium text-white hover:opacity-90 disabled:opacity-50">
+                {lpBusy ? 'Saving…' : 'Apply adjustment'}
+              </button>
+              <button type="button" onClick={() => setLpAdjust(null)} className="flex-1 rounded-lg bg-gray-200 px-4 py-2.5 text-sm font-medium text-gray-700 hover:bg-gray-300">Cancel</button>
+            </div>
+          </div>
+        </div>
+      )}
 
     </AdminLayout>
   );

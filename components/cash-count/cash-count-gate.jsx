@@ -77,7 +77,7 @@ export default function CashCountGate({ children, active }) {
   };
 
   const emergencyRoute = pathname === '/cashier/dashboard' || pathname?.startsWith('/cashier/dashboard/')
-    || pathname === '/cashier/pos' || pathname?.startsWith('/cashier/pos/');
+    || pathname === '/cashier/billing' || pathname?.startsWith('/cashier/billing/');
 
   if (!active || emergencyRoute) return children;
 
@@ -88,7 +88,7 @@ export default function CashCountGate({ children, active }) {
           {!checked ? <Loader2 className="mx-auto h-7 w-7 animate-spin text-gray-400" /> : <ShieldAlert className="mx-auto h-8 w-8 text-amber-600" />}
           <h1 className="mt-4 text-lg font-bold text-gray-950">{!checked ? 'Checking cash-count status' : 'Cash-count check unavailable'}</h1>
           <p className="mt-2 text-sm leading-6 text-gray-500">{!checked ? 'This takes only a moment.' : `${checkError} Dashboard and POS remain available.`}</p>
-          {checked && <div className="mt-5 flex justify-center gap-2"><button type="button" onClick={refresh} className="h-10 rounded-xl border border-gray-300 px-4 text-sm font-semibold text-gray-700">Retry</button><button type="button" onClick={() => router.push('/cashier/pos')} className="h-10 rounded-xl bg-gray-950 px-4 text-sm font-semibold text-white">Open POS</button></div>}
+          {checked && <div className="mt-5 flex justify-center gap-2"><button type="button" onClick={refresh} className="h-10 rounded-xl border border-gray-300 px-4 text-sm font-semibold text-gray-700">Retry</button><button type="button" onClick={() => router.push('/cashier/billing')} className="h-10 rounded-xl bg-gray-950 px-4 text-sm font-semibold text-white">Open Billing</button></div>}
         </div>
       </main>
     );
@@ -109,7 +109,7 @@ export default function CashCountGate({ children, active }) {
           </div>
           <div className="flex shrink-0 gap-2">
             <button type="button" onClick={() => router.push('/cashier/dashboard')} className="inline-flex h-10 items-center gap-2 rounded-xl border border-amber-300 bg-white px-3 text-sm font-semibold text-gray-800 hover:bg-amber-50"><LayoutDashboard className="h-4 w-4" /> Dashboard</button>
-            <button type="button" onClick={() => router.push('/cashier/pos')} className="inline-flex h-10 items-center gap-2 rounded-xl bg-gray-950 px-3 text-sm font-semibold text-white hover:bg-gray-800"><Receipt className="h-4 w-4" /> POS</button>
+            <button type="button" onClick={() => router.push('/cashier/billing')} className="inline-flex h-10 items-center gap-2 rounded-xl bg-gray-950 px-3 text-sm font-semibold text-white hover:bg-gray-800"><Receipt className="h-4 w-4" /> Billing</button>
           </div>
         </div>
 

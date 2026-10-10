@@ -10,7 +10,7 @@ copy .env.example .env
 npm run dev
 ```
 
-Development runs on `http://localhost:3002`. Configure a development database before exercising authenticated/data features. SQLite fallback is suitable for local work; use PostgreSQL for production-like testing.
+Development runs on `http://localhost:3004`. Configure a development database before exercising authenticated/data features. SQLite fallback is suitable for local work; use PostgreSQL for production-like testing.
 
 ## Pre-deployment verification
 
@@ -26,16 +26,17 @@ Also review pending migrations, verify `.env.example`, and back up the target Po
 
 1. Provision Node.js 22 and PostgreSQL 14+.
 2. Create a dedicated database/user and grant access only to that database.
-3. Load `deploy/production_schema.sql`, then `deploy/production_seed.sql`.
-4. Run `npm run db:migrate`. This is mandatory even on a fresh install: the
-   packaged snapshot is only a baseline and the migration directory is the
-   source of truth for newer features.
+3. Use a UTF-8 database. Run `npm run db:migrate` and check `npm run db:plan`
+   reports zero pending migrations. Do not load the old restaurant schema or
+   seed snapshots in `deploy/`.
+4. Set a unique `ADMIN_PASSWORD` and run `npm run db:seed` once on the fresh
+   database.
 5. Upload the app outside `public_html`, excluding `.git`, `.env`, `node_modules`, `.next`, local databases, test artifacts, and non-persistent uploads.
 6. Set cPanel application root to the project directory and startup file to `server.js`.
 7. Configure production environment variables from `.env.example`; do not set `PORT` because cPanel injects it.
 8. Run npm install and `npm run build`, then start/restart the application.
 9. Run `npm run health`, open the public site, and sign in.
-10. Immediately change the seeded administrator password and complete business/tax/receipt settings.
+10. Immediately change the initial administrator password and complete business/tax/receipt settings.
 
 ## Existing deployment
 

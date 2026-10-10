@@ -130,7 +130,7 @@ async function buildSummary(db, where, params) {
 
 export async function GET(request) {
   try {
-    const auth = await requireAuth(request, { roles: ['admin', 'cashier'], permission: 'expenses.manage' });
+    const auth = await requireAuth(request, { roles: ['admin', 'cashier', 'accountant'], permission: 'expenses.manage' });
     if (auth.error) return auth.error;
 
     const db = Database.getInstance();
@@ -207,7 +207,7 @@ export async function GET(request) {
 
 export async function POST(request) {
   try {
-    const auth = await requireAuth(request, { roles: ['admin', 'cashier'], permission: 'expenses.manage' });
+    const auth = await requireAuth(request, { roles: ['admin', 'cashier', 'accountant'], permission: 'expenses.manage' });
     if (auth.error) return auth.error;
 
     const data = await request.json();
@@ -276,7 +276,7 @@ export async function POST(request) {
 
 export async function PUT(request) {
   try {
-    const auth = await requireAuth(request, { roles: ['admin', 'cashier'], permission: 'expenses.manage' });
+    const auth = await requireAuth(request, { roles: ['admin', 'cashier', 'accountant'], permission: 'expenses.manage' });
     if (auth.error) return auth.error;
 
     const data = await request.json();
@@ -357,7 +357,7 @@ export async function PUT(request) {
  * a closed-day record can be fixed without rewriting its amount/date/details. */
 export async function PATCH(request) {
   try {
-    const auth = await requireAuth(request, { roles: ['admin', 'cashier'], permission: 'expenses.payment_method_correct' });
+    const auth = await requireAuth(request, { roles: ['admin', 'cashier', 'accountant'], permission: 'expenses.payment_method_correct' });
     if (auth.error) return auth.error;
 
     const data = await request.json();
@@ -382,7 +382,7 @@ export async function PATCH(request) {
 
 export async function DELETE(request) {
   try {
-    const auth = await requireAuth(request, { roles: ['admin', 'cashier'], permission: 'expenses.manage' });
+    const auth = await requireAuth(request, { roles: ['admin', 'cashier', 'accountant'], permission: 'expenses.manage' });
     if (auth.error) return auth.error;
 
     const { searchParams } = new URL(request.url);

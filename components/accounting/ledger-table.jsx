@@ -1,7 +1,9 @@
 'use client';
 
 import { useState } from 'react';
+import Link from 'next/link';
 import { X } from 'lucide-react';
+import { accountingSource } from '@/lib/accounting-source-registry';
 import { formatNepalDate, formatNepalTime } from '@/lib/time-utils';
 
 /**
@@ -89,6 +91,7 @@ function LedgerDetail({ line, debitNormal, onClose }) {
   const debit = Number(line.debit || 0);
   const credit = Number(line.credit || 0);
   const impact = debitNormal ? debit - credit : credit - debit;
+  const sourceHref = accountingSource(line).href;
   return <div className="fixed inset-0 z-[110] flex items-center justify-center bg-gray-950/50 p-4" role="dialog" aria-modal="true" onMouseDown={(event) => { if (event.target === event.currentTarget) onClose(); }}>
     <div className="w-full max-w-lg rounded-2xl border border-gray-200 bg-white shadow-2xl">
       <div className="flex items-start justify-between border-b border-gray-200 px-5 py-4"><div><p className="text-xs font-semibold uppercase tracking-wide text-gray-500">Journal #{line.journal_id || '—'}</p><h3 className="mt-1 text-base font-bold text-gray-950">{line.memo || line.line_memo || 'Ledger movement'}</h3></div><button type="button" onClick={onClose} className="rounded-lg p-2 text-gray-500 hover:bg-gray-100"><X className="h-4 w-4"/></button></div>
@@ -97,6 +100,7 @@ function LedgerDetail({ line, debitNormal, onClose }) {
         <Detail label="Recorded by" value={line.created_by_name || 'Not recorded'} />
         <Detail label="Source" value={String(line.source_type || 'manual').replaceAll('_', ' ')} />
         <Detail label="Source record" value={line.source_id ? `#${line.source_id}` : '—'} />
+        {sourceHref && <div><p className="text-xs font-medium text-gray-500">Operational document</p><Link href={sourceHref} className="mt-1 inline-block text-sm font-semibold text-emerald-700 underline">Open source transaction</Link></div>}
         <Detail label={debitNormal ? 'Added' : 'Removed'} value={debit ? money(debit) : '—'} tone={debit ? (debitNormal ? 'green' : 'red') : ''}/>
         <Detail label={debitNormal ? 'Removed' : 'Added'} value={credit ? money(credit) : '—'} tone={credit ? (debitNormal ? 'red' : 'green') : ''}/>
       </div>

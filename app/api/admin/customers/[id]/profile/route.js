@@ -2,6 +2,8 @@ import { NextResponse } from 'next/server';
 import Database from '@/lib/db/index.js';
 import { requireAuth, handleRouteError } from '@/lib/api-guard.js';
 import { ensureSplitPaymentSchema } from '@/lib/split-payments.js';
+import { getStoreCreditBalance, listStoreCreditTransactions } from '@/lib/retail-store-credit.js';
+import { getLoyaltyBalance, listLoyaltyTransactions, getCustomerTier } from '@/lib/retail-loyalty.js';
 
 /** Full customer profile: identity, credit, orders, bills, ledger, payments. */
 export async function GET(request, { params }) {
@@ -25,7 +27,7 @@ export async function GET(request, { params }) {
     );
     if (!customer) return NextResponse.json({ error: 'Customer not found.' }, { status: 404 });
 
-    const [orders, bills, ledgerRows, payments] = await Promise.all([
+    const [orders, bills, ledgerRows, payments, storeCreditBalance, storeCreditTransactions, loyaltyBalance, loyaltyTransactions, loyaltyTier] = await Promise.all([
       db.all(
         `SELECT o.id, o.order_number, o.order_type, o.status, o.table_number,
                 o.created_at, o.updated_at,
@@ -72,6 +74,11 @@ export async function GET(request, { params }) {
          LIMIT 100`,
         [customerId]
       ).catch(() => []),
+      getStoreCreditBalance(db, customerId).catch(() => 0),
+      listStoreCreditTransactions(db, customerId).catch(() => []),
+      getLoyaltyBalance(db, customerId).catch(() => 0),
+      listLoyaltyTransactions(db, customerId).catch(() => []),
+      getCustomerTier(db, customerId).catch(() => null),
     ]);
 
     let running = 0;
@@ -137,6 +144,7 @@ export async function GET(request, { params }) {
       success: true,
       customer: {
         ...customer,
+        notes: auth.user.role === 'admin' ? customer.notes : null,
         credit_limit: Number(customer.credit_limit || 0),
         current_credit: Number(customer.current_credit || 0),
         total_visits: Number(customer.total_visits || 0),
@@ -157,6 +165,11 @@ export async function GET(request, { params }) {
       bills: billsWithCredit,
       outstanding_bills: outstandingBills,
       ledger,
+      store_credit_balance: storeCreditBalance,
+      store_credit_transactions: storeCreditTransactions,
+      loyalty_balance: loyaltyBalance,
+      loyalty_transactions: loyaltyTransactions,
+      loyalty_tier: loyaltyTier,
       payments: (payments || []).map((p) => ({
         id: p.id,
         amount: Number(p.amount || 0),

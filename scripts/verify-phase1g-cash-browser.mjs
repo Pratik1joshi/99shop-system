@@ -1,0 +1,41 @@
+/** Run after the full browser suite, only on its disposable local fixture. */
+import fs from 'node:fs';
+import assert from 'node:assert/strict';
+import {chromium,expect} from '@playwright/test';
+import Database from '../lib/db/index.js';
+const url=new URL(process.env.DATABASE_URL||'');
+if(!['localhost','127.0.0.1'].includes(url.hostname)||!/^\/phase1f_browser_\d+_\d+$/.test(url.pathname))throw new Error('Disposable browser fixture required.');
+const base=process.env.E2E_BASE_URL||'http://localhost:3017';
+if(!['localhost','127.0.0.1'].includes(new URL(base).hostname))throw new Error('Local browser server required.');
+const db=Database.getInstance(),browser=await chromium.launch({headless:true});
+const report={status:'FAIL'};
+let page;
+try{
+  page=await browser.newPage({viewport:{width:1280,height:900}});
+  await page.goto(`${base}/login`);await page.locator('#admin-pin').fill(process.env.E2E_ADMIN_PIN||'KmTestOnly123');await page.getByRole('button',{name:/^Sign in$/i}).click();await expect(page).toHaveURL(/\/admin\/dashboard/);
+  const token=await page.evaluate(()=>localStorage.getItem('pos_token'));
+  const headers={Authorization:`Bearer ${token}`};
+  const request=async(path,method='GET',data)=>{const response=await page.request.fetch(`${base}${path}`,{method,headers,data});assert.ok(response.ok(),`${path}: ${await response.text()}`);return response.json();};
+  const context=await request('/api/admin/business-days?view=closing');
+  assert.ok(context.activeSession,'Open session required after browser transactions');
+  const expected=Number(context.summary.cash.expected_cash),counted=Math.max(0,expected+1);
+  const closed=await request('/api/admin/business-days','PUT',{counted_cash:counted,closing_note:'Phase 1G counted difference for review',force:true,force_close_reason:'Close isolated acceptance fixture after all browser transactions'});
+  const session=closed.result.store_session.id;
+  const before=await db.get('SELECT count(*) AS n FROM journal_entries');
+  await page.goto(`${base}/admin/retail-cash-variances`);
+  await expect(page.getByRole('heading',{name:'Cash variance review',exact:true})).toBeVisible();
+  await page.locator('tbody tr').first().getByRole('button').click();
+  await expect(page.getByRole('dialog')).toBeVisible();
+  await page.getByLabel('Resolution note',{exact:true}).fill('Reviewed closing evidence; accounting correction, if needed, remains separate.');
+  await page.getByRole('button',{name:'Accept variance',exact:true}).click();
+  await expect(page.getByRole('dialog')).toHaveCount(0);
+  const review=await db.get('SELECT * FROM cash_variance_reviews WHERE store_session_id=?',[session]);assert.equal(review.status,'ACCEPTED');
+  const after=await db.get('SELECT count(*) AS n FROM journal_entries');assert.equal(after.n,before.n);
+  const stored=await db.get('SELECT counted_cash FROM business_day_sessions WHERE id=?',[session]);assert.equal(Number(stored.counted_cash),counted);
+  await page.getByLabel('Review status',{exact:true}).selectOption('ACCEPTED');await expect(page.locator('tbody tr').first()).toBeVisible();
+  await page.addScriptTag({path:'node_modules/axe-core/axe.min.js'});
+  const violations=await page.evaluate(async()=>{const r=await window.axe.run(document.querySelector('#erp-main'),{runOnly:{type:'tag',values:['wcag2a','wcag2aa']}});return r.violations.filter(v=>['serious','critical'].includes(v.impact)).map(v=>v.id);});assert.deepEqual(violations,[]);
+  await page.screenshot({path:'.commerce-tmp/phase1g/cash-review.png',fullPage:true});
+  await request('/api/admin/business-days','POST',{action:'reopen_same_day',business_date:context.current.business_date,opening_cash:counted,opening_note:'Continue isolated acceptance fixture'});
+  Object.assign(report,{status:'PASS',session_id:session,counted_cash:counted,review_journals_added:0,serious_critical_accessibility_violations:0,same_day_reopened:true});
+}catch(error){report.error=error.message;throw error;}finally{fs.mkdirSync('.commerce-tmp/phase1g',{recursive:true});fs.writeFileSync('.commerce-tmp/phase1g/cash-browser.json',JSON.stringify(report,null,2));await browser.close();await db.close();}

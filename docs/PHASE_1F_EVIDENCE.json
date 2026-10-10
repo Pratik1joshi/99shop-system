@@ -1,0 +1,291 @@
+{
+  "recorded_at": "2026-09-26T05:38:35.150Z",
+  "scope": "Focused Phase 1F implementation and verification; not full release acceptance",
+  "acceptance": "FAIL",
+  "environment": {
+    "started_at": "2026-09-26T05:11:28.613Z",
+    "host": "127.0.0.1",
+    "port": "55441",
+    "checks": [
+      {
+        "mode": "upgrade",
+        "status": "PASS",
+        "migrations": 96,
+        "database": "phase1f_upgrade_1790399488613_3832"
+      },
+      {
+        "mode": "browser",
+        "status": "PASS",
+        "migrations": 96,
+        "database": "phase1f_browser_1790399488613_3832"
+      }
+    ]
+  },
+  "unit": {
+    "tests": 332,
+    "pass": 332,
+    "fail": 0,
+    "skipped": 0
+  },
+  "postgres": {
+    "tests": 42,
+    "pass": 42,
+    "fail": 0,
+    "skipped": 0
+  },
+  "browser": {
+    "desktop_selection": {
+      "passed": 7,
+      "log": ".commerce-tmp/phase1f/browser-rerun.log"
+    },
+    "source_journey": {
+      "passed": 3,
+      "projects": [
+        "desktop",
+        "tablet",
+        "mobile"
+      ],
+      "log": ".commerce-tmp/phase1f/evidence-browser-final.log"
+    },
+    "full_acceptance": false
+  },
+  "build": {
+    "passed": true,
+    "log": ".commerce-tmp/phase1f/build-final.log"
+  },
+  "lint": {
+    "errors": 0,
+    "warnings": 17,
+    "log": ".commerce-tmp/phase1f/lint-final.log"
+  },
+  "performance_before": {
+    "fixture": {
+      "skus": 25000,
+      "movements": 1000000,
+      "customers": 25000,
+      "sales": 100000,
+      "loyalty_events": 100000
+    },
+    "samples": 7,
+    "results": [
+      {
+        "name": "movement_first_page",
+        "samples_ms": [
+          360.17,
+          274.09,
+          315.88,
+          312.28,
+          427.92,
+          340.07,
+          307.24
+        ],
+        "median_ms": 315.88
+      },
+      {
+        "name": "movement_sku_search",
+        "samples_ms": [
+          3473.42,
+          3458.86,
+          2478.73,
+          1910.42,
+          1778.72,
+          1846.38,
+          1975.72
+        ],
+        "median_ms": 1975.72
+      },
+      {
+        "name": "stock_search",
+        "samples_ms": [
+          832.52,
+          692.08,
+          656.47,
+          655.68,
+          639.58,
+          679.47,
+          854.93
+        ],
+        "median_ms": 679.47
+      },
+      {
+        "name": "exact_barcode",
+        "samples_ms": [
+          70.53,
+          62.94,
+          60.13,
+          62.31,
+          66.92,
+          63.97,
+          64.15
+        ],
+        "median_ms": 63.97
+      },
+      {
+        "name": "customer_timeline_100k_events",
+        "samples_ms": [
+          138.9,
+          120.82,
+          94.2,
+          86.11,
+          81.81,
+          79.5,
+          77.38
+        ],
+        "median_ms": 86.11
+      }
+    ]
+  },
+  "performance_after": {
+    "fixture": {
+      "skus": 25000,
+      "movements": 1000000,
+      "customers": 25000,
+      "sales": 100000,
+      "loyalty_events": 100000
+    },
+    "samples": 7,
+    "results": [
+      {
+        "name": "movement_first_page",
+        "samples_ms": [
+          120.81,
+          84.51,
+          84.06,
+          171.94,
+          77.22,
+          85.83,
+          84.15
+        ],
+        "median_ms": 84.51
+      },
+      {
+        "name": "movement_sku_search",
+        "samples_ms": [
+          543.77,
+          574.51,
+          520.21,
+          484.48,
+          475.76,
+          517.14,
+          592.47
+        ],
+        "median_ms": 520.21
+      },
+      {
+        "name": "stock_search",
+        "samples_ms": [
+          923.63,
+          1039.05,
+          984.79,
+          1162.18,
+          1219.11,
+          824.38,
+          918.66
+        ],
+        "median_ms": 984.79
+      },
+      {
+        "name": "exact_barcode",
+        "samples_ms": [
+          80.41,
+          76.24,
+          92.65,
+          87.21,
+          75.04,
+          72.38,
+          78.96
+        ],
+        "median_ms": 78.96
+      },
+      {
+        "name": "customer_timeline_100k_events",
+        "samples_ms": [
+          129.42,
+          95.64,
+          98.72,
+          97.23,
+          92.52,
+          96.25,
+          88
+        ],
+        "median_ms": 96.25
+      }
+    ]
+  },
+  "reconciliation": {
+    "reconciled": true,
+    "generated_at": "2026-09-26T05:37:14.934Z",
+    "inventoryProjection": {
+      "name": "Inventory balance projection vs movement ledger",
+      "reconciled": true,
+      "checked": 1,
+      "differences": []
+    },
+    "checks": [
+      {
+        "name": "Inventory valuation vs inventory asset account",
+        "expected": 39920,
+        "actual": 39920,
+        "difference": 0,
+        "reconciled": true
+      },
+      {
+        "name": "Retail revenue vs sales journal postings",
+        "expected": 200,
+        "actual": 200,
+        "difference": 0,
+        "reconciled": true
+      },
+      {
+        "name": "Retail VAT vs VAT journal postings",
+        "expected": 0,
+        "actual": 0,
+        "difference": 0,
+        "reconciled": true
+      },
+      {
+        "name": "Retail COGS vs COGS journal postings",
+        "expected": 80,
+        "actual": 80,
+        "difference": 0,
+        "reconciled": true
+      },
+      {
+        "name": "Customer-tagged credit subledger vs Accounts Receivable",
+        "expected": 150,
+        "actual": 150,
+        "difference": 0,
+        "reconciled": true
+      },
+      {
+        "name": "Retail sale receivables vs Retail AR journal",
+        "expected": 150,
+        "actual": 150,
+        "difference": 0,
+        "reconciled": true
+      },
+      {
+        "name": "Supplier-tagged payable subledger vs Accounts Payable",
+        "expected": 40000,
+        "actual": 40000,
+        "difference": 0,
+        "reconciled": true
+      },
+      {
+        "name": "Store-credit transaction ledger vs customer balance projection",
+        "expected": 175,
+        "actual": 175,
+        "difference": 0,
+        "reconciled": true
+      },
+      {
+        "name": "Store-credit transaction ledger vs Store Credit Liability",
+        "expected": 175,
+        "actual": 175,
+        "difference": 0,
+        "reconciled": true
+      }
+    ],
+    "trial_balance_difference": 0
+  }
+}
