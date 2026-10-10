@@ -250,7 +250,7 @@ function StaleBanner({ businessDate, laterBusinessDay, reason, setReason, busy, 
         ) : (
           <>
             <p className="mt-1 text-sm text-rose-800">New sales, expenses, payroll and other new activity are blocked until this day is continued or the next business day is started. Unfinished records can still be completed, paid, voided or cancelled.</p>
-            <label className="mt-3 block"><span className="mb-1 block text-sm font-semibold text-rose-950">Reason to continue this day</span><textarea value={reason} onChange={(event) => setReason(event.target.value)} rows={2} maxLength={500} className="w-full border border-rose-300 bg-white px-3 py-2 text-sm outline-none focus:border-rose-700" placeholder="e.g. Night shift is still settling bills" /></label>
+            <label className="mt-3 block"><span className="mb-1 block text-sm font-semibold text-rose-950">Reason to continue this day</span><textarea value={reason} onChange={(event) => setReason(event.target.value)} rows={2} maxLength={500} className="w-full border border-rose-300 bg-white px-3 py-2 text-sm outline-none focus:border-rose-700" placeholder="e.g. Evening sales are still being counted" /></label>
             <button type="button" disabled={busy || !reason.trim()} onClick={onContinue} className="mt-3 inline-flex h-10 items-center gap-2 bg-rose-700 px-4 text-sm font-semibold text-white hover:bg-rose-800 disabled:opacity-40"><UnlockKeyhole className="h-4 w-4" />Continue This Existing Business Day</button>
           </>
         )}

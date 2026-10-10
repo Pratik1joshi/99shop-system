@@ -159,7 +159,7 @@ export default function OwnerOverview() {
                   <span className="min-w-0"><span className="block truncate font-bold text-gray-900">{sale.number}</span><span className="block text-xs text-gray-500">{sale.at ? formatNepalTime(sale.at) : ''}</span></span></span>
                 <span className="shrink-0 font-bold tabular-nums text-gray-900">{formatCurrency(sale.total)}</span>
               </Link></li>)}
-            </ul> : <p className="rounded-xl bg-gray-50 p-6 text-center text-sm text-gray-500">No sales yet. Completed bills from Billing show up here.</p>}
+            </ul> : <p className="rounded-xl bg-gray-50 p-6 text-center text-sm text-gray-500">No sales yet. Completed sales from Billing show up here.</p>}
           </section>
         </div>
 

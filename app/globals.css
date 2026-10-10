@@ -897,7 +897,7 @@ html:has(.erp-app) :focus-visible { outline: 2px solid var(--k-berry); outline-o
 .retail-money-table th { background: #fff5f9; }
 .retail-money-table th, .retail-money-table td { border-bottom-color: var(--k-line); }
 
-/* Document detail (bills, transactions): receipt-style sections. */
+/* Document detail (sales, transactions): receipt-style sections. */
 .k-doc { display: grid; gap: 1rem; }
 .k-doc-hero { position: relative; overflow: hidden; padding: 1.1rem 1.15rem 1rem; border: 1px solid var(--k-line); border-radius: 18px; background: #fff; box-shadow: var(--k-shadow); }
 .k-doc-hero::before { content: ''; position: absolute; inset: 0 0 auto; height: 6px; background-color: #fff; background-image: var(--k-gingham); background-size: 10px 10px; background-blend-mode: multiply; }
