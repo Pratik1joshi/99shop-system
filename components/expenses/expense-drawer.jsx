@@ -1,17 +1,10 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import Link from 'next/link';
-import { usePathname } from 'next/navigation';
-import { ExternalLink, Paperclip, Pencil, ReceiptText, Trash2, Truck, WalletCards, X } from 'lucide-react';
+import { ExternalLink, Paperclip, Pencil, ReceiptText, Trash2, WalletCards, X } from 'lucide-react';
 import { StatusBadge } from '@/components/admin/data-grid.jsx';
 import { formatNepalDate, formatNepalTime } from '@/lib/time-utils.js';
 import PaymentMethodCorrectionDialog from '@/components/expenses/payment-method-correction-dialog.jsx';
-
-const SOURCE_META = {
-  purchase: { label: 'Purchase', Icon: Truck },
-  wastage: { label: 'Wastage', Icon: Trash2 },
-};
 
 function paymentLabel(value) {
   const method = String(value || 'cash').trim().toLowerCase();
@@ -27,13 +20,6 @@ function Detail({ label, children }) {
 
 export default function ExpenseDrawer({ expense, category, onClose, onEdit, onChanged, canCorrectPayment = false }) {
   const [correctingPayment, setCorrectingPayment] = useState(false);
-  const pathname = usePathname();
-  const cashier = pathname?.startsWith('/cashier');
-  const source = SOURCE_META[expense?.source_type];
-  const sourceBase = cashier ? '/cashier' : '/admin';
-  const sourceHref = expense?.source_type === 'purchase'
-    ? `${sourceBase}/purchases?purchase=${expense.source_id}`
-    : expense?.source_type === 'wastage' ? `${sourceBase}/wastage` : null;
 
   useEffect(() => {
     const previousOverflow = document.body.style.overflow;
@@ -57,7 +43,6 @@ export default function ExpenseDrawer({ expense, category, onClose, onEdit, onCh
             <p className="text-xs font-medium uppercase tracking-wide text-gray-400">Expense #{expense.id}</p>
             <h2 id="expense-detail-title" className="mt-0.5 break-words text-lg font-semibold text-gray-950 sm:text-xl">{expense.description || 'Expense record'}</h2>
             <div className="mt-2 flex flex-wrap items-center gap-2">
-              <StatusBadge tone={expense.source_type ? 'violet' : 'gray'}>{expense.source_type ? 'Automatic' : 'Manual'}</StatusBadge>
               <StatusBadge tone={expense.status === 'voided' ? 'red' : 'green'}>{expense.status === 'voided' ? 'Voided' : 'Active'}</StatusBadge>
               {expense.business_day_status === 'closed' ? <StatusBadge tone="amber">Closed day</StatusBadge> : null}
             </div>
@@ -90,7 +75,6 @@ export default function ExpenseDrawer({ expense, category, onClose, onEdit, onCh
               <Detail label="Supplier / paid to">{expense.supplier}</Detail>
               <Detail label="Logged by">{expense.logged_by_name || 'System'}</Detail>
               <Detail label="Recorded at">{expense.created_at ? formatNepalTime(expense.created_at) : '—'}</Detail>
-              <Detail label="Origin">{source ? `${source.label} #${expense.source_id}` : 'Entered manually'}</Detail>
             </dl>
           </section>
 
@@ -98,7 +82,6 @@ export default function ExpenseDrawer({ expense, category, onClose, onEdit, onCh
 
           {expense.receipt_url ? <a href={expense.receipt_url} target="_blank" rel="noreferrer" className="inline-flex min-h-11 items-center gap-2 rounded-xl border border-gray-300 px-4 text-sm font-semibold text-gray-700 hover:bg-gray-50"><Paperclip className="h-4 w-4" /> Open receipt / attachment <ExternalLink className="h-3.5 w-3.5" /></a> : null}
 
-          {source && sourceHref ? <section className="rounded-xl border border-blue-200 bg-blue-50 p-4 sm:p-5"><div className="flex items-start gap-3"><source.Icon className="mt-0.5 h-5 w-5 shrink-0 text-blue-700" /><div><h3 className="text-sm font-semibold text-blue-950">Generated from {source.label} #{expense.source_id}</h3><p className="mt-1 text-sm text-blue-800">This expense is controlled by its source record so the financial and stock audit trails stay together.</p><Link href={sourceHref} onClick={onClose} className="mt-3 inline-flex items-center gap-1.5 text-sm font-semibold text-blue-900 underline">Open complete {source.label.toLowerCase()} record <ExternalLink className="h-3.5 w-3.5" /></Link></div></div></section> : null}
         </div>
 
         <footer className="sticky bottom-0 flex flex-wrap items-center justify-end gap-2 border-t border-gray-200 bg-white px-5 py-4 sm:px-6">

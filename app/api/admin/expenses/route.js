@@ -39,21 +39,15 @@ async function ensureExpensesReady(db) {
 }
 
 /**
- * Expenses with a source_type are owned by automation (a purchase, a wastage
- * entry). Editing or deleting them here would desync them from their source,
- * so they are read-only from this route. Manual expenses keep source_type NULL.
+ * Expenses with a source_type were written by another record and are
+ * read-only here. Manual expenses keep source_type NULL.
  */
-const LINKED_EXPENSE_HINT = {
-  purchase: 'Edit or void the purchase instead.',
-  wastage: 'Edit the wastage entry instead.',
-};
-
 async function rejectIfLinked(db, id) {
   const row = await db.get('SELECT source_type FROM expenses WHERE id = ?', [id]);
   if (row?.source_type) {
     return NextResponse.json(
       {
-        error: `This expense was generated automatically. ${LINKED_EXPENSE_HINT[row.source_type] || 'Change the record it came from instead.'}`,
+        error: 'This expense was generated automatically. Change the record it came from instead.',
       },
       { status: 409 }
     );
@@ -97,8 +91,6 @@ async function buildSummary(db, where, params) {
     db.get(
       `SELECT COUNT(*) AS entries,
               COALESCE(SUM(e.amount), 0) AS total,
-              COALESCE(SUM(CASE WHEN e.source_type = 'purchase' THEN e.amount ELSE 0 END), 0) AS purchases,
-              COALESCE(SUM(CASE WHEN e.source_type = 'wastage' THEN e.amount ELSE 0 END), 0) AS losses,
               COALESCE(SUM(CASE WHEN e.source_type IS NULL THEN e.amount ELSE 0 END), 0) AS operating
        FROM expenses e WHERE ${where}`,
       params
@@ -120,8 +112,6 @@ async function buildSummary(db, where, params) {
   return {
     entries: Number(totals?.entries || 0),
     total: Number(totals?.total || 0),
-    purchases: Number(totals?.purchases || 0),
-    losses: Number(totals?.losses || 0),
     operating: Number(totals?.operating || 0),
     byCategory: (byCategory || []).map((r) => ({ category: r.category, total: Number(r.total || 0) })),
     daily: (daily || []).map((r) => ({ date: String(r.day || '').slice(0, 10), total: Number(r.total || 0) })),
@@ -155,15 +145,6 @@ export async function GET(request) {
     if (category && category !== 'all') {
       conditions.push('e.category = ?');
       params.push(category);
-    }
-    // `origin` is the owner-facing version of source_type: manual means nobody's
-    // automation wrote it, so it is a NULL check rather than a value match.
-    const origin = searchParams.get('origin') || searchParams.get('source_type');
-    if (origin === 'manual') {
-      conditions.push('e.source_type IS NULL');
-    } else if (origin && origin !== 'all') {
-      conditions.push('e.source_type = ?');
-      params.push(origin);
     }
     const fromDate = searchParams.get('from');
     if (fromDate) {

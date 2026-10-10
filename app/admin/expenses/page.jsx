@@ -1,19 +1,11 @@
 'use client';
 
-/**
- * Expenses, including the ones nobody typed.
- *
- * Purchases and wastage now generate their own expense rows (source_type +
- * source_id). The API returns 409 if you try to edit or delete one, so this
- * page never offers the action — it points at the record that owns the row
- * instead. That is the whole difference from the old page.
- */
+/** Operating expenses: log, review, correct and void them by business day. */
 
 import { useEffect, useMemo, useState } from 'react';
-import Link from 'next/link';
 import { usePathname, useSearchParams } from 'next/navigation';
 import AdminLayout from '@/components/admin/admin-layout';
-import { Paperclip, Pencil, Plus, Trash2, Truck, Trash } from 'lucide-react';
+import { Paperclip, Pencil, Plus, Trash2 } from 'lucide-react';
 import { useToast } from '@/components/ui/toast';
 import { useConfirm } from '@/components/ui/confirm';
 import { friendlyFromError, friendlyMessage } from '@/lib/friendly-message';
@@ -29,23 +21,11 @@ import ExpenseDrawer from '@/components/expenses/expense-drawer.jsx';
 import DateInput from '@/components/ui/date-input.jsx';
 import { useCapabilities } from '@/lib/use-capabilities.js';
 
-/** Categories the automation writes; they never appear in the manual picker. */
-const GENERATED_CATEGORY_LABELS = {
-  inventory_purchase: 'Inventory purchase',
-  inventory_loss: 'Inventory loss',
-};
-
-const SOURCE_META = {
-  purchase: { label: 'Purchase', href: '/admin/purchases', Icon: Truck },
-  wastage: { label: 'Wastage', href: '/admin/wastage', Icon: Trash },
-};
-
 function categoryLabel(value, categories = EXPENSE_CATEGORIES) {
   const key = String(value ?? '').trim();
   if (!key || ['none', 'null', 'undefined'].includes(key.toLowerCase())) return 'Uncategorised';
   return (
     categories.find((c) => c.value === key || c.label === key)?.label ||
-    GENERATED_CATEGORY_LABELS[key] ||
     key.replace(/_/g, ' ')
   );
 }
@@ -111,7 +91,6 @@ export default function ExpensesPage() {
   const { addToast } = useToast();
   const { confirm } = useConfirm();
   const [categoryFilter, setCategoryFilter] = useState('all');
-  const [originFilter, setOriginFilter] = useState('all');
   const [datePreset, setDatePreset] = useState(focusedExpenseId ? 'all' : 'today');
   const [customFrom, setCustomFrom] = useState('');
   const [customTo, setCustomTo] = useState('');
@@ -128,8 +107,8 @@ export default function ExpensesPage() {
       : `${formatCalendarDate(from)} – ${formatCalendarDate(to)}`;
 
   const filters = useMemo(
-    () => ({ category: categoryFilter, origin: originFilter, from, to, id: focusedExpenseId }),
-    [categoryFilter, originFilter, from, to, focusedExpenseId]
+    () => ({ category: categoryFilter, from, to, id: focusedExpenseId }),
+    [categoryFilter, from, to, focusedExpenseId]
   );
 
   const {
@@ -173,16 +152,9 @@ export default function ExpensesPage() {
     return options;
   }, [managedCats]);
 
-  const allCategoryOptions = useMemo(
-    () => [
-      ...manualCategoryOptions,
-      ...Object.entries(GENERATED_CATEGORY_LABELS).map(([value, label]) => ({ value, label })),
-    ],
-    [manualCategoryOptions]
-  );
+  const allCategoryOptions = manualCategoryOptions;
 
   async function handleDelete(expense) {
-    if (expense.source_type) return; // never offered, but belt and braces
     const confirmed = await confirm({
       title: `Delete "${expense.description}"?`,
       tone: 'delete',
@@ -227,26 +199,13 @@ export default function ExpensesPage() {
         label: 'Description',
         wrap: true,
         className: 'text-gray-900 font-medium',
-        render: (e) => {
-          const meta = SOURCE_META[e.source_type];
-          return (
-            <div className="min-w-[220px]">
-              <p>{e.description}</p>
-              {meta && (
-                <Link href={meta.href} onClick={(event) => event.stopPropagation()} className="mt-1 inline-flex items-center gap-1 text-xs font-medium text-gray-500 hover:text-gray-900 hover:underline">
-                  <meta.Icon className="h-3 w-3" />
-                  Generated from {meta.label} #{e.source_id}
-                </Link>
-              )}
-            </div>
-          );
-        },
+        render: (e) => <div className="min-w-[220px]"><p>{e.description}</p></div>,
       },
       {
         key: 'category',
         label: 'Category',
         value: (e) => categoryLabel(e.category, allCategoryOptions),
-        render: (e) => <StatusBadge tone={e.source_type ? 'blue' : 'gray'}>{categoryLabel(e.category, allCategoryOptions)}</StatusBadge>,
+        render: (e) => <StatusBadge tone="gray">{categoryLabel(e.category, allCategoryOptions)}</StatusBadge>,
       },
       {
         key: 'amount',
@@ -256,13 +215,6 @@ export default function ExpensesPage() {
         className: 'text-gray-900 font-medium',
         value: (e) => Number(e.amount || 0),
         render: (e) => `Rs ${Number(e.amount || 0).toFixed(2)}`,
-      },
-      {
-        key: 'origin',
-        label: 'Origin',
-        value: (e) => (e.source_type ? 'Automatic' : 'Manual'),
-        render: (e) =>
-          e.source_type ? <StatusBadge tone="violet">Automatic</StatusBadge> : <StatusBadge tone="gray">Manual</StatusBadge>,
       },
       { key: 'payment_method', label: 'Method', render: (e) => <span>{expensePaymentLabel(e.payment_method)}</span> },
       { key: 'supplier', label: 'Paid to', render: (e) => e.supplier || <span className="text-gray-300">—</span> },
@@ -291,7 +243,7 @@ export default function ExpensesPage() {
           <div>
             <h1 className="text-2xl font-bold text-gray-900 sm:text-3xl">Expenses</h1>
             <p className="mt-1 text-sm text-gray-500 sm:text-base">
-              What you spent — including the purchases and wastage that book themselves.
+              What the shop spent on running costs, by business day.
             </p>
           </div>
           <div className="flex flex-wrap items-center justify-end gap-2">
@@ -340,9 +292,6 @@ export default function ExpensesPage() {
         <KpiCards
           kpis={[
             { key: 'total', label: 'Total spend', value: summary?.total || 0, format: 'currency', sub: `${plural(summary?.entries || 0, 'entry', 'entries')} · ${rangeLabel}` },
-            { key: 'purchases', label: 'Inventory purchases', value: summary?.purchases || 0, format: 'currency', sub: 'Booked by deliveries' },
-            { key: 'loss', label: 'Inventory loss', value: summary?.losses || 0, format: 'currency', sub: 'Booked by wastage' },
-            { key: 'operating', label: 'Operating expenses', value: summary?.operating || 0, format: 'currency', sub: 'Entered by hand' },
           ]}
         />
 
@@ -363,42 +312,21 @@ export default function ExpensesPage() {
           csvName="expenses"
           searchPlaceholder="Search description, supplier…"
           empty={loading ? 'Loading expenses…' : 'No expenses in this range. Change the dates, or log one.'}
-          footNote="Rows marked Automatic belong to a purchase or a wastage entry — open that record to change them. CSV and Print cover every row in the range, not just this page."
+          footNote="CSV and Print cover every row in the range, not just this page."
           rowClassName={(row) => Number(row.id) === focusedExpenseId ? 'bg-blue-50/70 ring-1 ring-inset ring-blue-200' : ''}
           onRowClick={setDetailsExpense}
           toolbar={
             <>
-              <select value={originFilter} onChange={(e) => setOriginFilter(e.target.value)} className={SELECT}>
-                <option value="all">All origins</option>
-                <option value="manual">Manual only</option>
-                <option value="purchase">From purchases</option>
-                <option value="wastage">From wastage</option>
-              </select>
               <select value={categoryFilter} onChange={(e) => setCategoryFilter(e.target.value)} className={SELECT}>
                 <option value="all">All categories</option>
                 {manualCategoryOptions.map((c) => (
                   <option key={c.value} value={c.value}>{c.label}</option>
                 ))}
-                {Object.entries(GENERATED_CATEGORY_LABELS).map(([value, label]) => (
-                  <option key={value} value={value}>{label}</option>
-                ))}
               </select>
             </>
           }
           renderActions={(e) => {
-            const meta = SOURCE_META[e.source_type];
             if (isCashier) return null;
-            if (meta) {
-              return (
-                <Link
-                  href={meta.href}
-                  title={`Edit this on the ${meta.label.toLowerCase()} it came from`}
-                  className="whitespace-nowrap rounded-lg border border-gray-200 px-2.5 py-1.5 text-xs font-medium text-gray-600 hover:bg-gray-50"
-                >
-                  Open {meta.label.toLowerCase()}
-                </Link>
-              );
-            }
             return (
               <>
                 <button type="button" title={e.business_day_status === 'closed' ? 'Correct closed expense' : 'Edit expense'} aria-label={e.business_day_status === 'closed' ? 'Correct closed expense' : 'Edit expense'} onClick={() => setModal({ expense: e, payroll: e.category === 'salaries' })} className="rounded-lg p-2 text-gray-400 hover:bg-gray-100 hover:text-gray-900">
