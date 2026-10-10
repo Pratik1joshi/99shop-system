@@ -45,7 +45,7 @@ Also review pending migrations, verify `.env.example`, and back up the target Po
 3. Upload/install the new release and dependencies.
 4. Run `npm run db:migrate` for incremental database updates.
 5. Run `npm run build` and restart the Node application.
-6. Run the health check and smoke-test login, menu, sale/payment, receipt, and reports.
+6. Run the health check and smoke-test login, products, billing and payment, receipt, and reports.
 7. Monitor logs and database/storage health after release.
 
 ## Required environment

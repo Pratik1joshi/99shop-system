@@ -31,9 +31,7 @@ origin **before** running `npm run build`.
 
 ## Fresh database
 
-The ordered SQL files in `migrations/` are the schema source of truth. Do not
-load the old `deploy/production_schema.sql` or `deploy/production_seed.sql`:
-those are 99 Shop-era snapshots with old defaults and migration levels.
+The ordered SQL files in `migrations/` are the schema source of truth.
 
 ```bash
 npm run db:migrate

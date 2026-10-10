@@ -43,13 +43,13 @@ Browser
 - Monetary calculations use the shared billing/accounting functions; UI code must not become the source of truth.
 - Multi-write business operations run in database transactions.
 - Accounting posts balanced journal lines and uses external references/idempotency where supported.
-- Order and stock transitions are explicit and reject invalid repeat transitions.
+- Sale and stock transitions are explicit and reject invalid repeat transitions.
 - Public endpoints use rate limiting where abuse is plausible.
 - Logs must be useful operationally without exposing secrets, PINs, tokens, or sensitive request bodies.
 
 ## Data and migration strategy
 
-Fresh production installs load `deploy/production_schema.sql` followed by `deploy/production_seed.sql`. Existing installations apply ordered files through `npm run db:migrate`. Every schema change must include an idempotent migration and, before release, a refreshed production schema when the deployment process requires it.
+Fresh and existing installations both apply the ordered files in `migrations/` through `npm run db:migrate`, then `npm run db:seed` on a fresh database. Every schema change must include an idempotent migration.
 
 ## Configuration
 
