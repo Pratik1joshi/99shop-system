@@ -24,7 +24,6 @@ import {
   businessDayContext,
   businessDaySummary,
   businessDayDetail,
-  businessDayIdForFinancialWork,
   currentBusinessDayId,
   isStaleBusinessDay,
   isStaleAcknowledged,
@@ -66,7 +65,7 @@ let saleSeq = 1;
 async function postCashSale(amount, businessDayId, drawerId) {
   await postJournal(db, {
     memo: 'Test cash sale',
-    source_type: 'bill',
+    source_type: 'retail_sale',
     source_id: saleSeq++,
     business_day_id: businessDayId,
     lines: [
@@ -131,16 +130,10 @@ test('matched cash close requires no closing note', async () => {
   assert.equal(result.store_session.status, 'closed');
 });
 
-test('financial settlement is blocked after the store session is counted and closed', async () => {
-  const error = await catchError(businessDayIdForFinancialWork(db, 'orders', -1));
-  assert.equal(error?.code, 'store_session_required');
-  assert.match(error?.message || '', /reopen the store session/i);
-});
-
 test('cash sales posted after drawer close are identified separately', async () => {
   await postCashSale(1500, day1Id, drawer1Id);
   const lateSale = await db.get(
-    `SELECT id FROM journal_entries WHERE source_type='bill' AND business_day_id=? ORDER BY id DESC LIMIT 1`,
+    `SELECT id FROM journal_entries WHERE source_type='retail_sale' AND business_day_id=? ORDER BY id DESC LIMIT 1`,
     [day1Id]
   );
   await db.run(`UPDATE journal_entries SET created_at='2999-01-01 00:00:00' WHERE id=?`, [lateSale.id]);
@@ -265,85 +258,24 @@ test('short cash close is rejected without a closing note, accepted with one', a
 
 /* ------------------------------------------------------------ closing blockers */
 
-let order2Id;
-
-test('normal close is blocked by open orders', async () => {
+test('a reopened store session has no closing blockers', async () => {
   await openBusinessDay(db, { business_date: today, opening_cash: 5800, action: 'reopen_same_day' }, admin); // session 4
-  const res = await db.run(`INSERT INTO orders (order_number, status, business_day_id) VALUES (?, 'dining', ?)`, ['TEST-ORD-1', day1Id]);
-  const order1Id = res.lastInsertRowid;
-
-  const error = await catchError(closeBusinessDay(db, { counted_cash: 5800 }, admin, { force: false }));
-  assert.equal(error?.status, 409);
-  assert.ok(error.blockers.items.some((item) => item.key === 'open_orders'));
-
-  await db.run(`UPDATE orders SET status='completed' WHERE id=?`, [order1Id]); // clear this blocker for the next test
-});
-
-test('normal close is blocked by active KOTs', async () => {
-  const res = await db.run(`INSERT INTO orders (order_number, status, business_day_id) VALUES (?, 'dining', ?)`, ['TEST-ORD-2', day1Id]);
-  order2Id = res.lastInsertRowid;
-  await db.run(
-    `INSERT INTO kots (order_id, status, voided, kot_type, business_day_id) VALUES (?, 'pending', 0, 'regular', ?)`,
-    [order2Id, day1Id]
-  );
-
-  const error = await catchError(closeBusinessDay(db, { counted_cash: 5800 }, admin, { force: false }));
-  assert.equal(error?.status, 409);
-  assert.ok(error.blockers.items.some((item) => item.key === 'active_kots'));
-
-  await db.run(`UPDATE kots SET status='completed' WHERE order_id=?`, [order2Id]); // clear this blocker for the next test
-  await db.run(`UPDATE orders SET status='completed' WHERE id=?`, [order2Id]);
-});
-
-test('a pending KOT on a cancelled order is not reported as an active closing blocker', async () => {
-  const order = await db.run(
-    `INSERT INTO orders (order_number, status, business_day_id) VALUES ('ORD-CANCELLED-KOT', 'cancelled', ?)`,
-    [day1Id]
-  );
-  await db.run(
-    `INSERT INTO kots (order_id, status, voided, kot_type, business_day_id) VALUES (?, 'pending', 0, 'regular', ?)`,
-    [order.lastInsertRowid, day1Id]
-  );
   const blockers = await closingBlockers(db, day1Id);
-  assert.equal(blockers.items.some((item) => item.key === 'active_kots'), false);
+  assert.equal(blockers.canCloseNormally, true);
 });
 
-test('normal close is blocked by unpaid bills', async () => {
-  await db.run(
-    `INSERT INTO bills (bill_number, order_id, subtotal, grand_total, status, business_day_id) VALUES (?, ?, 100, 100, 'unpaid', ?)`,
-    ['TEST-BILL-1', order2Id, day1Id]
-  );
-
-  const error = await catchError(closeBusinessDay(db, { counted_cash: 5800 }, admin, { force: false }));
-  assert.equal(error?.status, 409);
-  assert.ok(error.blockers.items.some((item) => item.key === 'pending_bills'));
-});
-
-/* ------------------------------------------------------------ force close + carry-forward */
-
-let order3Id;
+/* ------------------------------------------------------------ force close */
 
 test('force close requires a reason', async () => {
   const error = await catchError(closeBusinessDay(db, { counted_cash: 5800 }, admin, { force: true }));
   assert.match(error?.message || '', /reason is required to force close/i);
 });
 
-test('force close preserves unresolved activity and marks both rows force_closed', async () => {
-  const res = await db.run(`INSERT INTO orders (order_number, status, business_day_id) VALUES (?, 'dining', ?)`, ['TEST-ORD-3', day1Id]);
-  order3Id = res.lastInsertRowid;
-  await db.run(
-    `INSERT INTO kots (order_id, status, voided, kot_type, business_day_id) VALUES (?, 'pending', 0, 'regular', ?)`,
-    [order3Id, day1Id]
-  );
-
+test('force close marks both rows force_closed', async () => {
   const cashDenominations = { 1000: 5, 500: 1, 100: 3 };
-  const result = await closeBusinessDay(db, { counted_cash: 5800, cash_denominations: cashDenominations, force_close_reason: 'Guest dispute, unresolved at close' }, admin, { force: true });
+  const result = await closeBusinessDay(db, { counted_cash: 5800, cash_denominations: cashDenominations, force_close_reason: 'Customer dispute, unresolved at close' }, admin, { force: true });
   assert.equal(result.business_day.force_closed, 1);
   assert.equal(result.store_session.status, 'closed');
-
-  // Unresolved order/KOT/bill are untouched, not silently completed.
-  const order = await db.get('SELECT status FROM orders WHERE id=?', [order3Id]);
-  assert.equal(order.status, 'dining');
 
   const rows = await db.all('SELECT action FROM business_day_audit WHERE business_day_id=? ORDER BY id DESC LIMIT 1', [day1Id]);
   assert.equal(rows[0].action, 'store_session_force_closed');
@@ -374,7 +306,7 @@ test('a business day whose date has rolled past today is detected as stale', asy
   assert.equal(ctx.staleAcknowledged, false);
 });
 
-test('new activity is blocked with 409 on an unacknowledged stale day, but allowStale bypasses it for existing-order continuation', async () => {
+test('new activity is blocked with 409 on an unacknowledged stale day, but allowStale bypasses it', async () => {
   const blocked = await catchError(currentBusinessDayId(db, { required: true }));
   assert.equal(blocked?.status, 409);
   assert.equal(blocked?.code, 'business_day_stale');
@@ -413,11 +345,11 @@ test('stale acknowledgement expires automatically once the ack date is not today
   assert.equal(expired?.code, 'business_day_stale');
 });
 
-/* ------------------------------------------------------------ starting the next day + carry-forward */
+/* ------------------------------------------------------------ starting the next day */
 
 let day2Id;
 
-test('starting the next business day preserves unresolved work on its originating day', async () => {
+test('starting the next business day finalizes the previous day', async () => {
   const day2 = await openBusinessDay(db, {
     // The server, not the browser locale/date picker, selects today's Nepal
     // date when starting the next day.
@@ -425,7 +357,6 @@ test('starting the next business day preserves unresolved work on its originatin
   }, admin);
   day2Id = day2.id;
   assert.equal(day2.business_date, today);
-  assert.deepEqual(day2.carried_forward, { orders: 1, kots: 1, bills: 1 });
 
   const finalizedDay1 = await db.get('SELECT status FROM business_days WHERE id=?', [day1Id]);
   assert.equal(finalizedDay1.status, 'closed');
@@ -433,21 +364,11 @@ test('starting the next business day preserves unresolved work on its originatin
   assert.deepEqual(finalizedSnapshot.reconciliation.cash_denominations, { 100: 3, 500: 1, 1000: 5 });
   const finalizedDetail = await businessDayDetail(db, day1Id);
   assert.deepEqual(finalizedDetail.summary.reconciliation.cash_denominations, { 100: 3, 500: 1, 1000: 5 });
-
-  const order = await db.get('SELECT business_day_id, carried_from_business_day_id FROM orders WHERE id=?', [order3Id]);
-  assert.equal(order.business_day_id, day1Id);
-  assert.equal(order.carried_from_business_day_id, day1Id);
-  assert.equal(await businessDayIdForFinancialWork(db, 'orders', order3Id), day1Id);
-
-  // Repair an unresolved row moved by the former carry-forward implementation.
-  await db.run('UPDATE orders SET business_day_id=? WHERE id=?', [day2Id, order3Id]);
-  assert.equal(await businessDayIdForFinancialWork(db, 'orders', order3Id), day1Id);
-  assert.equal((await db.get('SELECT business_day_id FROM orders WHERE id=?', [order3Id])).business_day_id, day1Id);
 });
 
 test('a reversal after close keeps the physical count frozen and exposes adjusted closing cash', async () => {
   const sale = await db.get(
-    `SELECT id FROM journal_entries WHERE source_type='bill' AND business_day_id=? ORDER BY id LIMIT 1`,
+    `SELECT id FROM journal_entries WHERE source_type='retail_sale' AND business_day_id=? ORDER BY id LIMIT 1`,
     [day1Id]
   );
   const original = await businessDaySummary(db, day1Id);
@@ -475,24 +396,21 @@ test('a reversal after close keeps the physical count frozen and exposes adjuste
   });
 });
 
-test('existing prior-day orders may still be resolved while the current day is stale', async () => {
+test('allowStale still resolves the current day while it is stale', async () => {
   await db.run('UPDATE business_days SET business_date=? WHERE id=?', [twoDaysAgo, day2Id]);
 
   const newActivityBlocked = await catchError(currentBusinessDayId(db, { required: true }));
   assert.equal(newActivityBlocked?.code, 'business_day_stale');
 
-  const existingOrderContinues = await currentBusinessDayId(db, { required: true, allowStale: true });
-  assert.equal(existingOrderContinues, day2Id);
+  const continued = await currentBusinessDayId(db, { required: true, allowStale: true });
+  assert.equal(continued, day2Id);
 });
 
 /* ------------------------------------------------------------ atomic rollback */
 
 test('a failed opening cash movement (no active bank account) rolls back the whole transaction', async () => {
-  // Bring day2 back to today and resolve the carried-forward order so it can close cleanly.
+  // Bring day2 back to today so it can close cleanly.
   await db.run('UPDATE business_days SET business_date=? WHERE id=?', [today, day2Id]);
-  await db.run(`UPDATE orders SET status='completed' WHERE id=?`, [order3Id]);
-  await db.run(`UPDATE kots SET status='completed' WHERE order_id=?`, [order3Id]);
-  await db.run(`UPDATE bills SET status='voided' WHERE bill_number='TEST-BILL-1'`); // this carried forward too
   await closeBusinessDay(db, { counted_cash: 5800 }, admin, { force: false });
 
   await db.run(`UPDATE bank_accounts SET is_active = 0`);

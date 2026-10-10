@@ -141,33 +141,6 @@ export default function ClosingSummary({
           </div>
         )}
       </Section>
-      {Number(sales.completed_bills) > 0 && <Section icon={ReceiptText} title="Older bills">
-        <div className="grid grid-cols-2 gap-x-4 gap-y-5 sm:grid-cols-3 xl:grid-cols-6">
-          <Metric label="Gross Billed Sales" value={sales.gross_sales} tone="positive" />
-          <Metric label="Discounts" value={sales.discounts} />
-          <Metric label="Sales Before Returns" value={sales.sales_before_returns} tone="positive" />
-          <Metric label="Net Sales After Refunds" value={sales.net_sales} tone={Number(sales.net_sales) < 0 ? 'negative' : 'positive'} />
-          <Metric label="VAT / Tax" value={sales.tax} />
-          <Metric label="Service Charge" value={sales.service_charge} />
-          <Metric label="Refunds" value={sales.refunds} />
-          <Metric label="Voided Sales (bill value)" value={sales.voided_bill_value} />
-          <Metric label="Finalized Bills" value={sales.completed_bills} money={false} />
-          <Metric label="Average Net Bill" value={sales.average_bill} tone="positive" />
-        </div>
-        {!!sales.channels?.length && (
-          <div className="mt-5 flex flex-wrap gap-x-6 gap-y-2 border-t border-gray-100 pt-4">
-            {sales.channels.map((row) => (
-              <span key={row.channel} className="text-sm text-gray-600">
-                <strong className="capitalize text-gray-900">{String(row.channel).replaceAll('_', ' ')}</strong>{' '}
-                <span className="font-semibold text-emerald-700">{amount(row.amount)} net</span>
-                {Number(row.refunds || 0) > 0 && (
-                  <> (<span className="text-emerald-700">{amount(row.gross_amount)} gross</span> - <span className="text-rose-700">{amount(row.refunds)} refunded</span>)</>
-                )}
-              </span>
-            ))}
-          </div>
-        )}
-      </Section>}
 
       <Section icon={CreditCard} title="Payment collection summary">
         <p className="mb-4 text-xs text-gray-500">Whole business-day totals across all store sessions. Active settlement rows only; voided payments are removed.</p>
