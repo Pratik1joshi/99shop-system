@@ -2,11 +2,11 @@
 
 ## Product summary
 
-Dim Sum Puri is a restaurant website and counter POS that joins menu publishing, customer ordering, order fulfillment, billing, stock control, purchasing, expenses, and accounting in one application. The current operating model is a single-admin counter workflow; legacy waiter, kitchen, and cashier pages remain in the codebase but are redirected to the admin billing counter by middleware.
+99 Shop is the 99 Shop website and counter POS that joins menu publishing, customer ordering, order fulfillment, billing, stock control, purchasing, expenses, and accounting in one application. The current operating model is a single-admin counter workflow; legacy waiter, kitchen, and cashier pages remain in the codebase but are redirected to the admin billing counter by middleware.
 
 ## Problem
 
-Restaurant staff need one dependable source for menu prices, orders, payments, stock, and financial records. Customers need a fast mobile menu and a low-friction way to order. Owners need daily operational visibility without reconciling disconnected spreadsheets.
+99 Shop staff need one dependable source for menu prices, orders, payments, stock, and financial records. Customers need a fast mobile menu and a low-friction way to order. Owners need daily operational visibility without reconciling disconnected spreadsheets.
 
 ## Users
 
@@ -17,7 +17,7 @@ Restaurant staff need one dependable source for menu prices, orders, payments, s
 
 ## Primary outcomes
 
-1. Publish an accurate, mobile-friendly restaurant presence and menu.
+1. Publish an accurate, mobile-friendly 99 Shop presence and menu.
 2. Accept counter and online orders without trusting client-supplied prices.
 3. Produce correct bills and payment records.
 4. Keep inventory movements traceable through purchases, use, adjustment, and wastage.

@@ -4,7 +4,7 @@ Point of sale, stock and accounting for a cosmetics and accessories shop in
 Surkhet, plus the shop's public storefront. Next.js (App Router) with
 PostgreSQL in production and SQLite for local development.
 
-This codebase began as a restaurant POS. The accounting, inventory, billing and
+This codebase began as the 99 Shop POS. The accounting, inventory, billing and
 reporting engine is trade-agnostic and stays; the dine-in workflow — waiters,
 kitchen tickets, tables, reservations — has been removed. `lib/deployment.js`
 is the single place that records the deployment profile.
@@ -29,7 +29,7 @@ npm run dev          # http://localhost:3003
 ```
 
 With no `DATABASE_URL` set, the app opens `shop99.db` in the project root
-(falling back to an existing `pos_restaurant.db` from before the conversion).
+(falling back to the legacy SQLite file from before the conversion).
 For PostgreSQL:
 
 ```bash

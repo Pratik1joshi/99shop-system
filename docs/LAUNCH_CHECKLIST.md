@@ -2,7 +2,7 @@
 
 ## Ownership and readiness
 
-- [ ] Name the launch owner, technical owner, restaurant operator, and rollback decision-maker.
+- [ ] Name the launch owner, technical owner, 99 Shop operator, and rollback decision-maker.
 - [ ] Freeze the release commit and record the deployment window.
 - [ ] All critical PRD acceptance criteria and QA checks pass; known issues have owner/severity/workaround.
 - [ ] Menu, variants, prices, availability, tax, service charge, receipt, address, phone, WhatsApp, and opening hours are approved by the business.

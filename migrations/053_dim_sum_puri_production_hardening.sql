@@ -1,4 +1,4 @@
--- Preserve the production-only Dim Sum Puri safeguards when this newer
+-- Preserve the production-only 99 Shop safeguards when this newer
 -- application lineage is used for fresh staging databases or future installs.
 
 ALTER TABLE journal_lines

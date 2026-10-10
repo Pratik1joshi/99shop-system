@@ -25,7 +25,7 @@ Browser
 
 | Path | Responsibility |
 |---|---|
-| `app/(public)` | Public restaurant pages |
+| `app/(public)` | Public 99 Shop pages |
 | `app/admin` | Protected counter and management pages |
 | `app/api` | HTTP API route handlers |
 | `components` | Shared and feature UI components |

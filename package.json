@@ -26,10 +26,7 @@
     "docs:renumber": "node --import ./tests/unit/loader-register.mjs scripts/renumber-documents.mjs",
     "journals:backfill": "node --import ./tests/unit/loader-register.mjs scripts/backfill-bill-journals.mjs",
     "bank:audit": "node --import ./tests/unit/loader-register.mjs scripts/bank-audit.mjs",
-    "probe:reports:fresh": "node --import ./tests/unit/loader-register.mjs scripts/probe-reports.mjs --fresh",
-    "import:menu": "node scripts/import-menu.mjs",
-    "db:seed-images": "node scripts/seed-menu-images.mjs",
-    "map:menu-images": "node scripts/map-menu-images.mjs"
+    "probe:reports:fresh": "node --import ./tests/unit/loader-register.mjs scripts/probe-reports.mjs --fresh"
   },
   "dependencies": {
     "@hookform/resolvers": "^5.2.2",

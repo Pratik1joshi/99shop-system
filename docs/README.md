@@ -1,6 +1,6 @@
-# Dim Sum Puri Documentation
+# 99 Shop Documentation
 
-This directory is the documentation hub for the Dim Sum Puri restaurant website and point-of-sale system. The application is built with Next.js 16 and React 19, uses PostgreSQL in production, and can fall back to SQLite for local development.
+This directory is the documentation hub for the 99 Shop website and point-of-sale system. The application is built with Next.js 16 and React 19, uses PostgreSQL in production, and can fall back to SQLite for local development.
 
 ## Start here
 

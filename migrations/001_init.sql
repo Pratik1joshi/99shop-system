@@ -1,5 +1,5 @@
 -- Production schema migration 001
--- Fresh PostgreSQL install for restaurant POS (cPanel)
+-- Fresh PostgreSQL install for 99 Shop POS (cPanel)
 
 CREATE TABLE IF NOT EXISTS schema_migrations (
   id SERIAL PRIMARY KEY,

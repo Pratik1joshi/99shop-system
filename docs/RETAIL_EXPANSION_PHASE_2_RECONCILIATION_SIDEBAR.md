@@ -17,11 +17,11 @@ The test compares before/after values to isolate this transaction from other fix
 
 ## Sidebar translation
 
-Superseded by `RETAIL_EXPANSION_PHASE_3_RESTAURANT_STYLE.md`, which moves the shell to the restaurant markup and merges Suppliers into Purchasing.
+Superseded by `RETAIL_EXPANSION_PHASE_3_99SHOP_STYLE.md`, which moves the shell to the 99 Shop markup and merges Suppliers into Purchasing.
 
-The style reference is `../dimsonpuri/components/admin/admin-layout.jsx`. Shop 99 now uses its 16 rem expanded panel, 5 rem icon rail, lightly tinted expandable groups, uppercase group headings, indented view links, 4 px active stripe, compact footer, and a scrollable mobile drawer. The implementation is in `components/erp/app-shell.jsx` and `app/globals.css`. Desktop expansion, group choices and scroll position persist locally. Radix handles mobile focus trapping and Escape; links close the drawer. Keyboard users can expand groups with Enter, and the global focus-visible outline remains in place.
+The style reference is the earlier admin app's `components/admin/admin-layout.jsx`. Shop 99 now uses its 16 rem expanded panel, 5 rem icon rail, lightly tinted expandable groups, uppercase group headings, indented view links, 4 px active stripe, compact footer, and a scrollable mobile drawer. The implementation is in `components/erp/app-shell.jsx` and `app/globals.css`. Desktop expansion, group choices and scroll position persist locally. Radix handles mobile focus trapping and Escape; links close the drawer. Keyboard users can expand groups with Enter, and the global focus-visible outline remains in place.
 
-The restaurant reference's visual grouping was adapted to Shop 99's existing retail workspaces. Its tables, kitchen, waiter, reservation and restaurant-report navigation were not added. The permission-filtered admin/cashier/specialist workspace arrays remain the source of destinations. Expanded groups reveal the same permitted views as the local workspace bar; the compact rail opens each group's first permitted view.
+The 99 Shop reference's visual grouping was adapted to Shop 99's existing retail workspaces. Its tables, kitchen, waiter, reservation and 99 Shop-report navigation were not added. The permission-filtered admin/cashier/specialist workspace arrays remain the source of destinations. Expanded groups reveal the same permitted views as the local workspace bar; the compact rail opens each group's first permitted view.
 
 When two workspaces intentionally link to the same retail page, such as Purchasing and Suppliers linking to Payables, both groups indicate the current route. This keeps the active page visible whichever task path the operator used.
 

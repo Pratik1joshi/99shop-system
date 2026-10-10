@@ -20,7 +20,7 @@ try {
     try {
       await client.query(`CREATE DATABASE "${name}" TEMPLATE template0 ENCODING 'UTF8'`); created = true;
       const target=new URL(url);target.pathname=`/${name}`;
-      const env={...process.env,DATABASE_URL:target.href,ADMIN_PASSWORD:'KmTestOnly123',RESTAURANT_NAME:'Kathmandu Momo',SKIP_DB_ON_BUILD:''};
+      const env={...process.env,DATABASE_URL:target.href,ADMIN_PASSWORD:'KmTestOnly123',SHOP_NAME:'99 Shop by Shahana',SKIP_DB_ON_BUILD:''};
       const run=(args)=>{ const r=spawnSync(process.execPath,args,{env,stdio:'inherit'});if(r.status!==0)throw new Error(`Validation failed (${r.status}): ${args.join(' ')}`); };
       run(['scripts/migrate.mjs']);run(['scripts/seed-postgres.mjs']);
       run(['--import','./tests/unit/loader-register.mjs','--test',files[index]]);

@@ -33,7 +33,7 @@ origin **before** running `npm run build`.
 
 The ordered SQL files in `migrations/` are the schema source of truth. Do not
 load the old `deploy/production_schema.sql` or `deploy/production_seed.sql`:
-those are restaurant-era snapshots with old defaults and migration levels.
+those are 99 Shop-era snapshots with old defaults and migration levels.
 
 ```bash
 npm run db:migrate

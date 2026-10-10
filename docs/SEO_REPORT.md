@@ -146,7 +146,7 @@ announces open/close; footer headings are real headings; links in text are
 underlined. No full automated WCAG (axe) run.
 
 ## 20. Social / Entity Consistency: FIXED
-Instagram `@99shop_surkhet`, TikTok `@99shop_surkhet`, WhatsApp +977 976-789-6814
+Instagram `@99shop_surkhet`, TikTok `@99shop_surkhet`, WhatsApp +977 976-7896814
 come from one settings source and appear identically in the header, footer,
 `/contact`, structured data and the share card (`/og`, 1200×630, live categories).
 Facebook is added only when a URL is entered.

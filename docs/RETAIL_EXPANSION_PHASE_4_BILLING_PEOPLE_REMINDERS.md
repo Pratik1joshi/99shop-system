@@ -1,10 +1,10 @@
-# Retail expansion phase 4: restaurant-style billing, staff performance, reminders (2026-09-28)
+# Retail expansion phase 4: 99 Shop-style billing, staff performance, reminders (2026-09-28)
 
-This phase clears the "Remaining" list in `RETAIL_EXPANSION_PHASE_3_RESTAURANT_STYLE.md` and restyles Billing after the restaurant POS (`../dimsonpuri/components/pos/admin-pos.jsx`). No sale, stock or journal logic changed; Billing still calls the same Retail quote, hold and checkout endpoints.
+This phase clears the "Remaining" list in `RETAIL_EXPANSION_PHASE_3_99SHOP_STYLE.md` and restyles Billing after the 99 Shop POS (the earlier admin app's `components/pos/admin-pos.jsx`). No sale, stock or journal logic changed; Billing still calls the same Retail quote, hold and checkout endpoints.
 
 ## Billing
 
-| Restaurant POS | Retail Billing now |
+| 99 Shop POS | Retail Billing now |
 | --- | --- |
 | Full-height board: product grid left, 440–540 px cart right | Same split (420 / 500 px cart); sidebar opens on the icon rail on Billing and can be expanded for that visit |
 | Header actions, search, collapsible category chips | Held (n), Scan, Shortcuts, New; barcode/SKU search; category chips filter the product search (`categoryId`) |
@@ -17,15 +17,15 @@ Retail-only controls stay in the cart: customer search/create, AR and store-cred
 
 ## Staff performance
 
-`lib/payroll.js#getPerformance` read restaurant `orders`, `bills` and `wastage_log`. It now uses `getSalesByDimension(..., groupBy: 'staff')`, the same net-sales and return rules as Reports, keyed by `retail_sales.cashier_id`. Returns are credited to the original seller when they post. Attendance comes from the HRM `attendance` register (half day = 0.5). The page has a date range and role filter. It is linked under People, and cashiers see it only with `employee_performance.view`. Cost and profit are not shown.
+`lib/payroll.js#getPerformance` read 99 Shop `orders`, `bills` and `wastage_log`. It now uses `getSalesByDimension(..., groupBy: 'staff')`, the same net-sales and return rules as Reports, keyed by `retail_sales.cashier_id`. Returns are credited to the original seller when they post. Attendance comes from the HRM `attendance` register (half day = 0.5). The page has a date range and role filter. It is linked under People, and cashiers see it only with `employee_performance.view`. Cost and profit are not shown.
 
 ## Finance dashboard
 
-`lib/accounting-dashboard.js` computed gross profit with restaurant COGS `5010` only and inventory from `1200` only. It now includes Retail `5080` and `1210`. The page stays unlinked because Finance overview (`/admin/retail-finance`) covers it.
+`lib/accounting-dashboard.js` computed gross profit with 99 Shop COGS `5010` only and inventory from `1200` only. It now includes Retail `5080` and `1210`. The page stays unlinked because Finance overview (`/admin/retail-finance`) covers it.
 
 ## Payment reminders
 
-Ported from the restaurant's WhatsApp reminder page and driven by open Retail credit (`retail_sales.amount_due`), oldest first. Staff press WhatsApp and a pre-filled chat opens; they send it themselves. Each opened reminder is stored in `customer_payment_reminders` (migration `112`, SQLite guard in `lib/retail-reminders.js`) with the balance at that moment. The list shows the last reminder and count, and filters for over 30 days and not reminded in 7 days. A queue opens selected customers one by one. Access matches Receivables (`customer_ledger.access`). The ported `openWhatsapp` no longer passes `noopener` to `window.open`, which made the restaurant version report every successful open as a failure.
+Ported from the 99 Shop's WhatsApp reminder page and driven by open Retail credit (`retail_sales.amount_due`), oldest first. Staff press WhatsApp and a pre-filled chat opens; they send it themselves. Each opened reminder is stored in `customer_payment_reminders` (migration `112`, SQLite guard in `lib/retail-reminders.js`) with the balance at that moment. The list shows the last reminder and count, and filters for over 30 days and not reminded in 7 days. A queue opens selected customers one by one. Access matches Receivables (`customer_ledger.access`). The ported `openWhatsapp` no longer passes `noopener` to `window.open`, which made the 99 Shop version report every successful open as a failure.
 
 ## Cashier stock lookup
 
@@ -37,7 +37,7 @@ The Retail promotions engine already supported `bundle` offers (fixed price for 
 
 ## Page styling
 
-Retail list pages now use the restaurant page title (`text-2xl font-bold text-gray-900 sm:text-3xl`); detail pages use one step smaller. `WorkspaceHeader`, `.commerce-page` and `retail-money` headings follow the same sizes and padding. Timestamps on the dashboard, held sales and reminders use `formatNepalTime`, because SQLite stores UTC without a zone.
+Retail list pages now use the 99 Shop page title (`text-2xl font-bold text-gray-900 sm:text-3xl`); detail pages use one step smaller. `WorkspaceHeader`, `.commerce-page` and `retail-money` headings follow the same sizes and padding. Timestamps on the dashboard, held sales and reminders use `formatNepalTime`, because SQLite stores UTC without a zone.
 
 ## Verification
 
@@ -55,5 +55,5 @@ Retail list pages now use the restaurant page title (`text-2xl font-bold text-gr
 
 - Reminders are WhatsApp click-to-chat only. Automatic SMS/WhatsApp sending would need a provider account and consent records.
 - Supplier payables have no reminder view. Payables already lists due invoices.
-- Many Retail pages still use `slate-*` colours and their own card styles. Titles and tokens match the restaurant; full per-page restyles are not done.
+- Many Retail pages still use `slate-*` colours and their own card styles. Titles and tokens match the 99 Shop; full per-page restyles are not done.
 - `formatNepalTime` shows Bikram Sambat dates when that calendar is selected, as elsewhere in the app.

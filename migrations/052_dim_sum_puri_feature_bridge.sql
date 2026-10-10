@@ -1,5 +1,5 @@
 -- Bridge the 037-043 migration-number collision between the production
--- Dim Sum Puri lineage and the newer feature lineage. Every operation is
+-- 99 Shop lineage and the newer feature lineage. Every operation is
 -- additive/idempotent so existing operational and financial rows remain intact.
 
 CREATE TABLE IF NOT EXISTS role_permissions (

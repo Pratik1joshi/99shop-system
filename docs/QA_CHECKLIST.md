@@ -1,6 +1,6 @@
 # QA Production Readiness Guide
 
-This is the executable QA guide for approving Dim Sum Puri for production. It covers the public website, online ordering, counter POS, administration, inventory, purchasing, accounting, security, deployment, recovery, and operational readiness.
+This is the executable QA guide for approving 99 Shop for production. It covers the public website, online ordering, counter POS, administration, inventory, purchasing, accounting, security, deployment, recovery, and operational readiness.
 
 Do not mark the release production-ready because pages merely load. QA must prove that business transactions create the correct order, payment, stock, and accounting effects, that retries do not duplicate them, and that protected data cannot be reached without authorization.
 
@@ -121,7 +121,7 @@ node scripts/check-units.mjs
 
 Test `/`, `/menu`, `/about`, `/gallery`, and `/contact`.
 
-- [ ] Correct Dim Sum Puri name, logo, favicon, address, phone, opening hours, and calls to action appear.
+- [ ] Correct 99 Shop name, logo, favicon, address, phone, opening hours, and calls to action appear.
 - [ ] Header/footer links, logo-home link, browser back/forward, and direct URL entry work.
 - [ ] No legacy Sundar/Bagaicha branding or reservation CTA appears where removed.
 - [ ] Unknown URL returns the intended 404 experience without server details.
@@ -336,7 +336,7 @@ Record expected formula and values:
 
 ### RES-01 Reservations
 
-- [ ] Create through public/admin/restaurant paths with valid customer, date/time, party size, preferences, VIP/deposit fields where supported.
+- [ ] Create through public/admin/99 Shop paths with valid customer, date/time, party size, preferences, VIP/deposit fields where supported.
 - [ ] Validate past/invalid time, capacity, overlap/conflict, missing contact, long notes, and duplicate submit.
 - [ ] Exercise confirmed/arrived/seated/completed/cancelled/no-show states and allowed transitions.
 - [ ] Change table, seat, link order/customer, and verify table/reservation/order synchronization.
@@ -623,7 +623,7 @@ Pass only when:
 Run immediately after deployment with controlled data:
 
 - [ ] `/api/health` passes and public home/menu/images load over HTTPS.
-- [ ] Contact/phone/WhatsApp and restaurant information are correct.
+- [ ] Contact/phone/WhatsApp and 99 Shop information are correct.
 - [ ] Admin login works and wrong credentials fail.
 - [ ] Create one marked test counter sale, accept payment, and print/review receipt.
 - [ ] Submit one marked public order and verify it appears in admin.

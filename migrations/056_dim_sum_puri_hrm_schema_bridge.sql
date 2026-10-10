@@ -1,4 +1,4 @@
--- Bridge the production Dim Sum Puri `hr_*` HRM schema to the newer
+-- Bridge the production 99 Shop `hr_*` HRM schema to the newer
 -- unprefixed HRM schema. Legacy tables remain in place for audit/rollback;
 -- records are copied with the same ids so existing user assignments survive.
 

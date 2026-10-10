@@ -10,7 +10,7 @@ async function signIn(page, username, pin) {
   await expect(page).toHaveURL(username === 'sita' ? /\/cashier\// : /\/admin\//);
 }
 
-test('admin retail sidebar uses the restaurant accordion, active links and a persistent compact rail', async ({ page }) => {
+test('admin retail sidebar uses the 99 Shop accordion, active links and a persistent compact rail', async ({ page }) => {
   test.setTimeout(120_000);
   await page.setViewportSize({ width: 1366, height: 768 });
   await signIn(page, 'admin', adminPin);

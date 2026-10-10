@@ -36,7 +36,7 @@ The requested Phase 1 closure is not complete. This pass implements and verifies
 | 24 | Search | Existing universal search retained. Explorer adds cross-document querying. Full universal-search coverage and role leakage matrix remain. |
 | 25 | Saved views | Explorer/Audit save per-user filters locally in the browser. No results, balances or credentials are snapshotted. Sort/column preferences and other requested workspaces remain. |
 | 26 | Export security | Analytics CSV consumes the server-filtered payload; restricted profit rankings are also removed. Complete active export audit remains. |
-| 27 | Legacy cleanup | Compatibility/restaurant routes and historical tables preserved. Parity-based active Retail navigation cleanup remains. |
+| 27 | Legacy cleanup | Compatibility/99 Shop routes and historical tables preserved. Parity-based active Retail navigation cleanup remains. |
 | 28 | Vocabulary | New surfaces use Retail vocabulary. Full active-route terminology audit remains. |
 | 29 | Visual consistency | New views use existing shell, tables, drawers, buttons and input styles. Explorer screenshots retained for desktop, tablet and mobile. Full active Retail visual audit remains. |
 | 30 | Accessibility | Fixed shared table Enter handling and drawer focus restoration. New Explorer/Audit journey checks keyboard behavior and serious/critical WCAG A/AA findings. Complete critical-journey accessibility gate remains. |
@@ -78,7 +78,7 @@ The requested Phase 1 closure is not complete. This pass implements and verifies
 - Scale measurements: `node --import ./tests/unit/loader-register.mjs scripts/benchmark-phase1g.mjs`.
 - Browser app: port 3017, `.next-phase1g-dev`, isolated Phase 1F browser database freshly migrated through 101. Credentials are read from the ignored local fixture file, not included in this report.
 - Full browser gate: `npx playwright test`; focused verification also writes separate output directories to preserve full-run failure evidence.
-- Browser fixture failures and restaurant/public tests run against Retail data are identified separately from demonstrated product defects. They do not establish that restaurant deployments were broken by these changes.
+- Browser fixture failures and 99 Shop/public tests run against Retail data are identified separately from demonstrated product defects. They do not establish that 99 Shop deployments were broken by these changes.
 - Performance runs performed during other validation are explicitly labeled as concurrent-load observations, not an SLA or controlled before/after comparison.
 - Review creation never balances cash. The pre-existing closing service's own journal behavior was not rewritten.
 - Saved views are local to this browser/account, not server-synchronized preferences.
@@ -102,7 +102,7 @@ The requested Phase 1 closure is not complete. This pass implements and verifies
 | Trial balance | Balanced: Rs 48,113.88 debit and credit |
 | Bank statement reconciliation / full common-period proof | NOT VERIFIED |
 
-The original browser gate mixed Retail fixtures with restaurant/public assumptions (24 failing public cases). Other failures included missing serial prerequisites, login throttling, and ambiguous source/payment selectors. Missing serials were subsequently received through a canonical GRN. The payment test now selects its unique reference, and the timeline test targets its exact correction. The focused rerun used the production build on port 3018 with test-process-only RATE_LIMIT_LOGIN=1000; production defaults were unchanged. Its two flaky cases timed out at sign-in and passed on retry. No combined or inflated ?all tests passed? count is reported.
+The original browser gate mixed Retail fixtures with 99 Shop/public assumptions (24 failing public cases). Other failures included missing serial prerequisites, login throttling, and ambiguous source/payment selectors. Missing serials were subsequently received through a canonical GRN. The payment test now selects its unique reference, and the timeline test targets its exact correction. The focused rerun used the production build on port 3018 with test-process-only RATE_LIMIT_LOGIN=1000; production defaults were unchanged. Its two flaky cases timed out at sign-in and passed on retry. No combined or inflated ?all tests passed? count is reported.
 
 The cash status filter received an explicit accessible label after its initial browser check could not locate it exactly. The final cash journey passed against the development server, and the final production build includes that label. One build attempt failed while scanning the Windows system temporary folder; the rerun passed with TEMP/TMP scoped to the workspace.
 

@@ -109,7 +109,7 @@ Only movement query implementation changed between these measurements. It now re
 - Journal evidence truncates after 500 lines with an explicit notice and no misleading totals; reversals are bounded. This is not a substitute for completing large-GL pagination/export acceptance.
 - Source inspection uses Nepal date/time formatting. Accounting date, recorded timestamp and business-day identity remain distinct. It does not recalculate historical profit.
 - Shared tables keep Arrow Up/Down navigation and Enter inspection. New source links support keyboard Enter. No new shortcut vocabulary was introduced.
-- Existing compatibility and restaurant routes were not deleted or represented as modernized. Existing ownership documentation remains in `RETAIL_CANONICAL_OWNERSHIP.md`.
+- Existing compatibility and 99 Shop routes were not deleted or represented as modernized. Existing ownership documentation remains in `RETAIL_CANONICAL_OWNERSHIP.md`.
 
 ## Workspace-by-workspace acceptance
 

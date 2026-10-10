@@ -15,7 +15,7 @@ function dayOffset(iso, offset) {
   return nepalDateString(d);
 }
 
-/** Retail dashboard only: no restaurant orders, bills, KOTs, tables or legacy stock. */
+/** Retail dashboard only: no 99 Shop orders, bills, KOTs, tables or legacy stock. */
 export async function GET(request) {
   let user = null;
   try {

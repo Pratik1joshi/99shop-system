@@ -27,9 +27,9 @@ const EXPECTED = [
 const SAMPLE_ROWS = [
   // Row 2 leaves the factor blank on purpose — liter/ml derives it. Row 3 is a
   // custom unit, which is exactly when the factor still has to be given.
-  { item_name: 'Chili, Fresh', purchase_unit: 'kg', consumption_unit: 'grams', conversion_factor: '1000', cost_per_unit: '250', min_stock_level: '500', quantity: '5', supplier: 'Local Farm', category: 'Vegetables' },
-  { item_name: 'Cooking Oil', purchase_unit: 'liter', consumption_unit: 'ml', conversion_factor: '', cost_per_unit: '300', min_stock_level: '2000', quantity: '10', supplier: '', category: 'Pantry' },
-  { item_name: 'Momo Wrappers', purchase_unit: 'box_24', consumption_unit: 'pieces', conversion_factor: '24', cost_per_unit: '600', min_stock_level: '48', quantity: '4', supplier: '', category: 'Frozen' },
+  { item_name: 'Craft Beads', purchase_unit: 'kg', consumption_unit: 'grams', conversion_factor: '1000', cost_per_unit: '250', min_stock_level: '500', quantity: '5', supplier: 'Local Wholesaler', category: 'Craft Supplies' },
+  { item_name: 'Nail Polish Remover', purchase_unit: 'liter', consumption_unit: 'ml', conversion_factor: '', cost_per_unit: '300', min_stock_level: '2000', quantity: '10', supplier: '', category: 'Cosmetics' },
+  { item_name: 'Claw Clips', purchase_unit: 'box_24', consumption_unit: 'pieces', conversion_factor: '24', cost_per_unit: '600', min_stock_level: '48', quantity: '4', supplier: '', category: 'Hair Accessories' },
 ];
 
 function summarize(preview) {

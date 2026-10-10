@@ -8,7 +8,7 @@
 --   2030 Store Credit Liability — a liability owed to the customer, never revenue
 -- Write-offs reuse the EXISTING 5040 "Wastage / Inventory Loss" expense
 -- account — a damaged cosmetic return is economically identical to
--- restaurant wastage (goods left the building at a loss), no new expense
+-- 99 Shop wastage (goods left the building at a loss), no new expense
 -- account needed.
 
 INSERT INTO accounts (code, name, type, subtype, is_system)
@@ -56,7 +56,7 @@ CREATE TABLE IF NOT EXISTS store_credit_transactions (
 CREATE INDEX IF NOT EXISTS idx_store_credit_transactions_customer ON store_credit_transactions(customer_id);
 CREATE INDEX IF NOT EXISTS idx_store_credit_transactions_source ON store_credit_transactions(source_type, source_id);
 
--- Independent domain from restaurant refunds/voids (lib/bill-corrections.js) —
+-- Independent domain from 99 Shop refunds/voids (lib/bill-corrections.js) —
 -- see lib/retail-returns.js. References retail_sales/retail_sale_lines only.
 CREATE TABLE IF NOT EXISTS retail_returns (
   id SERIAL PRIMARY KEY,

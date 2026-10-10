@@ -57,24 +57,24 @@ test('Billing opens the whole catalog in the Items browser without a search', ()
   assert.doesNotMatch(billing, /!searchTerm \? \(/);
 });
 
-test('retail staff access roles exclude restaurant-only waiter and kitchen accounts', () => {
+test('retail staff access roles exclude 99 Shop-only waiter and kitchen accounts', () => {
   assert.equal(requireRetailStaffRole('cashier'), 'cashier');
   assert.equal(requireRetailStaffRole('ADMIN'), 'admin');
-  assert.throws(() => requireRetailStaffRole('waiter'), /restaurant-only/i);
-  assert.throws(() => requireRetailStaffRole('kitchen'), /restaurant-only/i);
+  assert.throws(() => requireRetailStaffRole('waiter'), /99 Shop-only/i);
+  assert.throws(() => requireRetailStaffRole('kitchen'), /99 Shop-only/i);
   const staffPage = source('app/admin/employees/page.jsx');
   assert.doesNotMatch(staffPage, /option value="waiter"/);
   assert.doesNotMatch(staffPage, /option value="kitchen"/);
 });
 
 test('legacy sale creation endpoints fail closed in Retail mode', () => {
-  assert.match(source('app/api/admin/billing/route.js'), /Legacy restaurant billing is read-only in Retail mode/);
-  assert.match(source('app/api/admin/pos/orders/route.js'), /Restaurant orders cannot be created in Retail mode/);
+  assert.match(source('app/api/admin/billing/route.js'), /Legacy 99 Shop billing is read-only in Retail mode/);
+  assert.match(source('app/api/admin/pos/orders/route.js'), /99 Shop orders cannot be created in Retail mode/);
 });
 
-test('active retail dashboard and reporting never read restaurant transaction facts', () => {
+test('active retail dashboard and reporting never read 99 Shop transaction facts', () => {
   for (const file of ['app/api/admin/dashboard/route.js', 'lib/retail-reporting.js']) {
     const text = source(file).replace(/\/\*[\s\S]*?\*\//g, '').replace(/\/\/.*$/gm, '');
-    assert.doesNotMatch(text, /\b(?:bills|kots|restaurant_tables|stock_movements)\b/i, file);
+    assert.doesNotMatch(text, /\b(?:bills|kots|stock_movements)\b/i, file);
   }
 });

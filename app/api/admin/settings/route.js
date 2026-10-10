@@ -28,9 +28,9 @@ async function seedMissingDefaults(db) {
   // All values remain editable in Settings; nothing here is hard-coded at billing time.
   let shopInfo = {
     name: '99 Shop by Shahana',
-    address: 'Birendranagar-6, New Road, Surkhet 21700, Nepal',
-    phone: '+977 980-8174841',
-    email: 'dimsumpurifastfood@gmail.com',
+    address: 'Surkhet, Nepal',
+    phone: '+977 976-7896814',
+    email: '',
   };
   let ownerName = '';
   try {

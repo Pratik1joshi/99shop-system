@@ -1,5 +1,5 @@
 /**
- * Clear operational POS data (orders, KOTs, bills, payments) so the restaurant
+ * Clear operational POS data (orders, KOTs, bills, payments) so the 99 Shop
  * can start fresh. Keeps menu, tables, users, settings, inventory masters.
  *
  * Usage: node scripts/clear-ops-data.mjs

@@ -4,7 +4,7 @@ Generated before cPanel / PostgreSQL migration work. Findings are from static re
 
 ## Locked decisions
 
-- Restaurant POS only (legacy multi-shop / distribution stack removed from production)
+- 99 Shop POS only (legacy multi-shop / distribution stack removed from production)
 - Fresh PostgreSQL database with secure seed (no SQLite sales import)
 - cPanel Setup Node.js App, Node.js 22, SSH available, dedicated domain/subdomain
 
@@ -27,7 +27,7 @@ Generated before cPanel / PostgreSQL migration work. Findings are from static re
 
 **Public (keep):** `/api/public/menu`, `/api/public/reservations`, `/api/public/inquiries`, marketing `sundar.html`
 
-**Must authenticate:** all `/api/admin/*` (except none for shop login — remove), `/api/restaurant/*`, `/api/uploads/*`, `/api/auth/*` (except login), `/api/users/*`
+**Must authenticate:** all `/api/admin/*` (except none for shop login — remove), `/api/shop99/*`, `/api/uploads/*`, `/api/auth/*` (except login), `/api/users/*`
 
 **Legacy (quarantine / remove):** `/api/orders`, `/api/products`, `/api/customers`, `/api/transactions`, `/api/held-bills`, `/api/credit-payments`, `/api/ingredients`, `/api/menu-items`, `/api/shop/*`, `/api/admin/shops`, `/api/admin/login`
 
@@ -48,7 +48,7 @@ Generated before cPanel / PostgreSQL migration work. Findings are from static re
 | `ADMIN_USERNAME` | seed only | First admin |
 | `ADMIN_PASSWORD` | seed only | First admin (min 8 chars) |
 | `DB_NAME` | no | SQLite only — do not use in production |
-| `RESTAURANT_NAME` | optional | Display / seed |
+| `SHOP_NAME` | optional | Display / seed |
 
 ## Dependency notes
 

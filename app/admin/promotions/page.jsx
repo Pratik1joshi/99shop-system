@@ -152,7 +152,7 @@ export default function PromotionsPage() {
             <Field label="Offer name"><input required value={form.name} onChange={(e) => set({ name: e.target.value })} className={input} placeholder="Monsoon momo offer" /></Field>
             <Field label="Coupon code (optional)"><input value={form.code} onChange={(e) => set({ code: e.target.value.toUpperCase().replace(/\s/g, '') })} className={input} placeholder="MOMO10" /></Field>
           </div>
-          <Field label="Customer-facing description"><input value={form.description} onChange={(e) => set({ description: e.target.value })} className={input} placeholder="Save on selected momo dishes" /></Field>
+          <Field label="Customer-facing description"><input value={form.description} onChange={(e) => set({ description: e.target.value })} className={input} placeholder="Save on selected hair clips" /></Field>
           <div>
             <span className="mb-1.5 block text-sm font-semibold text-gray-700">Website image <span className="font-normal text-gray-400">(optional)</span></span>
             <div className="flex flex-wrap items-center gap-3">

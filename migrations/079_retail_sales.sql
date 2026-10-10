@@ -1,4 +1,4 @@
--- Retail sales: an independent domain from the restaurant orders/bills/tables
+-- Retail sales: an independent domain from the 99 Shop orders/bills/tables
 -- stack. A retail sale never needs a table_id, waiter_id, KOT or dine-in
 -- channel — see lib/retail-sales.js for the full rationale. HELD is the cart
 -- state (no inventory/accounting effect); COMPLETED is the one-way,

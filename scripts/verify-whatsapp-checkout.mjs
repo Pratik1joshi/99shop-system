@@ -54,7 +54,7 @@ try {
   const retry = await retryResponse.json();
   const duplicateCount = Number((await pool.query('SELECT COUNT(*) FROM orders WHERE idempotency_key=$1', [deliveryKey])).rows[0].count);
   const message = buildWhatsAppOrderMessage(delivery.order);
-  const url = buildWhatsAppOrderUrl('9779808174841', message);
+  const url = buildWhatsAppOrderUrl('9779767896814', message);
 
   const pickupKey = `pickup-checkout-${stamp}`;
   const pickupResponse = await postOrder({

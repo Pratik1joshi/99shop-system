@@ -26,7 +26,7 @@ function memoryDb() {
 
 const COUNTER = { order_type: 'counter', table_id: null, table_number: null };
 const DELIVERY = { order_type: 'delivery', table_id: null, table_number: null };
-// Written while this was a restaurant; it must number as an ordinary sale.
+// Written while this was the 99 Shop; it must number as an ordinary sale.
 const LEGACY_DINE_IN = { order_type: 'dine_in', table_id: 4, table_number: 'T-04' };
 
 test('each channel prints its own prefix for order and bill', () => {

@@ -1,4 +1,4 @@
--- 032: restaurant-wide business day lifecycle.
+-- 032: 99 Shop-wide business day lifecycle.
 -- Business days are explicit operating periods and may cross calendar midnight.
 -- Drawer sessions remain independent cashier/register shifts within a day.
 

@@ -1,6 +1,6 @@
 # Future Roadmap
 
-This roadmap communicates direction, not committed dates. Reprioritize using customer value, restaurant risk, operational effort, and evidence from production.
+This roadmap communicates direction, not committed dates. Reprioritize using customer value, 99 Shop risk, operational effort, and evidence from production.
 
 ## Now — stabilize the single-admin launch
 

@@ -37,7 +37,7 @@ test('single-day summary uses business-day cash scope across the midnight bounda
   );
   const drawer = await db.get(`SELECT id FROM cash_drawers WHERE is_active=1 ORDER BY id LIMIT 1`);
 
-  // The journal is created today but belongs to yesterday's restaurant day.
+  // The journal is created today but belongs to yesterday's 99 Shop day.
   // A calendar-only report would miss it and disagree with the drawer close.
   await postJournal(db, {
     memo: 'Late business-day cash movement', source_type: 'manual_adjustment',

@@ -1,7 +1,7 @@
 # Final production audit report
 
 **Date:** 2026-07-21  
-**Scope:** Restaurant POS only — legacy multi-shop/SQLite distribution stack removed from runtime.  
+**Scope:** 99 Shop POS only — legacy multi-shop/SQLite distribution stack removed from runtime.  
 **Deploy target:** cPanel Node.js 22 + PostgreSQL (fresh DB + secure seed).
 
 Companion docs:
@@ -20,7 +20,7 @@ Companion docs:
 | Sessions | Bearer only; noisy login logs | HttpOnly cookies + CSRF cookie; generic login errors; rate limits |
 | Payments | Multi-step non-atomic; race possible | Single transaction + row lock + unique paid bill index |
 | Uploads | MIME trust only; path leaks | Magic bytes, size, path containment; media API no dir disclosure |
-| Kitchen load | N+1 detail poll every 5s | `/api/restaurant/orders?board=kitchen` + 8s poll + visibility pause |
+| Kitchen load | N+1 detail poll every 5s | `/api/shop99/orders?board=kitchen` + 8s poll + visibility pause |
 | Dashboard | Per-day query loop | Single `GROUP BY DATE(created_at)` |
 | Ops | No health / error boundaries | `/api/health`, `error.js`, `global-error.js`, `not-found.js`, `loading.js` |
 | Hosting | Desktop `server.js` port 3000 + browser open | cPanel `PORT`/`HOSTNAME`, quiet start, graceful shutdown |
@@ -61,4 +61,4 @@ Browser → HTTPS domain
 
 Public surfaces: marketing site, `/api/public/menu`, `/api/public/reservations`, `/api/public/inquiries`, `/api/health`, media GET.
 
-All other `/api/admin/*`, `/api/restaurant/*`, `/api/uploads/*` require authenticated staff with role checks.
+All other `/api/admin/*`, `/api/shop99/*`, `/api/uploads/*` require authenticated staff with role checks.

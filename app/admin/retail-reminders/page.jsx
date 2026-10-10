@@ -1,7 +1,7 @@
 'use client';
 
 /**
- * Payment reminders — the restaurant's WhatsApp reminder workflow, driven by
+ * Payment reminders — the 99 Shop's WhatsApp reminder workflow, driven by
  * open Retail credit. Staff send each message in WhatsApp; the system records
  * only that the reminder was opened, with the balance at that moment.
  */

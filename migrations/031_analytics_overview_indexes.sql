@@ -1,4 +1,4 @@
--- Reporting hot paths used by the restaurant management overview.
+-- Reporting hot paths used by the 99 Shop management overview.
 -- These are read-performance indexes only; no business data is changed.
 
 CREATE INDEX IF NOT EXISTS idx_bills_status_paid_at

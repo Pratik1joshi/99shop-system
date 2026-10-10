@@ -22,7 +22,7 @@ import { permissionForStaffPath } from '@/lib/staff-access-policy';
 import { KeyboardProvider, useShortcut } from './keyboard';
 
 /*
- * Visual treatment follows the restaurant reference (../dimsonpuri
+ * Visual treatment follows the 99 Shop reference (the earlier
  * components/admin/admin-layout.jsx): white 16rem panel, 5rem icon rail,
  * tinted accordion groups with uppercase headings, coloured item icons and a
  * 4px active stripe. The destinations are Retail only. Literal Tailwind class
@@ -242,7 +242,7 @@ function ShellContent({ children }) {
   const [mobileOpen, setMobileOpen] = useState(false);
   const [savedExpanded, setSavedExpanded] = useState(true);
   const [showAdvanced, setShowAdvanced] = useState(false);
-  // Billing opens on the icon rail, like the restaurant POS, without touching
+  // Billing opens on the icon rail, like the 99 Shop POS, without touching
   // the saved preference; expanding it there lasts until the page changes.
   const [wideChoice, setWideChoice] = useState(null);
   const wideRoute = /^\/(admin|cashier)\/billing(\/|$)/.test(pathname || '');

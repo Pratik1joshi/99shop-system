@@ -45,7 +45,7 @@ try {
   const settings = [
     ['shop_name', shopName],
     ['shop_address', process.env.SHOP_ADDRESS || 'Surkhet, Nepal'],
-    ['shop_phone', process.env.SHOP_PHONE || '+977 976-789-6814'],
+    ['shop_phone', process.env.SHOP_PHONE || '+977 976-7896814'],
     ['shop_email', process.env.SHOP_EMAIL || ''],
     ['vat_percentage', process.env.VAT_PERCENT || '0'],
     ['service_charge_percentage', process.env.SERVICE_PERCENT || '0'],

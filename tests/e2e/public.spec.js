@@ -6,15 +6,15 @@ test.describe('Public website', () => {
     page.on('console', (m) => m.type() === 'error' && errors.push(m.text()));
 
     await page.goto('/');
-    await expect(page).toHaveTitle(/Dim Sum Puri/i);
-    await expect(page.getByText('Dim Sum Puri').first()).toBeVisible();
+    await expect(page).toHaveTitle(/99 Shop/i);
+    await expect(page.getByText('99 Shop').first()).toBeVisible();
 
     await expect(page.getByRole('link', { name: /menu/i }).first()).toBeVisible();
 
     const wa = page.getByRole('link', { name: /WhatsApp/i }).first();
-    await expect(wa).toHaveAttribute('href', /wa\.me\/9779849216081/);
+    await expect(wa).toHaveAttribute('href', /wa\.me\/9779767896814/);
 
-    const call = page.locator('a[href^="tel:+9779849216081"]:visible').first();
+    const call = page.locator('a[href^="tel:+9779767896814"]:visible').first();
     await expect(call).toBeVisible();
 
     expect(errors.filter((e) => !/Failed to load resource|404/.test(e)), `console errors: ${errors.join('\n')}`).toEqual([]);
@@ -22,7 +22,7 @@ test.describe('Public website', () => {
 
   test('menu page shows imported items with prices, search and categories', async ({ page }) => {
     await page.goto('/menu');
-    await expect(page).toHaveTitle(/Menu \| Dim Sum Puri/i);
+    await expect(page).toHaveTitle(/99 Shop/i);
     await expect(page.getByText('Americano').first()).toBeVisible();
     await expect(page.getByText(/Rs\.?\s?120/).first()).toBeVisible();
     await expect(page.locator('input[type="search"]')).toBeVisible();
@@ -93,7 +93,7 @@ test.describe('Public website', () => {
     await expect(page.getByText(/Order received/i)).toBeVisible({ timeout: 15_000 });
   });
 
-  test('no legacy Dim Sum / Sundar branding on active public pages', async ({ page }) => {
+  test('no previous-deployment branding on active public pages', async ({ page }) => {
     for (const path of ['/', '/menu', '/about', '/gallery', '/contact']) {
       await page.goto(path);
       const body = await page.evaluate(() => document.body.innerText);
@@ -119,8 +119,8 @@ test.describe('Public website', () => {
 
   test('about, gallery and contact pages load', async ({ page }) => {
     for (const [path, re] of [
-      ['/about', /About \| Dim Sum Puri/i],
-      ['/gallery', /Gallery \| Dim Sum Puri/i],
+      ['/about', /About \| 99 Shop/i],
+      ['/gallery', /Gallery \| 99 Shop/i],
       ['/contact', /Contact & location|Contact &amp; location/i],
     ]) {
       await page.goto(path);

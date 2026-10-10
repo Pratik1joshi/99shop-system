@@ -1,12 +1,12 @@
 # Retail canonical ownership (Phase 0)
 
-This deployment runs in `RETAIL` mode. A new retail transaction has one operational truth. Restaurant-era tables remain intact for historical/restaurant compatibility, but are not part of the active retail write or reporting path.
+This deployment runs in `RETAIL` mode. A new retail transaction has one operational truth. 99 Shop-era tables remain intact for historical/99 Shop compatibility, but are not part of the active retail write or reporting path.
 
 ## Domain ownership
 
 | Domain | Canonical owner | Rules |
 | --- | --- | --- |
-| Catalog | `menu_items`, `menu_item_variants`, product catalog tables | A variant is the sellable and stock-tracked unit. Restaurant naming is retained for backward compatibility. |
+| Catalog | `menu_items`, `menu_item_variants`, product catalog tables | A variant is the sellable and stock-tracked unit. 99 Shop naming is retained for backward compatibility. |
 | Pricing / promotions | variant price snapshots, `promotions`, `promotion_redemptions` | Checkout reloads canonical prices and re-evaluates promotions. Client totals are previews only. |
 | Sales | `retail_sales`, `retail_sale_lines`, `retail_sale_payments` via `lib/retail-sales.js` | Billing, hold/resume, payment, idempotency, COGS snapshots and sale journal are one transaction. No retail write to `orders`, `bills` or `bill_payments`. |
 | Inventory | `inventory_movements` via `lib/retail-inventory.js` | The immutable signed movement ledger is authoritative. `inventory_balances` is a transactionally maintained projection/cache, never an independent write target. Serial identity is in `inventory_serials`; batch identity is in `inventory_batches`. |
@@ -36,9 +36,9 @@ Sales, returns, GRNs, purchase returns, adjustments, counts, transfers, damage, 
 
 ## Legacy compatibility boundary
 
-`orders`, `order_items`, `bills`, `bill_payments`, `kots`, `restaurant_tables`, `stock_movements` and restaurant role/workflow data are preserved. Their APIs and historical reporting code may remain available for old deployments/data, but Retail Billing does not call them and active retail dashboard/report routes do not combine them with retail facts. There is intentionally no `UNION` between legacy and retail transactions: an unlabeled union would double count and give unlike documents identical meaning.
+`orders`, `order_items`, `bills`, `bill_payments`, `kots`, `shop99_tables`, `stock_movements` and 99 Shop role/workflow data are preserved. Their APIs and historical reporting code may remain available for old deployments/data, but Retail Billing does not call them and active retail dashboard/report routes do not combine them with retail facts. There is intentionally no `UNION` between legacy and retail transactions: an unlabeled union would double count and give unlike documents identical meaning.
 
-Historical restaurant records are read-only from the retail experience. Migration `086_phase0_retail_foundation.sql` is additive: it hashes new sessions and persists selected serial identities on held retail sale lines. No legacy table or column is dropped.
+Historical 99 Shop records are read-only from the retail experience. Migration `086_phase0_retail_foundation.sql` is additive: it hashes new sessions and persists selected serial identities on held retail sale lines. No legacy table or column is dropped.
 
 ## Deployment and reconciliation
 

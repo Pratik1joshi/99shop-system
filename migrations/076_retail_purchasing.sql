@@ -3,7 +3,7 @@
 -- ledger (inventory_locations/batches/balances/movements) and variants.
 --
 -- This is deliberately separate from the legacy purchases/purchase_items
--- tables (which model a restaurant ingredient's combined receipt+invoice
+-- tables (which model the 99 Shop ingredient's combined receipt+invoice
 -- event, keyed to inventory_items). Retail lines are keyed to
 -- menu_item_variants and need PO-vs-GRN separation, cumulative partial
 -- receiving, and per-line batch splitting that the legacy shape doesn't

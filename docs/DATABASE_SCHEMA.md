@@ -5,7 +5,7 @@
 - Incremental changes: `migrations/001_init.sql` through the latest numbered migration.
 - Fresh PostgreSQL install: `deploy/production_schema.sql`.
 - Production seed: `deploy/production_seed.sql`.
-- Local development may use `pos_restaurant.db` through the SQLite adapter.
+- Local development may use the legacy SQLite file through the SQLite adapter.
 
 The production schema currently contains 40 domain tables plus the migration ledger (41 tables in total). Do not infer the live schema from this summary alone; inspect migrations and the deployed database before a destructive change.
 

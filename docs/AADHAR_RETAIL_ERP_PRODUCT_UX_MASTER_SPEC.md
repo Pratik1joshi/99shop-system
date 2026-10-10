@@ -258,7 +258,7 @@ Statuses: Draft, Awaiting Approval (when policy requires), Approved, Partially R
 | Permissions/keyboard | Cashiers see operational balance labels, not journals; write-off/manual adjustments require authority |
 | Layout | Desktop command-center page; tablet stacked; mobile identity, balances, timeline and actions |
 | Existing backend | Customer profiles, retail sales/returns, customer-tagged AR, collections/write-off, store credit, loyalty |
-| Current pages merged/replaced | Improve customers list; replace current mixed restaurant-first detail timeline; merge Accounts Receivable as `Receivables` view while Finance retains control-account analysis |
+| Current pages merged/replaced | Improve customers list; replace current mixed 99 Shop-first detail timeline; merge Accounts Receivable as `Receivables` view while Finance retains control-account analysis |
 
 AR, Store Credit, and Loyalty are never combined: AR says “Customer owes us,” Store Credit says “We owe customer purchasing value,” Loyalty says “Non-cash points.” Each has its own color-neutral label, unit, rules, and history.
 
@@ -315,7 +315,7 @@ One `Registers & Cash` view contains open register, opening cash, movements, exp
 | Permissions/keyboard | Export and sensitive margin/customer fields independently gated |
 | Layout | Desktop two-column analytical canvas; tablet one column; mobile summary/ranked lists only |
 | Existing backend | Retail analytics/reporting, financial reports, comparison, CSV, canonical definitions |
-| Current pages merged/replaced | Replace separate Analytics, Retail Analytics, Summary, Reports catalog/compare, inventory reports, previous-day activity with one question-led workspace; legacy restaurant reports marked legacy-only |
+| Current pages merged/replaced | Replace separate Analytics, Retail Analytics, Summary, Reports catalog/compare, inventory reports, previous-day activity with one question-led workspace; legacy 99 Shop reports marked legacy-only |
 
 ### 8.11 Control
 
@@ -486,9 +486,9 @@ The Nepal localization package concept owns BS display/conversion, Nepal wall cl
 | COA, GL, cash book, corrections, financial reports | MERGE; retain specialized depth | Finance / Accounting |
 | Analytics, Retail Analytics, Summary, Reports, Compare, inventory reports | REPLACE/MERGE | Insights |
 | previous-day activity | MOVE | Transaction Explorer / audit filters |
-| `/admin/orders`, `/admin/bills`, legacy POS | REMAIN LEGACY-ONLY | Historical restaurant reader, absent from retail nav |
+| `/admin/orders`, `/admin/bills`, legacy POS | REMAIN LEGACY-ONLY | Historical 99 Shop reader, absent from retail nav |
 | online orders | RETIRE FROM PHASE 1 RETAIL NAV unless current deployment actively uses it | Later scoped channel workspace; no marketplace expansion |
-| employees/HRM/payroll | SURFACE (owner direction 2026-09-28) | People: staff, departments, designations, attendance, holidays, payroll. Staff performance stays hidden until it is rebuilt on Retail sale attribution; the shared page still reads restaurant orders/bills |
+| employees/HRM/payroll | SURFACE (owner direction 2026-09-28) | People: staff, departments, designations, attendance, holidays, payroll. Staff performance stays hidden until it is rebuilt on Retail sale attribution; the shared page still reads 99 Shop orders/bills |
 | permissions | REPLACE UX | Control / Team & Roles |
 | settings, printer | REPLACE/MERGE | Control / Settings |
 | website CMS | RETIRE FROM RETAIL NAV | Separate legacy/website administration |
@@ -518,7 +518,7 @@ Domain dependencies:
 - Inventory depends on canonical stock query pagination and unified movement references.
 - Replenishment depends on supplier preference/incoming PO visibility already available or explicitly confirmed.
 - Purchasing depends on PO list/editor and GRN detail contracts over existing services.
-- Customer/Supplier command centers depend on retail-first timelines rather than restaurant-only profile queries.
+- Customer/Supplier command centers depend on retail-first timelines rather than 99 Shop-only profile queries.
 - Finance depends on source-link navigation and role presets; it does not wait for visual dashboard work.
 - Global Transaction Explorer depends on normalized read models/search endpoints, not a new transactional database.
 - Control role presets require backend support beyond the current cashier-only managed-role model.
@@ -549,7 +549,7 @@ Complete replacements: Dashboard, Products, retail Purchasing page, primary navi
 - **Dashboard trust can fail if scopes differ.** Every number carries cutoff/definition and uses canonical APIs.
 - **Keyboard shortcuts can conflict with browsers/scanners/local layouts.** Test on real retail hardware and make mappings discoverable/remappable.
 - **Dense tables can become unreadable on touch.** Provide task-specific tablet/mobile layouts instead of horizontal compression.
-- **Legacy restaurant data may leak into retail totals.** Legacy reader is clearly labeled and never unioned into canonical retail facts.
+- **Legacy 99 Shop data may leak into retail totals.** Legacy reader is clearly labeled and never unioned into canonical retail facts.
 - **Visual polish can slow frequent work.** No animation on scanner/keyboard paths; motion remains optional feedback.
 - **Recommendations can look authoritative.** Replenishment always exposes inputs and remains editable.
 - **Offline/network ambiguity can duplicate financial work.** Show save state, preserve idempotency, and never imply success before server confirmation.

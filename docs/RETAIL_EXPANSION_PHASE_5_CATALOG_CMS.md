@@ -14,7 +14,7 @@ Reported on a local SQLite database: `POST /api/admin/commerce/catalog-setup` fa
 
 ## Catalog screens redesigned
 
-All pages use the restaurant admin look: header band with icon, rounded cards, gray-900 buttons, toggles and plain-language help. Shared pieces live in `components/commerce/catalog-ui.jsx`: `PageHeader`, `Panel`, `Field`, `Toggle`, `SearchPicker` and `ImageUploadButton`. API payloads are unchanged unless noted.
+All pages use the 99 Shop admin look: header band with icon, rounded cards, gray-900 buttons, toggles and plain-language help. Shared pieces live in `components/commerce/catalog-ui.jsx`: `PageHeader`, `Panel`, `Field`, `Toggle`, `SearchPicker` and `ImageUploadButton`. API payloads are unchanged unless noted.
 
 | Page | Before | Now |
 | --- | --- | --- |
@@ -26,7 +26,7 @@ All pages use the restaurant admin look: header band with icon, rounded cards, g
 | Online store | One long form, logo typed as a path, customer chosen by ID. | Big ON/OFF card; panels for look, ordering and payments; colour picker; logo upload; delivery fields appear only when delivery is on; product publishing with chips; customer search with a copyable one-time code. |
 | Products | Filter labels and a DataTable; list failed on a fresh SQLite DB. | Search bar and compact filters; product rows with image, category, stock badge and price. Broken images fall back to an icon. |
 
-The shared `.commerce-form` CSS now uses the restaurant input style, so the product edit drawer matches. Scheduling selected prices uses local time instead of UTC.
+The shared `.commerce-form` CSS now uses the 99 Shop input style, so the product edit drawer matches. Scheduling selected prices uses local time instead of UTC.
 
 ## Website CMS
 
@@ -61,7 +61,7 @@ The shared `.commerce-form` CSS now uses the restaurant input style, so the prod
 
 Owner feedback: product, variant, barcode and pricing work was spread over eight Catalog pages, and it was unclear where to go. Printing a sticker for a new product required a detour to create a barcode first.
 
-- **Menu:** Catalog is now Products, Categories & brands, Offers & bundles and Special prices. Online store moved next to Website. Barcode labels and the bulk editor (Merchandising) open from Products, so they no longer have menu entries. The legacy restaurant categories page is no longer linked.
+- **Menu:** Catalog is now Products, Categories & brands, Offers & bundles and Special prices. Online store moved next to Website. Barcode labels and the bulk editor (Merchandising) open from Products, so they no longer have menu entries. The legacy 99 Shop categories page is no longer linked.
 - **Products:**
   - Tick products (or "Select all on this page") and press **Print labels**; each row also has its own print button.
   - One editor holds photo, name, category, brand and the "For sale" switch, plus price, MRP, barcode, SKU and stock.

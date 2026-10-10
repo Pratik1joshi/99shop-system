@@ -1,7 +1,7 @@
 'use client';
 
 /**
- * Small shared pieces for the Catalog pages, in the restaurant admin's visual
+ * Small shared pieces for the Catalog pages, in the 99 Shop admin's visual
  * language (white header band, rounded-2xl cards, gray-900 primary buttons).
  */
 import { useState } from 'react';

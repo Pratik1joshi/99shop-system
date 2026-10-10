@@ -8,7 +8,7 @@ Home -> Menu -> Search/filter -> Add items -> Cart
   -> Enter customer/fulfillment details -> Submit online order -> Confirmation
 ```
 
-The server reloads current products, availability, variants, and prices before accepting an order. The client cart is a request, not a trusted financial record. Public pages also expose restaurant information, gallery, contact, and inquiry actions.
+The server reloads current products, availability, variants, and prices before accepting an order. The client cart is a request, not a trusted financial record. Public pages also expose 99 Shop information, gallery, contact, and inquiry actions.
 
 ## Administrator flow
 

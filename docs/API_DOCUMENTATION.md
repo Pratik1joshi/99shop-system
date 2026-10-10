@@ -36,14 +36,14 @@ Public write routes are rate-limited. Product identity, price, availability, tot
 | `/api/users/active` | GET | Active staff list for supported login UI |
 | `/api/admin/login` | POST | Admin login compatibility endpoint |
 
-## Counter and restaurant operations
+## Counter and 99 Shop operations
 
-- Menu: `/api/restaurant/menu`, `/api/restaurant/menu/categories`
-- Tables: `/api/restaurant/tables`, `/api/restaurant/tables/[id]`
-- Orders: `/api/restaurant/orders`, `/api/restaurant/orders/[id]`, `/items`, and `/api/restaurant/order-items/[id]/status`
-- Kitchen tickets: `/api/restaurant/kots`, `/api/restaurant/kots/[id]`
-- Bills/payments: `/api/restaurant/bills`, `/api/restaurant/bills/[id]/payment`, `/api/restaurant/payments`
-- Reservations: `/api/restaurant/reservations`, `/api/restaurant/reservations/[id]`
+- Menu: `/api/shop99/menu`, `/api/shop99/menu/categories`
+- Tables: `/api/shop99/tables`, `/api/shop99/tables/[id]`
+- Orders: `/api/shop99/orders`, `/api/shop99/orders/[id]`, `/items`, and `/api/shop99/order-items/[id]/status`
+- Kitchen tickets: `/api/shop99/kots`, `/api/shop99/kots/[id]`
+- Bills/payments: `/api/shop99/bills`, `/api/shop99/bills/[id]/payment`, `/api/shop99/payments`
+- Reservations: `/api/shop99/reservations`, `/api/shop99/reservations/[id]`
 
 These routes require authentication. Method support is declared in each `route.js`; clients must not assume every collection supports full CRUD.
 
@@ -53,7 +53,7 @@ These routes require authentication. Method support is declared in each `route.j
 |---|---|
 | Dashboard/reporting | `/api/admin/dashboard`, `/analytics`, `/reports`, `/kitchen-analytics` |
 | Orders/billing | `/api/admin/orders`, `/bills`, `/billing`, `/corrections` |
-| Catalog | `/api/admin/products`, `/categories` via restaurant API, `/cms` |
+| Catalog | `/api/admin/products`, `/categories` via 99 Shop API, `/cms` |
 | Inventory | `/api/admin/inventory`, `/inventory/dashboard`, `/inventory/restock`, `/stock-movements`, `/unit-conversions`, `/wastage` |
 | Purchasing | `/api/admin/purchases`, `/suppliers`, `/accounts-payable` |
 | People | `/api/admin/customers`, `/employees`, `/payroll`, `/employee-performance` |

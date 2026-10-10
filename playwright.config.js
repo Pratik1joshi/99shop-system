@@ -1,7 +1,7 @@
 import { defineConfig, devices } from '@playwright/test';
 
 /**
- * E2E acceptance tests for the Dim Sum Puri counter POS + public site.
+ * E2E acceptance tests for the 99 Shop counter POS + public site.
  * Assumes a dev server is already running on PORT (default 3002) against the
  * target database. Start it with:
  *   DATABASE_URL=... npx next dev -p 3002

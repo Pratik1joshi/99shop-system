@@ -5,7 +5,7 @@ Scope: application structure, navigation, billing, catalog, purchasing, inventor
 
 ## Executive summary
 
-The project is not a failed rewrite. It contains a strong accounting/business-day core and a substantial retail engine, but two generations of the product were exposed at the same time. Restaurant orders, bills, stock, purchases, reports, and permissions remained active beside new retail sales, inventory balances, goods receipts, returns, transfers, and analytics. The result looked like one ERP while behaving like two partially connected ERPs.
+The project is not a failed rewrite. It contains a strong accounting/business-day core and a substantial retail engine, but two generations of the product were exposed at the same time. 99 Shop orders, bills, stock, purchases, reports, and permissions remained active beside new retail sales, inventory balances, goods receipts, returns, transfers, and analytics. The result looked like one ERP while behaving like two partially connected ERPs.
 
 The highest-impact defect was deeper than duplicate navigation: 10 of the 11 current Shop 99 products had no variant/SKU row, while retail billing, purchasing, and inventory require a variant ID. Most of the real catalog therefore could not appear in retail Billing or enter retail stock.
 
@@ -13,13 +13,13 @@ This repair establishes retail as the canonical operator experience. Legacy tabl
 
 ## System map
 
-| Area | Restaurant-era path | Retail-era path | Decision |
+| Area | 99 Shop-era path | Retail-era path | Decision |
 | --- | --- | --- | --- |
 | Checkout | `orders`, `bills`, `/admin/pos` | `retail_sales`, `/admin/retail-pos` | Canonical `/admin/billing`; old URLs redirect |
 | Purchases | `purchases` + `purchase_items` + `inventory_items` | purchase orders + goods receipts + `inventory_balances` | Canonical retail Purchases screen |
 | Stock | legacy quantity/stock movements | location-aware perpetual inventory | Retail inventory is operational source of truth |
 | Returns | bill corrections/cancellations | retail returns and exchanges | Retail returns for new sales |
-| Promotions | restaurant promotions | priority/coupon retail promotions | Retail promotions in navigation |
+| Promotions | 99 Shop promotions | priority/coupon retail promotions | Retail promotions in navigation |
 | Analytics | order-based reports | retail sales/inventory analytics | Retail Insights is primary |
 | People | employees/payroll plus separate HRM setup pages | same shared data | One “People & Payroll” navigation area |
 | Accounting | shared journals and business days | retail sales/COGS and receipts post into the same ledger | Keep shared core |
@@ -63,7 +63,7 @@ This repair establishes retail as the canonical operator experience. Legacy tabl
 4. Made product-to-SKU compatibility deterministic and protected stable retail history IDs.
 5. Backfilled the local development database from 1/11 to 11/11 sellable products; migration 084 performs the production backfill.
 6. Expanded Purchases with supplier invoice metadata, payment method, product search, serial capture, and recent receipt history.
-7. Simplified navigation labels, removed duplicate restaurant operations from the primary admin path, and made retail Insights canonical.
+7. Simplified navigation labels, removed duplicate 99 Shop operations from the primary admin path, and made retail Insights canonical.
 8. Improved responsive Billing layout and interaction feedback.
 9. Added regression tests for canonical routes/navigation and SKU stability.
 10. Restored the full Analytics, Summary, and Reports navigation after operator feedback.
@@ -88,7 +88,7 @@ This repair establishes retail as the canonical operator experience. Legacy tabl
 - Add a People dashboard with today’s attendance, pending payroll, advances, and staff actions.
 - Add role presets (Owner, Manager, Cashier, Stock Clerk, Accountant) over the raw permission matrix.
 - Create a settings-driven store/location selector if multi-location operation is actually required; otherwise hide transfer/location complexity.
-- Archive restaurant-only routes after a measured historical-data migration and signed reconciliation, not before.
+- Archive 99 Shop-only routes after a measured historical-data migration and signed reconciliation, not before.
 
 ## Acceptance criteria for “retail ERP ready”
 
@@ -96,7 +96,7 @@ This repair establishes retail as the canonical operator experience. Legacy tabl
 - Receiving a purchase changes the same stock balance that Billing consumes.
 - A completed sale reduces location stock and posts revenue, payment, inventory, and COGS exactly once.
 - Returns reverse the correct sale lines and tender/store-credit amounts exactly once.
-- Business-day close reconciles retail cash and non-cash payments without consulting restaurant orders.
+- Business-day close reconciles retail cash and non-cash payments without consulting 99 Shop orders.
 - Owner, cashier, stock clerk, and accountant each see only their required workflows.
 - Dashboard, Insights, inventory valuation, general ledger, AP, and AR agree for the same cutoff.
 - Retail unit, integration, and end-to-end suites pass on SQLite and PostgreSQL.

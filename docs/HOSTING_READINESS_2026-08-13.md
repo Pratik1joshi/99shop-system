@@ -44,7 +44,7 @@ Not yet a passing gate:
 
 ## Database procedure
 
-### Fresh restaurant database
+### Fresh 99 Shop database
 
 1. Create a dedicated PostgreSQL database and non-superuser application user.
 2. Keep database sessions in UTC:
@@ -115,7 +115,7 @@ Not yet a passing gate:
    reports before reopening ordering.
 
 Never manually edit production tables to hide a schema error. Add or run an
-ordered migration so staging, production and the next restaurant stay aligned.
+ordered migration so staging, production and the next 99 Shop stay aligned.
 
 ## Hosting configuration
 
@@ -129,7 +129,7 @@ Use Node.js 22 and `server.js`. Required production values include:
 - `FORCE_SECURE_COOKIES=1`
 - `HOSTNAME=0.0.0.0`
 - persistent `UPLOADS_DIR` and `IMAGES_PATH=/uploads`
-- `RESTAURANT_MODE` and `POS_ENABLED_ROLES`
+- `SHOP_MODE` and `POS_ENABLED_ROLES`
 
 Do not copy the local `.env`; it has no production URL or PostgreSQL connection.
 Create the production environment from `.env.example` and the host secret store.

@@ -1,4 +1,4 @@
--- Retail naming cleanup: rename restaurant-era setting keys to shop_*, and
+-- Retail naming cleanup: rename 99 Shop-era setting keys to shop_*, and
 -- drop the dine-in tables (reservations, waiter requests, table floor/type
 -- taxonomy) that have had no writer since the retail conversion — no FK
 -- references them.

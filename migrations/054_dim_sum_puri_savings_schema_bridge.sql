@@ -1,4 +1,4 @@
--- Convert the production Dim Sum Puri savings-deposit shape to the newer
+-- Convert the production 99 Shop savings-deposit shape to the newer
 -- Savings module without dropping old columns or records. Fresh databases
 -- already have these columns, so all operations remain idempotent.
 

@@ -21,11 +21,11 @@ test('printer payload persists every template option and serializes switches', (
   assert.equal(settingEnabled(payload.bill_show_payment), false);
 });
 
-test('retail shell keeps the restaurant accordion style without restaurant-only destinations', async () => {
+test('retail shell keeps the 99 Shop accordion style without 99 Shop-only destinations', async () => {
   const source = await readFile(new URL('../../components/erp/app-shell.jsx', import.meta.url), 'utf8');
   assert.match(source, /aria-label="Retail workspaces"/);
   assert.match(source, /name: 'People', tint: 'fuchsia'/);
   assert.match(source, /name: 'Accounting', tint: 'emerald'/);
-  // Restaurant workflows, and shared pages still reading restaurant facts, stay out of the Retail nav.
+  // 99 Shop workflows, and shared pages still reading 99 Shop facts, stay out of the Retail nav.
   assert.doesNotMatch(source, /href: '\/(admin|cashier)\/(kot|kots|tables|table-management|waiter-requests|recipes|kitchen-analytics|leads|reservations|bills|orders|wastage|inventory\/dashboard|finance-dashboard|corrections|previous-day-activity|suppliers)'/);
 });

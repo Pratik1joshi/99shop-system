@@ -1,4 +1,4 @@
--- Retail transactions are variant/SKU keyed, while the restaurant catalog
+-- Retail transactions are variant/SKU keyed, while the 99 Shop catalog
 -- allowed products with no variant row. Give every ordinary product one
 -- stable default SKU so it can be sold, received, counted, and transferred.
 -- These compatibility columns previously existed only through the runtime

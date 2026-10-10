@@ -5,7 +5,7 @@ import { normalizedOrderType, orderTypeLabel, normalizedOrderTypeSql } from '../
 test('every non-delivery sale, including legacy dine-in rows, normalizes to counter', () => {
   assert.equal(normalizedOrderType({ order_type: 'counter' }), 'counter');
   assert.equal(normalizedOrderType({ order_type: null }), 'counter');
-  // Rows written while this was a restaurant keep their stored type; they must
+  // Rows written while this was the 99 Shop keep their stored type; they must
   // still group as ordinary counter sales rather than a channel of their own.
   assert.equal(normalizedOrderType({ order_type: 'dine_in', table_id: 4 }), 'counter');
   assert.equal(normalizedOrderType({ order_type: 'takeaway' }), 'counter');

@@ -1,7 +1,7 @@
 'use client';
 
 /**
- * Retail POS — independent of the restaurant orders/bills/tables/KOT stack.
+ * Retail POS — independent of the 99 Shop orders/bills/tables/KOT stack.
  * Every mutation goes through /api/admin/retail-sales*, which is backed by
  * lib/retail-sales.js (checkoutSale -> issueStock -> moving-average COGS ->
  * one journal). Nothing here calls the legacy bill/order/KOT endpoints.

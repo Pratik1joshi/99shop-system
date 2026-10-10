@@ -27,7 +27,7 @@ Also review pending migrations, verify `.env.example`, and back up the target Po
 1. Provision Node.js 22 and PostgreSQL 14+.
 2. Create a dedicated database/user and grant access only to that database.
 3. Use a UTF-8 database. Run `npm run db:migrate` and check `npm run db:plan`
-   reports zero pending migrations. Do not load the old restaurant schema or
+   reports zero pending migrations. Do not load the old 99 Shop schema or
    seed snapshots in `deploy/`.
 4. Set a unique `ADMIN_PASSWORD` and run `npm run db:seed` once on the fresh
    database.

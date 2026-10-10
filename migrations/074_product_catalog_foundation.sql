@@ -1,7 +1,7 @@
 -- Retail product catalog foundation: multi-barcode support, a flexible
 -- attribute system (color/size/shade/... without fixed columns), and the
 -- per-variant commercial fields (SKU, MRP, wholesale price, tax category,
--- reorder quantity) a retail SKU needs that a restaurant menu item never
+-- reorder quantity) a retail SKU needs that the 99 Shop menu item never
 -- did. Additive only — menu_items/menu_item_variants.barcode stay as the
 -- primary code so nothing that already reads them breaks; this is a second,
 -- optional namespace for extra codes per variant.

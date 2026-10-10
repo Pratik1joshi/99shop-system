@@ -202,7 +202,7 @@
 }
 
 /* ─────────────────────────────────────────────────────────────
-   Dim Sum Puri public website theme (Phase 6 tokens).
+   99 Shop public website theme (Phase 6 tokens).
    Namespaced under .dsp-site so the admin/POS theme is untouched.
    Swap these values to rebrand the public site in one place.
    ───────────────────────────────────────────────────────────── */
@@ -504,7 +504,7 @@
   .dsp-site * { animation-duration: 0.001ms !important; transition-duration: 0.001ms !important; }
 }
 
-/* ── Dim Sum Puri public motion (emil-design-eng pass) ──────────────
+/* ── 99 Shop public motion (emil-design-eng pass) ──────────────
    Restrained, purposeful: press feedback + a single mobile-menu entrance.
    Transforms/opacity only. Reduced-motion is neutralized by the rule above. */
 .dsp-site { --dsp-ease-out: cubic-bezier(0.23, 1, 0.32, 1); }

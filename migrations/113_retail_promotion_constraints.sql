@@ -1,5 +1,5 @@
 -- The retail promotion editor adds repriced bundles, brands and variants to
--- the original restaurant promotion schema. Keep these fields in migrations
+-- the original 99 Shop promotion schema. Keep these fields in migrations
 -- so a fresh PostgreSQL install works before any runtime schema helper runs.
 ALTER TABLE promotions ADD COLUMN IF NOT EXISTS priority INTEGER NOT NULL DEFAULT 0;
 ALTER TABLE promotions ADD COLUMN IF NOT EXISTS quantity_price_amount DOUBLE PRECISION;

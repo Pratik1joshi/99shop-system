@@ -5,7 +5,7 @@ Every accounting number is derived from a single double-entry journal; no
 stored balances. Role-based access (admin / cashier) plus a public storefront
 that reads the live catalogue.
 
-The codebase started as a restaurant POS; the dine-in workflow (tables,
+The codebase started as the 99 Shop POS; the dine-in workflow (tables,
 waiters, kitchen tickets, reservations, QR table ordering) has been removed and
 `lib/deployment.js` records the profile. Sections describing those modules are
 gone from this document.
@@ -27,7 +27,7 @@ Stack: Next.js 16 (webpack), custom `server.js` (cPanel/Node), PostgreSQL
 - **Purpose:** the product catalogue, shared by the till and the storefront.
 - **Features:** product CRUD, variants, barcodes (scanned, typed or generated), availability, images, master categories (Accessories / Cosmetics / Other).
 - **Pages:** `/admin/products`, `/admin/products/labels`, `/admin/categories`, `/cashier/products`, public `/` and `/shop/[slug]`.
-- **APIs:** `/api/admin/products`, `/api/restaurant/menu`, `/api/restaurant/menu/categories`, `/api/uploads/menu`.
+- **APIs:** `/api/admin/products`, `/api/shop99/menu`, `/api/shop99/menu/categories`, `/api/uploads/menu`.
 - **Tables:** `menu_items` (+`barcode`, `stock_usage`), `menu_categories` (+`food_group`, holding the master category), `menu_item_variants`.
 - **Integration:** sales, inventory links, billing prices, storefront (`lib/storefront.js`).
 
@@ -43,7 +43,7 @@ Stack: Next.js 16 (webpack), custom `server.js` (cPanel/Node), PostgreSQL
 - **Purpose:** turn an order into a paid bill; thermal receipt.
 - **Features:** VAT + service + discount, split payments, cash/card/QR/eSewa/Khalti/credit, change, shared 58/80mm thermal print, payment QR display.
 - **Pages:** `/cashier`, `/cashier/bill/[id]`, `/cashier/billing`, `/admin/bills`.
-- **APIs:** `/api/admin/billing`, `/api/admin/pos/orders/[id]/pay`, `/api/admin/bills`, `/api/restaurant/payments`.
+- **APIs:** `/api/admin/billing`, `/api/admin/pos/orders/[id]/pay`, `/api/admin/bills`, `/api/shop99/payments`.
 - **Tables:** `bills` (+`void_reason`,`voided_at`,`refunded_amount`), `bill_payments`, `bill_corrections`.
 - **Integration:** **posts the sale journal atomically**; accounting corrections (void/refund); customers.
 

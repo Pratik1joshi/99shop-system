@@ -4,7 +4,7 @@ import Database from '@/lib/db/index.js';
 import { OrderRepository } from '@/lib/db/repositories/orders.js';
 import { getOrderWorkspace, logPosEvent, ensureKotProSchema } from '@/lib/kot-service.js';
 import { ensureColumn } from '@/lib/db/schema-helpers.js';
-import { RESTAURANT_MODE } from '@/lib/deployment.js';
+import { SHOP_MODE } from '@/lib/deployment.js';
 
 const orderRepo = new OrderRepository();
 
@@ -26,8 +26,8 @@ export async function GET(request) {
  * already-occupied table (multi-person dining).
  */
 export async function POST(request) {
-  if (RESTAURANT_MODE === 'RETAIL') {
-    return NextResponse.json({ error: 'Restaurant orders cannot be created in Retail mode. Use Billing.' }, { status: 410 });
+  if (SHOP_MODE === 'RETAIL') {
+    return NextResponse.json({ error: '99 Shop orders cannot be created in Retail mode. Use Billing.' }, { status: 410 });
   }
   try {
     const auth = await requireAuth(request, { roles: ['admin', 'waiter', 'cashier'], permission: 'orders.create' });

@@ -14,7 +14,7 @@
  *   node scripts/seed-shop99-catalog.mjs              # add/update accessories
  *   node scripts/seed-shop99-catalog.mjs --dry-run    # report only
  *   node scripts/seed-shop99-catalog.mjs --replace-demo
- *       # additionally delete the inherited restaurant demo catalog
+ *       # additionally delete the inherited 99 Shop demo catalog
  */
 import Database from '../lib/db/index.js';
 
@@ -84,7 +84,7 @@ async function upsertProduct(db, product, categoryId) {
 }
 
 /**
- * Drops the inherited restaurant demo catalog. Sold lines keep their own
+ * Drops the inherited 99 Shop demo catalog. Sold lines keep their own
  * item_name/price snapshot in order_items, so paid bills stay readable; the
  * menu_item_id link is ON DELETE SET NULL.
  */
