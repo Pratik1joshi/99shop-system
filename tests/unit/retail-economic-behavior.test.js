@@ -73,7 +73,6 @@ async function checkout(item, quantity, payments, extra = {}) {
 
 test('setup canonical retail transaction environment', async () => {
   await ensureAccountingSchema(db);
-  await ensureColumn(db, 'menu_items', 'is_combo', 'INTEGER DEFAULT 0');
   await ensureMenuVariantsSchema(db);
   await ensureRetailInventorySchema(db);
   await ensureRetailSalesSchema(db);

@@ -86,9 +86,8 @@ export async function PUT(request) {
     await db.transaction(async (tx) => {
       await lockCatalogWrite(tx);
       const lock = tx.driver === 'postgres' ? ' FOR UPDATE' : '';
-      const product = await tx.get(`SELECT id,is_combo FROM menu_items WHERE id=?${lock}`, [data.id]);
+      const product = await tx.get(`SELECT id FROM menu_items WHERE id=?${lock}`, [data.id]);
       if (!product) throw bad('Product not found.', 404);
-      if (product.is_combo) throw bad('Manage this product through Combo Packs.', 409);
       let categoryId = data.category_id;
       if (categoryId) {
         const selected = await tx.get('SELECT id FROM menu_categories WHERE id=?', [Number(categoryId)]);
@@ -165,9 +164,8 @@ export async function DELETE(request) {
     const id = Number(new URL(request.url).searchParams.get('id'));
     const result = await db.transaction(async (tx) => {
       await lockCatalogWrite(tx);
-      const product = await tx.get('SELECT id,is_combo FROM menu_items WHERE id=?', [id]);
+      const product = await tx.get('SELECT id FROM menu_items WHERE id=?', [id]);
       if (!product) throw bad('Product not found.', 404);
-      if (Number(product.is_combo)) throw bad('Manage this product through Combo Packs.', 409);
       return deleteProduct(tx, id);
     });
     return NextResponse.json({ id, result });
