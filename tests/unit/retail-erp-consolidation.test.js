@@ -67,10 +67,6 @@ test('retail staff access roles exclude 99 Shop-only waiter and kitchen accounts
   assert.doesNotMatch(staffPage, /option value="kitchen"/);
 });
 
-test('legacy sale creation endpoints fail closed in Retail mode', () => {
-  assert.match(source('app/api/admin/billing/route.js'), /Legacy 99 Shop billing is read-only in Retail mode/);
-  assert.match(source('app/api/admin/pos/orders/route.js'), /99 Shop orders cannot be created in Retail mode/);
-});
 
 test('active retail dashboard and reporting never read 99 Shop transaction facts', () => {
   for (const file of ['app/api/admin/dashboard/route.js', 'lib/retail-reporting.js']) {

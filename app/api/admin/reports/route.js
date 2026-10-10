@@ -3,10 +3,8 @@ import { NextResponse } from 'next/server';
 import Database from '@/lib/db/index';
 import { resolvePeriodRange } from '@/lib/report-dates.js';
 import { requireAuth, handleRouteError } from '@/lib/api-guard.js';
-import {
-  allowedReportTabs, ensureReportSchema,
-  dateKey, REPORT_TABS, parseReportTablePaging,
-} from '@/lib/reports.js';
+import { allowedReportTabs, dateKey, REPORT_TABS, parseReportTablePaging } from '@/lib/report-tabs.js';
+import { ensureExpenseVoidSchema } from '@/lib/expense-links.js';
 import { currentBusinessDay } from '@/lib/business-days.js';
 import { isPermissionAllowedSync } from '@/lib/permissions.js';
 import { buildRetailReport, getRetailReportFilterOptions, retailSupportedFilters } from '@/lib/retail-reporting.js';
@@ -70,7 +68,7 @@ export async function GET(request) {
     // Every optional table/column this engine reads lives in one place next to
     // the queries, so direct callers (tests, jobs, the probe script) get the
     // same preparation this route does.
-    await ensureReportSchema(db);
+    await ensureExpenseVoidSchema(db);
     /*
      * "Today" means the CURRENT BUSINESS DAY, not the calendar date — the same
      * rule /api/admin/analytics already applies.

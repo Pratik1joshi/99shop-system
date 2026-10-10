@@ -22,11 +22,9 @@
     "test:e2e": "playwright test",
     "test:integration": "node scripts/run-integration.mjs",
     "test:unit": "node --import ./tests/unit/loader-register.mjs --test tests/unit/*.test.js",
-    "probe:reports": "node --import ./tests/unit/loader-register.mjs scripts/probe-reports.mjs",
     "docs:renumber": "node --import ./tests/unit/loader-register.mjs scripts/renumber-documents.mjs",
     "journals:backfill": "node --import ./tests/unit/loader-register.mjs scripts/backfill-bill-journals.mjs",
-    "bank:audit": "node --import ./tests/unit/loader-register.mjs scripts/bank-audit.mjs",
-    "probe:reports:fresh": "node --import ./tests/unit/loader-register.mjs scripts/probe-reports.mjs --fresh"
+    "bank:audit": "node --import ./tests/unit/loader-register.mjs scripts/bank-audit.mjs"
   },
   "dependencies": {
     "@hookform/resolvers": "^5.2.2",

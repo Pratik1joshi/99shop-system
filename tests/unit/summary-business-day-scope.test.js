@@ -7,7 +7,7 @@ import { PosDatabase } from '../../lib/db/index.js';
 import { ensureAccountingSchema, postJournal } from '../../lib/accounting.js';
 import { ensureBusinessDaySchema } from '../../lib/business-days.js';
 import { buildSummaryReport } from '../../lib/summary-report.js';
-import { ensureReportSchema } from '../../lib/reports.js';
+import { ensureExpenseVoidSchema } from '../../lib/expense-links.js';
 
 const dbPath = path.join(os.tmpdir(), `summary-business-scope-${process.pid}-${Date.now()}.db`);
 const db = new PosDatabase(dbPath);
@@ -22,7 +22,7 @@ test.after(() => {
 });
 
 test('single-day summary uses business-day cash scope across the midnight boundary', async () => {
-  await ensureReportSchema(db);
+  await ensureExpenseVoidSchema(db);
   await ensureAccountingSchema(db);
   await ensureBusinessDaySchema(db);
   const inserted = await db.run(
@@ -37,7 +37,7 @@ test('single-day summary uses business-day cash scope across the midnight bounda
   );
   const drawer = await db.get(`SELECT id FROM cash_drawers WHERE is_active=1 ORDER BY id LIMIT 1`);
 
-  // The journal is created today but belongs to yesterday's 99 Shop day.
+  // The journal is created today but belongs to yesterday's business day.
   // A calendar-only report would miss it and disagree with the drawer close.
   await postJournal(db, {
     memo: 'Late business-day cash movement', source_type: 'manual_adjustment',
@@ -79,7 +79,7 @@ test('single-day summary includes cash moved between same-day store sessions', a
       ? [{ code: '3010', debit: amount, credit: 0 }, { code: '1010', debit: 0, credit: amount, drawer_id: drawer.id }]
       : [{ code: '1010', debit: amount, credit: 0, drawer_id: drawer.id }, { code: '4010', debit: 0, credit: amount }],
   });
-  await postCash(9035, 'bill');
+  await postCash(9035, 'retail_sale');
   await postCash(1100, 'credit_collection');
   // Mid-day reopen bridge — must still affect closing because day.opening_cash
   // stays at the morning float. Day-open (store_session_opened) bridges do not.
@@ -134,7 +134,7 @@ test('single-day summary does not double-count day-open bridge when opening is 0
     ],
   });
   await postJournal(db, {
-    memo: 'Cash sale', source_type: 'bill', business_day_id: dayId, created_by: actor.id,
+    memo: 'Cash sale', source_type: 'retail_sale', business_day_id: dayId, created_by: actor.id,
     lines: [
       { code: '1010', debit: 2367.5, credit: 0, drawer_id: drawer.id },
       { code: '4010', debit: 0, credit: 2367.5 },
@@ -157,7 +157,7 @@ test('single-day summary does not double-count day-open bridge when opening is 0
 });
 
 test('summary counts shop (retail) sales, returns and cost of goods', async () => {
-  await ensureReportSchema(db);
+  await ensureExpenseVoidSchema(db);
   await ensureAccountingSchema(db);
   const day = '2000-02-01';
   for (const code of ['4011', '5080', '1210']) {

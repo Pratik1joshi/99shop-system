@@ -142,7 +142,7 @@ test('past-day Summary cash only drops by the unfunded portion after Business Fu
   await postJournal(db, {
     entry_date: dayDate,
     memo: 'Cash sale',
-    source_type: 'bill',
+    source_type: 'retail_sale',
     business_day_id: day.lastInsertRowid,
     lines: [
       { code: '1010', debit: 500, credit: 0, drawer_id: 1 },
@@ -154,18 +154,17 @@ test('past-day Summary cash only drops by the unfunded portion after Business Fu
   await db.run(
     `INSERT INTO expenses
        (id, description, category, amount, expense_date, purchase_date, payment_method, business_day_id, status, source_type)
-     VALUES (501, 'Big stock buy', 'Purchases', 1800, ?, ?, 'cash', ?, 'active', 'purchase')`,
+     VALUES (501, 'Shop rent', 'Rent', 1800, ?, ?, 'cash', ?, 'active', NULL)`,
     [dayDate, dayDate, day.lastInsertRowid]
   );
   await postExpenseJournal(db, {
     id: 501,
     amount: 1800,
-    description: 'Big stock buy',
-    category: 'Purchases',
+    description: 'Shop rent',
+    category: 'Rent',
     payment_method: 'cash',
     expense_date: dayDate,
     business_day_id: day.lastInsertRowid,
-    source_type: 'purchase',
     use_business_funding: true,
   });
 
@@ -181,8 +180,8 @@ test('past-day Summary cash only drops by the unfunded portion after Business Fu
   assert.equal(fundingCredit, 1300);
 
   const summary = await buildSummaryReport(db, { start: dayDate, end: dayDate });
-  assert.equal(summary.purchases.cash, 500);
-  assert.equal(summary.purchases.funding, 1300);
+  assert.equal(summary.expenses.cash, 500);
+  assert.equal(summary.expenses.funding, 1300);
   assert.equal(summary.accounts.cash.movements.expense?.credit, 500);
   assert.equal(summary.accounts.cash.closing, 0);
 });

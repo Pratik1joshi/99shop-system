@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import Database from '@/lib/db/index';
 import { requireAuth, handleRouteError } from '@/lib/api-guard.js';
-import { allowedReportTabs, REPORT_TABS } from '@/lib/reports.js';
+import { allowedReportTabs, REPORT_TABS } from '@/lib/report-tabs.js';
 import { buildReportRecordDetails } from '@/lib/report-record-details.js';
 import { isPermissionAllowedSync } from '@/lib/permissions.js';
 
