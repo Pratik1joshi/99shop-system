@@ -1,17 +1,17 @@
 import { NextResponse } from 'next/server';
-import { saveMenuImage } from '@/lib/uploads';
+import { saveProductImage } from '@/lib/uploads';
 import { requireAuth, handleRouteError } from '@/lib/api-guard.js';
 
 export const runtime = 'nodejs';
 
 /**
- * POST /api/uploads/menu
+ * POST /api/uploads/products
  * multipart form field: "file" or "image"
- * Returns: { url: "/uploads/menu/...." }
+ * Returns: { url: "/api/media/products/..." }
  */
 export async function POST(request) {
   try {
-    const auth = await requireAuth(request, { roles: ['admin', 'cashier'], permission: 'menu.manage' });
+    const auth = await requireAuth(request, { roles: ['admin', 'cashier'], permission: 'catalog.manage' });
     if (auth.error) return auth.error;
 
     const form = await request.formData();
@@ -25,7 +25,7 @@ export async function POST(request) {
       return NextResponse.json({ error: 'Image must be under 5MB' }, { status: 400 });
     }
 
-    const url = await saveMenuImage(file);
+    const url = await saveProductImage(file);
     return NextResponse.json({ url, image_url: url });
   } catch (error) {
     if (error?.status === 400) {

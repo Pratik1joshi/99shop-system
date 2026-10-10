@@ -25,7 +25,7 @@ export async function GET(request, context) {
       v.reorder_point,v.reorder_quantity,l.id AS location_id,l.name AS location_name,l.code AS location_code,
       (SELECT COALESCE(SUM(b.quantity_on_hand),0) FROM inventory_balances b WHERE b.variant_id=v.id AND b.location_id=l.id) AS on_hand
       ${showCost ? ',ic.average_cost AS current_cost' : ''}
-      FROM menu_item_variants v JOIN menu_items p ON p.id=v.menu_item_id
+      FROM product_variants v JOIN products p ON p.id=v.product_id
       JOIN inventory_locations l ON l.id=? ${showCost ? 'LEFT JOIN inventory_costs ic ON ic.variant_id=v.id' : ''}
       WHERE v.id=?`, [locationId, variantId]);
     if (!identity) return NextResponse.json({ error: 'Stock identity not found.' }, { status: 404 });

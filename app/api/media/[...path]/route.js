@@ -20,7 +20,7 @@ const MIME = {
 };
 
 /**
- * GET /api/media/menu/filename.jpg
+ * GET /api/media/products/filename.jpg
  * Streams files from UPLOADS_DIR (or public/uploads fallback).
  */
 export async function GET(_request, context) {
@@ -29,7 +29,8 @@ export async function GET(_request, context) {
     if (!parts.length || parts.some((p) => p.includes('..') || p.includes('/') || p.includes('\\'))) {
       return NextResponse.json({ error: 'Not found' }, { status: 404 });
     }
-    const publicMedia=['menu','cms'].includes(parts[0]);
+    // 'menu' holds product photos uploaded before the products folder existed.
+    const publicMedia=['products','menu','cms'].includes(parts[0]);
     if(!publicMedia){const auth=await requireAuth(_request,{roles:['admin','cashier'],anyPermissions:['expenses.manage','purchases.view']});if(auth.error)return auth.error;}
 
     const urlPath = `/uploads/${parts.map(decodeURIComponent).join('/')}`;

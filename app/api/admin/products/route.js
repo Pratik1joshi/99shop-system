@@ -1,14 +1,14 @@
 import { NextResponse } from 'next/server';
 import Database from '@/lib/db/index';
 import { requireAuth, handleRouteError } from '@/lib/api-guard.js';
-import { ensureMenuVariantsSchema, getVariantsByMenuItemIds } from '@/lib/menu-variants.js';
+import { ensureProductVariantsSchema, getVariantsByProductIds } from '@/lib/product-variants.js';
 import { ensureProductCatalogSchema } from '@/lib/product-catalog.js';
 import { isPermissionAllowedSync, ensurePermissionCache } from '@/lib/permissions.js';
 
 /** Every non-primary barcode, grouped by owner, so scanning finds manufacturer/supplier/alternate codes too. */
 async function getExtraBarcodes(db) {
   const rows = await db.all(
-    `SELECT menu_item_id, variant_id, barcode, barcode_type
+    `SELECT product_id, variant_id, barcode, barcode_type
      FROM product_barcodes WHERE is_primary = 0`
   );
   const byItem = new Map();
@@ -18,10 +18,10 @@ async function getExtraBarcodes(db) {
       const list = byVariant.get(row.variant_id) || [];
       list.push(row.barcode);
       byVariant.set(row.variant_id, list);
-    } else if (row.menu_item_id) {
-      const list = byItem.get(row.menu_item_id) || [];
+    } else if (row.product_id) {
+      const list = byItem.get(row.product_id) || [];
       list.push(row.barcode);
-      byItem.set(row.menu_item_id, list);
+      byItem.set(row.product_id, list);
     }
   }
   return { byItem, byVariant };
@@ -30,21 +30,21 @@ async function getExtraBarcodes(db) {
 /** Product list with variants, for the product pickers on Online Orders and Promotions. */
 export async function GET(request) {
   try {
-    const auth = await requireAuth(request, { roles: ['admin', 'cashier'], permission: 'menu.view' });
+    const auth = await requireAuth(request, { roles: ['admin', 'cashier'], permission: 'catalog.view' });
     if (auth.error) return auth.error;
 
     const db = Database.getInstance();
-    await ensureMenuVariantsSchema(db);
+    await ensureProductVariantsSchema(db);
     await ensureProductCatalogSchema(db);
 
     const products = await db.all(`
       SELECT mi.*, mi.base_price AS price, mc.name AS category_name
-      FROM menu_items mi
-      LEFT JOIN menu_categories mc ON mi.category_id = mc.id
+      FROM products mi
+      LEFT JOIN product_categories mc ON mi.category_id = mc.id
       ORDER BY mi.name
     `);
 
-    const variantsByItem = await getVariantsByMenuItemIds(db, products.map((p) => p.id));
+    const variantsByItem = await getVariantsByProductIds(db, products.map((p) => p.id));
     const extraBarcodes = await getExtraBarcodes(db);
     for (const product of products) {
       product.variants = variantsByItem.get(product.id) || [];

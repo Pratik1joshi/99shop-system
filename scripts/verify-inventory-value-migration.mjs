@@ -19,9 +19,9 @@ try {
       if (mode === 'upgrade') baseline = (await client.query(`INSERT INTO customers(name,phone,notes) VALUES ('Preserve customer','9800000102','Existing evidence') RETURNING *`)).rows[0];
       let inventoryBaseline;
       if (mode === 'upgrade') {
-        const cat=(await client.query("INSERT INTO menu_categories(name) VALUES ('Upgrade inventory') RETURNING id")).rows[0].id;
-        const product=(await client.query("INSERT INTO menu_items(name,category_id,base_price) VALUES ('Upgrade SKU',$1,100) RETURNING id",[cat])).rows[0].id;
-        const variant=(await client.query("INSERT INTO menu_item_variants(menu_item_id,variant_name) VALUES ($1,'Standard') RETURNING id",[product])).rows[0].id;
+        const cat=(await client.query("INSERT INTO product_categories(name) VALUES ('Upgrade inventory') RETURNING id")).rows[0].id;
+        const product=(await client.query("INSERT INTO products(name,category_id,base_price) VALUES ('Upgrade SKU',$1,100) RETURNING id",[cat])).rows[0].id;
+        const variant=(await client.query("INSERT INTO product_variants(product_id,variant_name) VALUES ($1,'Standard') RETURNING id",[product])).rows[0].id;
         await client.query('INSERT INTO inventory_costs(variant_id,quantity_on_hand,average_cost) VALUES ($1,3,33.3333)',[variant]);
         inventoryBaseline=variant;
       }

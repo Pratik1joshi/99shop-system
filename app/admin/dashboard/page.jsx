@@ -79,7 +79,7 @@ export default function OwnerOverview() {
   const compare = versusAverage(data?.charts?.salesTrend);
 
   const quick = [
-    { label: 'Add a product', href: '/admin/products', icon: PackagePlus, show: can('menu.manage') },
+    { label: 'Add a product', href: '/admin/products', icon: PackagePlus, show: can('catalog.manage') },
     { label: 'Receive stock', href: '/admin/retail-goods-receipts', icon: PackageCheck, show: can('retail_purchasing.grn.receive') },
     { label: 'Record an expense', href: '/admin/expenses', icon: Wallet, show: can('expenses.manage') },
     { label: 'Find a bill', href: '/admin/retail-transactions', icon: Search, show: can('retail_sale.view') },

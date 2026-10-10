@@ -7,7 +7,7 @@ import { getSellableStockBulk, getDefaultLocation } from '@/lib/retail-inventory
 // list and the GRN screen both need this without an N+1 lookup per row.
 export async function GET(request) {
   try {
-    const auth = await requireAuth(request, { roles: ['admin', 'cashier'], permission: 'menu.view' });
+    const auth = await requireAuth(request, { roles: ['admin', 'cashier'], permission: 'catalog.view' });
     if (auth.error) return auth.error;
 
     const params = new URL(request.url).searchParams;

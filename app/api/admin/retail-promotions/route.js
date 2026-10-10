@@ -66,7 +66,7 @@ export async function GET(request) {
       ? await db.all(`SELECT promotion_id, COUNT(*) AS uses, COALESCE(SUM(discount_amount),0) AS saved FROM promotion_redemptions WHERE promotion_id IN (${ids.map(() => '?').join(',')}) GROUP BY promotion_id`, ids)
       : [];
     const usageMap = new Map(usage.map((r) => [Number(r.promotion_id), r]));
-    const categories = await db.all(`SELECT id, name FROM menu_categories WHERE is_active = 1 ORDER BY name`);
+    const categories = await db.all(`SELECT id, name FROM product_categories WHERE is_active = 1 ORDER BY name`);
     return NextResponse.json({
       promotions: rows.map((row) => ({ ...normalizePromotion(row, targets), uses: Number(usageMap.get(row.id)?.uses || 0), saved: Number(usageMap.get(row.id)?.saved || 0) })),
       categories,

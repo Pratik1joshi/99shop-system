@@ -5,23 +5,23 @@ import { addBarcode, generateInternalBarcode, getBarcodesFor, removeBarcode,ensu
 import { lockCatalogWrite } from '@/lib/retail-catalog-lock.js';
 
 async function ownedVariant(db, productId, variantId) {
-  const variant = await db.get('SELECT id FROM menu_item_variants WHERE id=? AND menu_item_id=?', [variantId, productId]);
+  const variant = await db.get('SELECT id FROM product_variants WHERE id=? AND product_id=?', [variantId, productId]);
   if (!variant) throw Object.assign(new Error('SKU does not belong to this product.'), { status: 404 });
 }
 
 // Extra barcodes (manufacturer/supplier/alternate) beyond the one primary
-// code menu_items/menu_item_variants already carry — see migration 074.
+// code products/product_variants already carry — see migration 074.
 
 export async function GET(request, context) {
   try {
-    const auth = await requireAuth(request, { roles: ['admin', 'cashier'], permission: 'menu.view' });
+    const auth = await requireAuth(request, { roles: ['admin', 'cashier'], permission: 'catalog.view' });
     if (auth.error) return auth.error;
 
     const { id } = await context.params;
     const variantId = new URL(request.url).searchParams.get('variantId');
     const db = Database.getInstance();
     if (variantId) await ownedVariant(db, Number(id), Number(variantId));
-    const barcodes = await getBarcodesFor(db, variantId ? { variantId: Number(variantId) } : { menuItemId: Number(id) });
+    const barcodes = await getBarcodesFor(db, variantId ? { variantId: Number(variantId) } : { productId: Number(id) });
     return NextResponse.json({ barcodes });
   } catch (error) {
     return handleRouteError(error, 'Could not load barcodes.');
@@ -30,7 +30,7 @@ export async function GET(request, context) {
 
 export async function POST(request, context) {
   try {
-    const auth = await requireAuth(request, { roles: ['admin', 'cashier'], permission: 'menu.manage' });
+    const auth = await requireAuth(request, { roles: ['admin', 'cashier'], permission: 'catalog.manage' });
     if (auth.error) return auth.error;
 
     const { id } = await context.params;
@@ -44,7 +44,7 @@ export async function POST(request, context) {
     if (!barcode) throw Object.assign(new Error('Barcode required.'), { status: 400 });
 
     await addBarcode(db, {
-      menuItemId: data.variantId ? null : Number(id),
+      productId: data.variantId ? null : Number(id),
       variantId: data.variantId ? Number(data.variantId) : null,
       barcode,
       barcodeType: data.barcodeType || 'other',
@@ -59,7 +59,7 @@ export async function POST(request, context) {
 
 export async function DELETE(request, context) {
   try {
-    const auth = await requireAuth(request, { roles: ['admin', 'cashier'], permission: 'menu.manage' });
+    const auth = await requireAuth(request, { roles: ['admin', 'cashier'], permission: 'catalog.manage' });
     if (auth.error) return auth.error;
 
     const barcodeId = new URL(request.url).searchParams.get('barcodeId');
@@ -68,8 +68,8 @@ export async function DELETE(request, context) {
     const db = Database.getInstance();
     const { id } = await context.params;
     const owned = await db.get(`SELECT b.id FROM product_barcodes b
-      LEFT JOIN menu_item_variants v ON v.id=b.variant_id
-      WHERE b.id=? AND COALESCE(v.menu_item_id,b.menu_item_id)=?`, [Number(barcodeId), Number(id)]);
+      LEFT JOIN product_variants v ON v.id=b.variant_id
+      WHERE b.id=? AND COALESCE(v.product_id,b.product_id)=?`, [Number(barcodeId), Number(id)]);
     if (!owned) throw Object.assign(new Error('Barcode does not belong to this product.'), { status: 404 });
     await removeBarcode(db, Number(barcodeId));
     return NextResponse.json({ message: 'Barcode removed' });

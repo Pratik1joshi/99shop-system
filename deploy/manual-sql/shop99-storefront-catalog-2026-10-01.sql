@@ -1,5 +1,5 @@
 -- 99 Shop by Shahana: initial production storefront catalog.
--- Apply after migrations through 114, db:seed, basic_shop_seed.sql, and
+-- Apply after migrations through 118, db:seed, basic_shop_seed.sql, and
 -- copying public/storefront/catalog/.
 -- Prices are Rs 99 and opening stock is 10 units per variant, as requested.
 -- Opening stock has zero cost because no purchase costs were supplied. Record
@@ -15,7 +15,7 @@ INSERT INTO shop99_seed_categories VALUES
   ('Hair Clips', 'Claw clips, cloud clips and bows.', 1, '/storefront/catalog/categories/hair-claws-and-clips.jpg'),
   ('Cherry', 'The glossy cherry range.', 2, '/storefront/catalog/categories/cherry-charms.jpg');
 
-INSERT INTO menu_categories (name, description, display_order, image_url, is_active, online_enabled, merchandising_active)
+INSERT INTO product_categories (name, description, display_order, image_url, is_active, online_enabled, merchandising_active)
 SELECT name, description, display_order, image_url, 1, 1, 1 FROM shop99_seed_categories
 ON CONFLICT (name) DO UPDATE SET
   description = EXCLUDED.description,
@@ -44,13 +44,13 @@ BEGIN
     RAISE EXCEPTION 'A sellable default inventory location is required before seeding opening stock';
   END IF;
   IF EXISTS (
-    SELECT 1 FROM shop99_seed_products s JOIN menu_items p ON p.online_slug = s.slug
+    SELECT 1 FROM shop99_seed_products s JOIN products p ON p.online_slug = s.slug
     WHERE p.barcode IS NOT NULL AND p.barcode <> s.barcode
   ) THEN
     RAISE EXCEPTION 'A seeded online slug belongs to a different product; resolve it before applying this file';
   END IF;
   IF EXISTS (
-    SELECT 1 FROM shop99_seed_products s JOIN menu_items p ON p.barcode = s.barcode
+    SELECT 1 FROM shop99_seed_products s JOIN products p ON p.barcode = s.barcode
     WHERE p.online_slug IS DISTINCT FROM s.slug
   ) THEN
     RAISE EXCEPTION 'A seeded barcode belongs to a different product; resolve it before applying this file';
@@ -59,11 +59,11 @@ END $$;
 
 -- Reuse products already created by basic_shop_seed.sql, which had no
 -- product-level barcode, before the barcode-based upsert below.
-UPDATE menu_items p SET barcode = s.barcode
+UPDATE products p SET barcode = s.barcode
 FROM shop99_seed_products s
 WHERE p.online_slug = s.slug AND p.barcode IS NULL;
 
-INSERT INTO menu_items (
+INSERT INTO products (
   name, description, category_id, base_price, image_url, barcode, unit,
   is_available, stock_usage, display_order, online_title, online_summary,
   online_description, online_slug, online_enabled, featured, merchandising_type
@@ -71,7 +71,7 @@ INSERT INTO menu_items (
 SELECT s.name, s.description, c.id, 99, s.image_url, s.barcode, 'pcs',
   1, 1, s.display_order, s.name, s.description, s.description, s.slug, 1,
   CASE WHEN s.display_order <= 2 THEN 1 ELSE 0 END, 'simple'
-FROM shop99_seed_products s JOIN menu_categories c ON c.name = s.category_name
+FROM shop99_seed_products s JOIN product_categories c ON c.name = s.category_name
 ON CONFLICT (barcode) WHERE barcode IS NOT NULL DO UPDATE SET
   name = EXCLUDED.name,
   description = EXCLUDED.description,
@@ -89,26 +89,26 @@ ON CONFLICT (barcode) WHERE barcode IS NOT NULL DO UPDATE SET
   featured = EXCLUDED.featured,
   updated_at = CURRENT_TIMESTAMP;
 
-INSERT INTO product_barcodes (menu_item_id, barcode, barcode_type, is_primary)
+INSERT INTO product_barcodes (product_id, barcode, barcode_type, is_primary)
 SELECT p.id, s.barcode, 'primary', 1
-FROM menu_items p JOIN shop99_seed_products s ON s.barcode = p.barcode
+FROM products p JOIN shop99_seed_products s ON s.barcode = p.barcode
 ON CONFLICT (barcode) DO NOTHING;
 
 -- Keep existing size/colour variants. Add Standard only when a product has no variants.
-INSERT INTO menu_item_variants (menu_item_id, variant_name, price_modifier, is_default, price, mrp, tracking_mode, merchandising_active)
+INSERT INTO product_variants (product_id, variant_name, price_modifier, is_default, price, mrp, tracking_mode, merchandising_active)
 SELECT p.id, 'Standard', 0, 1, 99, 99, 'none', 1
-FROM menu_items p JOIN shop99_seed_products s ON s.barcode = p.barcode
-WHERE NOT EXISTS (SELECT 1 FROM menu_item_variants v WHERE v.menu_item_id = p.id);
+FROM products p JOIN shop99_seed_products s ON s.barcode = p.barcode
+WHERE NOT EXISTS (SELECT 1 FROM product_variants v WHERE v.product_id = p.id);
 
-UPDATE menu_item_variants v SET price = 99, mrp = 99, merchandising_active = 1
-FROM menu_items p JOIN shop99_seed_products s ON s.barcode = p.barcode
-WHERE v.menu_item_id = p.id;
+UPDATE product_variants v SET price = 99, mrp = 99, merchandising_active = 1
+FROM products p JOIN shop99_seed_products s ON s.barcode = p.barcode
+WHERE v.product_id = p.id;
 
 -- Public product gallery, with the exact same paths used by the category cards.
 INSERT INTO retail_product_media (product_id, variant_id, url, alt, display_order, is_primary)
 SELECT p.id, NULL, s.image_url, s.name, 0,
   CASE WHEN EXISTS (SELECT 1 FROM retail_product_media old WHERE old.product_id = p.id AND old.is_primary = 1) THEN 0 ELSE 1 END
-FROM menu_items p JOIN shop99_seed_products s ON s.barcode = p.barcode
+FROM products p JOIN shop99_seed_products s ON s.barcode = p.barcode
 WHERE NOT EXISTS (SELECT 1 FROM retail_product_media old WHERE old.product_id = p.id AND old.url = s.image_url);
 
 -- Only newly unstocked variant/location pairs receive opening stock.
@@ -119,8 +119,8 @@ WITH inserted AS (
   INSERT INTO inventory_balances (variant_id, location_id, batch_id, quantity_on_hand)
   SELECT v.id, loc.id, NULL, s.opening_quantity
   FROM shop99_seed_products s
-  JOIN menu_items p ON p.barcode = s.barcode
-  JOIN menu_item_variants v ON v.menu_item_id = p.id
+  JOIN products p ON p.barcode = s.barcode
+  JOIN product_variants v ON v.product_id = p.id
   JOIN inventory_locations loc ON loc.is_default = 1 AND loc.is_active = 1 AND loc.is_sellable = 1
   WHERE v.tracking_mode = 'none'
   ON CONFLICT (variant_id, location_id) WHERE batch_id IS NULL DO NOTHING

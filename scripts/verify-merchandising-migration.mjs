@@ -11,12 +11,12 @@ try{
       for(const file of fs.readdirSync('migrations').filter(file=>/^\d+.*\.sql$/.test(file)&&Number(file.slice(0,3))<=103).sort())await db.query(fs.readFileSync(`migrations/${file}`,'utf8'));
       let baseline;
       if(mode==='upgrade'){
-        const category=(await db.query("INSERT INTO menu_categories(name) VALUES ('Upgrade catalog') RETURNING id")).rows[0].id;
-        const product=(await db.query("INSERT INTO menu_items(name,category_id,base_price,is_available) VALUES ('Preserved product',$1,100,1) RETURNING id",[category])).rows[0].id;
-        baseline=(await db.query("INSERT INTO menu_item_variants(menu_item_id,variant_name,sku,price) VALUES ($1,'Ruby','PRESERVE-RUBY',100) RETURNING id,sku,price",[product])).rows[0];
+        const category=(await db.query("INSERT INTO product_categories(name) VALUES ('Upgrade catalog') RETURNING id")).rows[0].id;
+        const product=(await db.query("INSERT INTO products(name,category_id,base_price,is_available) VALUES ('Preserved product',$1,100,1) RETURNING id",[category])).rows[0].id;
+        baseline=(await db.query("INSERT INTO product_variants(product_id,variant_name,sku,price) VALUES ($1,'Ruby','PRESERVE-RUBY',100) RETURNING id,sku,price",[product])).rows[0];
       }
       const sql=fs.readFileSync('migrations/104_retail_merchandising_pricing.sql','utf8');await db.query(sql);await db.query(sql);
-      if(baseline){assert.deepEqual((await db.query('SELECT id,sku,price FROM menu_item_variants WHERE id=$1',[baseline.id])).rows[0],baseline);assert.equal((await db.query('SELECT online_enabled FROM menu_items LIMIT 1')).rows[0].online_enabled,0);}
+      if(baseline){assert.deepEqual((await db.query('SELECT id,sku,price FROM product_variants WHERE id=$1',[baseline.id])).rows[0],baseline);assert.equal((await db.query('SELECT online_enabled FROM products LIMIT 1')).rows[0].online_enabled,0);}
       assert.equal((await db.query('SELECT COUNT(*)::int count FROM journal_entries')).rows[0].count,0);
       assert.equal((await db.query('SELECT COUNT(*)::int count FROM retail_margin_policy')).rows[0].count,1);
       checks.push({mode,rerun:'PASS',identity_preserved:true,automatic_online_publication:false,accounting_unchanged:true});

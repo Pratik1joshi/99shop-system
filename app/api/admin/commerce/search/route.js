@@ -9,7 +9,7 @@ import { searchCommerce } from '@/lib/commerce-search.js';
 export async function GET(request) {
   try {
     const auth = await requireAuth(request, { roles: ['admin', 'cashier', 'manager'], anyPermissions: [
-      'menu.view', 'retail_inventory.view', 'retail_purchasing.grn.receive', 'customers.access',
+      'catalog.view', 'retail_inventory.view', 'retail_purchasing.grn.receive', 'customers.access',
       'retail_sale.view', 'suppliers.view',
     ] });
     if (auth.error) return auth.error;await ensureRetailCommerceSchema(Database.getInstance());

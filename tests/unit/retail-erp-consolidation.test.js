@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { ensureStandardVariant } from '../../lib/menu-variants.js';
+import { ensureStandardVariant } from '../../lib/product-variants.js';
 import { requireRetailStaffRole } from '../../lib/employees.js';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
@@ -28,13 +28,13 @@ test('a standard SKU is updated in place so retail history keeps its foreign key
   const calls = [];
   const db = {
     all: async (sql) => sql.startsWith('SELECT *')
-      ? (calls.length ? [{ id: 41, menu_item_id: 7, variant_name: 'Standard', price: 125 }] : [{ id: 41, menu_item_id: 7, variant_name: 'Old', price: 99 }])
+      ? (calls.length ? [{ id: 41, product_id: 7, variant_name: 'Standard', price: 125 }] : [{ id: 41, product_id: 7, variant_name: 'Old', price: 99 }])
       : [],
     run: async (sql, params) => { calls.push({ sql, params }); },
   };
   const rows = await ensureStandardVariant(db, 7, { price: 125, stockUnit: 'pcs' });
   assert.equal(calls.length, 1);
-  assert.match(calls[0].sql, /UPDATE menu_item_variants/);
+  assert.match(calls[0].sql, /UPDATE product_variants/);
   assert.equal(calls[0].params[2], 41);
   assert.equal(rows[0].id, 41);
 });

@@ -4,7 +4,7 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import Database, { PosDatabase } from '../../lib/db/index.js';
-import { ensureMenuVariantsSchema, ensureStandardVariant } from '../../lib/menu-variants.js';
+import { ensureProductVariantsSchema, ensureStandardVariant } from '../../lib/product-variants.js';
 import { openBusinessDay, businessDaySummary } from '../../lib/business-days.js';
 import { getNepaliDateString } from '../../lib/time-utils.js';
 import { ensureAccountingSchema, accountBalance } from '../../lib/accounting.js';
@@ -52,10 +52,10 @@ test.after(async () => {
 });
 
 async function product({ price = 100, cost = 40, tracking = 'none', stock = 20 } = {}) {
-  const category = await db.get(`SELECT id FROM menu_categories ORDER BY id LIMIT 1`);
-  const id = (await db.run(`INSERT INTO menu_items (name,category_id,base_price,is_available) VALUES (?,?,?,1)`, [`Phase0 ${++seq}`, category.id, price])).lastInsertRowid;
+  const category = await db.get(`SELECT id FROM product_categories ORDER BY id LIMIT 1`);
+  const id = (await db.run(`INSERT INTO products (name,category_id,base_price,is_available) VALUES (?,?,?,1)`, [`Phase0 ${++seq}`, category.id, price])).lastInsertRowid;
   const [variant] = await ensureStandardVariant(db, id, { price, stockUnit: 'pcs' });
-  await db.run(`UPDATE menu_item_variants SET tracking_mode=? WHERE id=?`, [tracking, variant.id]);
+  await db.run(`UPDATE product_variants SET tracking_mode=? WHERE id=?`, [tracking, variant.id]);
   if (stock > 0 && tracking === 'none') await receiveStock(db, { variantId: variant.id, locationId: location.id, quantity: stock, unitCost: cost, movementType: 'OPENING_STOCK', referenceType: 'phase0_fixture', referenceId: seq, businessDayId: day.id });
   return { id, variantId: variant.id, price, cost };
 }
@@ -73,15 +73,15 @@ async function checkout(item, quantity, payments, extra = {}) {
 
 test('setup canonical retail transaction environment', async () => {
   await ensureAccountingSchema(db);
-  await ensureMenuVariantsSchema(db);
+  await ensureProductVariantsSchema(db);
   await ensureRetailInventorySchema(db);
   await ensureRetailSalesSchema(db);
   await ensureRetailReturnsSchema(db);
   await ensureRetailPurchasingSchema(db);
   day = await openBusinessDay(db, { business_date: getNepaliDateString(), opening_cash: 0 }, actor);
   location = await getDefaultLocation(db);
-  if (!(await db.get(`SELECT id FROM menu_categories LIMIT 1`))) {
-    await db.run(`INSERT INTO menu_categories (name, display_order) VALUES ('Phase 0 Products', 1)`);
+  if (!(await db.get(`SELECT id FROM product_categories LIMIT 1`))) {
+    await db.run(`INSERT INTO product_categories (name, display_order) VALUES ('Phase 0 Products', 1)`);
   }
   if (!(await db.get(`SELECT id FROM suppliers LIMIT 1`))) {
     await db.run(`INSERT INTO suppliers (name,normalized_name) VALUES ('Phase 0 Supplier','phase 0 supplier')`);
@@ -499,7 +499,7 @@ test('reconciliation reports explicit differences and performs no automatic repa
 test('dashboard/report query layer reads canonical retail facts across core dimensions', async () => {
   const dates = await db.get("SELECT MIN(date(completed_at)) AS start, MAX(date(completed_at)) AS end FROM retail_sales WHERE status='COMPLETED'");
   const range = { start: dates.start, end: dates.end };
-  for (const tab of ['sales', 'inventory', 'menu', 'categories', 'employees', 'customers', 'purchases', 'suppliers', 'changes']) {
+  for (const tab of ['sales', 'inventory', 'products', 'categories', 'employees', 'customers', 'purchases', 'suppliers', 'changes']) {
     const report = await buildRetailReport(db, tab, range, {});
     assert.ok(report.tables?.length, `${tab} should return a canonical table`);
   }
@@ -652,13 +652,13 @@ test('catalog, pricing and online-store schema and search work on local SQLite',
   await ensureRetailCommerceSchema(db);
   const settings = await db.get('SELECT * FROM retail_online_settings WHERE id=1');
   assert.equal(settings.brand_color, '#20372e');
-  for (const [table, column] of [['product_attributes', 'online_filter'], ['menu_items', 'online_title'], ['menu_item_variants', 'merchandising_signature'], ['retail_brands', 'logo_url']]) {
+  for (const [table, column] of [['product_attributes', 'online_filter'], ['products', 'online_title'], ['product_variants', 'merchandising_signature'], ['retail_brands', 'logo_url']]) {
     assert.ok((await db.all(`PRAGMA table_info(${table})`)).some((row) => row.name === column), `${table}.${column}`);
   }
   const item = await product({ price: 250, cost: 90, stock: 4 });
-  await db.run('UPDATE menu_items SET online_enabled=1, online_title=?, brand=? WHERE id=?', ['Ruby Hair Clip', 'Kawaii', item.id]);
-  const { category_id: categoryId } = await db.get('SELECT category_id FROM menu_items WHERE id=?', [item.id]);
-  await db.run('UPDATE menu_categories SET online_enabled=1, merchandising_active=1, is_active=1 WHERE id=?', [categoryId]);
+  await db.run('UPDATE products SET online_enabled=1, online_title=?, brand=? WHERE id=?', ['Ruby Hair Clip', 'Kawaii', item.id]);
+  const { category_id: categoryId } = await db.get('SELECT category_id FROM products WHERE id=?', [item.id]);
+  await db.run('UPDATE product_categories SET online_enabled=1, merchandising_active=1, is_active=1 WHERE id=?', [categoryId]);
   await db.run('UPDATE retail_online_settings SET enabled=1 WHERE id=1');
   try {
     const result = await publicCatalog(db, { query: 'RUBY' });
@@ -694,7 +694,7 @@ test('bulk product upload makes products with versions and barcodes, all or noth
   const result = await importProducts(db, csv);
   assert.equal(result.variant_ids.length, 3);
   const rows = await db.all(`SELECT v.id,v.variant_name,v.barcode,v.sku,v.price,v.is_default,p.barcode AS product_barcode,c.name AS category
-    FROM menu_item_variants v JOIN menu_items p ON p.id=v.menu_item_id JOIN menu_categories c ON c.id=p.category_id WHERE v.id IN (?,?,?) ORDER BY v.id`, result.variant_ids);
+    FROM product_variants v JOIN products p ON p.id=v.product_id JOIN product_categories c ON c.id=p.category_id WHERE v.id IN (?,?,?) ORDER BY v.id`, result.variant_ids);
   assert.deepEqual(rows.map((r) => r.variant_name), ['Pink', 'Black', 'Standard']);
   // The shop's own codes are 13-digit EAN-13 numbers in the in-store 2xx range.
   assert.ok(/^2\d{12}$/.test(rows[0].barcode) && /^2\d{12}$/.test(rows[1].barcode) && rows[0].barcode !== rows[1].barcode);
@@ -717,5 +717,5 @@ test('bulk product upload makes products with versions and barcodes, all or noth
   assert.match(checked.errors[1].message, /already belongs/);
   assert.match(checked.errors[2].message, /Excel/);
   await assert.rejects(importProducts(db, broken), /Row 3: price is empty/);
-  assert.ok(!(await db.get('SELECT id FROM menu_items WHERE name=?', [`Pen ${tag}`])), 'a bad row stops the whole upload');
+  assert.ok(!(await db.get('SELECT id FROM products WHERE name=?', [`Pen ${tag}`])), 'a bad row stops the whole upload');
 });

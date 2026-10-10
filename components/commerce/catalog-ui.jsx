@@ -155,7 +155,7 @@ function DefaultRow({ row, group }) {
   );
 }
 
-/** Uploads one image through /api/uploads/menu and returns its /uploads/menu/... path. */
+/** Uploads one image through /api/uploads/products and returns its /api/media/products/... path. */
 export function ImageUploadButton({ onUploaded, label = 'Upload image' }) {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
@@ -171,7 +171,7 @@ export function ImageUploadButton({ onUploaded, label = 'Upload image' }) {
           try {
             const form = new FormData();
             form.append('file', file);
-            const result = await apiJson('/api/uploads/menu', { method: 'POST', body: form });
+            const result = await apiJson('/api/uploads/products', { method: 'POST', body: form });
             onUploaded(result.url);
           } catch (e) { setError(e.error || 'Upload failed.'); } finally { setBusy(false); }
         }} />

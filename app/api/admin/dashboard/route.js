@@ -46,7 +46,7 @@ export async function GET(request) {
                GROUP BY u.id,u.full_name,u.username ORDER BY count DESC LIMIT 1`, [today, `${today} 23:59:59`]),
       db.all(`SELECT sale_number, grand_total, completed_at AS at FROM retail_sales WHERE status='COMPLETED' ORDER BY completed_at DESC LIMIT 12`),
       db.all(`SELECT m.movement_type, m.quantity, m.created_at AS at, mi.name AS product_name, v.variant_name
-                FROM inventory_movements m JOIN menu_item_variants v ON v.id=m.variant_id JOIN menu_items mi ON mi.id=v.menu_item_id
+                FROM inventory_movements m JOIN product_variants v ON v.id=m.variant_id JOIN products mi ON mi.id=v.product_id
                ORDER BY m.created_at DESC LIMIT 12`),
     ]);
 

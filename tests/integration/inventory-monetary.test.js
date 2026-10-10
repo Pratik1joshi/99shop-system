@@ -5,7 +5,7 @@ import { accountBalance, ensureAccountingSchema } from '../../lib/accounting.js'
 import { trialBalance } from '../../lib/accounting-reports.js';
 import { openBusinessDay } from '../../lib/business-days.js';
 import { getNepaliDateString } from '../../lib/time-utils.js';
-import { ensureStandardVariant } from '../../lib/menu-variants.js';
+import { ensureStandardVariant } from '../../lib/product-variants.js';
 import { getDefaultLocation, createLocation } from '../../lib/retail-inventory.js';
 import { createGoodsReceipt, postGoodsReceipt, createPurchaseReturn, postPurchaseReturn } from '../../lib/retail-purchasing.js';
 import { holdSale, checkoutSale } from '../../lib/retail-sales.js';
@@ -26,15 +26,15 @@ async function check(label) {
   const values = await db.get(`SELECT SUM(carrying_value) AS value FROM inventory_costs`);
   const breakdown = await db.get(`SELECT SUM(allocated_value) AS value FROM inventory_balance_valuation`);
   assert.equal(r2(breakdown.value), r2(values.value), `${label}: breakdown conservation`);
-  const serialMismatch = await db.all(`SELECT v.id FROM menu_item_variants v WHERE v.tracking_mode='serial'
+  const serialMismatch = await db.all(`SELECT v.id FROM product_variants v WHERE v.tracking_mode='serial'
     AND (SELECT COUNT(*) FROM inventory_serials s WHERE s.variant_id=v.id AND s.status IN ('IN_STOCK','QUARANTINE'))
       <> COALESCE((SELECT SUM(b.quantity_on_hand) FROM inventory_balances b WHERE b.variant_id=v.id),0)`);
   assert.equal(serialMismatch.length, 0, `${label}: exact serial state projection`);
 }
 async function item(tracking = 'none') {
-  const productId = (await db.run(`INSERT INTO menu_items(name,category_id,base_price,is_available) VALUES (?,?,300,1)`, [`Money ${++sequence}`, categoryId])).lastInsertRowid;
+  const productId = (await db.run(`INSERT INTO products(name,category_id,base_price,is_available) VALUES (?,?,300,1)`, [`Money ${++sequence}`, categoryId])).lastInsertRowid;
   const [variant] = await ensureStandardVariant(db, productId, { price: 300, stockUnit: 'pcs' });
-  await db.run(`UPDATE menu_item_variants SET tracking_mode=? WHERE id=?`, [tracking, variant.id]);
+  await db.run(`UPDATE product_variants SET tracking_mode=? WHERE id=?`, [tracking, variant.id]);
   return variant.id;
 }
 async function receipt(variantId, quantity, cost, extra = {}) {
@@ -64,7 +64,7 @@ test('PostgreSQL carrying-value property matrix', async t => {
   day = await openBusinessDay(db, { business_date: getNepaliDateString(), opening_cash: 0 }, actor);
   location = await getDefaultLocation(db);
   supplierId = (await db.run(`INSERT INTO suppliers(name,normalized_name) VALUES ('Money supplier','money supplier')`)).lastInsertRowid;
-  categoryId = (await db.run(`INSERT INTO menu_categories(name,display_order) VALUES ('Money',1)`)).lastInsertRowid;
+  categoryId = (await db.run(`INSERT INTO product_categories(name,display_order) VALUES ('Money',1)`)).lastInsertRowid;
   await t.test('100 / 3 multi-quantity sale and three partial returns conserve historical cents', async () => {
     const id = await item(); await receipt(id, 3, 33.33, { taxAmount: 0.01 });
     const sale = await sell(id, 3); assert.equal(Number(sale.total_cost ?? sale.cogs_total), 100);

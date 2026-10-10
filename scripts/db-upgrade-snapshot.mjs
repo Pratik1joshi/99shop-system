@@ -31,7 +31,7 @@ const client = new pg.Client({
 });
 
 const criticalTables = [
-  'users', 'menu_categories', 'menu_items', 'menu_item_variants', 'customers',
+  'users', 'product_categories', 'products', 'product_variants', 'customers',
   'retail_sales', 'retail_sale_lines', 'retail_sale_payments', 'retail_returns',
   'inventory_balances', 'inventory_movements', 'suppliers', 'purchase_orders', 'goods_receipts',
   'expenses', 'journal_entries', 'journal_lines',

@@ -4,7 +4,7 @@ import Database from '../../lib/db/index.js';
 import { ensureAccountingSchema,accountBalance } from '../../lib/accounting.js';
 import { openBusinessDay } from '../../lib/business-days.js';
 import { getNepaliDateString } from '../../lib/time-utils.js';
-import { ensureStandardVariant } from '../../lib/menu-variants.js';
+import { ensureStandardVariant } from '../../lib/product-variants.js';
 import { getDefaultLocation } from '../../lib/retail-inventory.js';
 import { createGoodsReceipt,postGoodsReceipt } from '../../lib/retail-purchasing.js';
 import { holdSale,checkoutSale } from '../../lib/retail-sales.js';
@@ -20,9 +20,9 @@ test('Phase 2D PostgreSQL acceptance',async t=>{
   const day=await openBusinessDay(db,{business_date:getNepaliDateString(),opening_cash:0},actor),location=await getDefaultLocation(db);
   const supplier=(await db.run("INSERT INTO suppliers(name,normalized_name) VALUES ('Warranty supplier','warranty supplier')")).lastInsertRowid;
   const customer=(await db.run("INSERT INTO customers(name,phone) VALUES ('Warranty customer','9800000200')")).lastInsertRowid;
-  const category=(await db.run("INSERT INTO menu_categories(name,display_order) VALUES ('Warranty test',1)")).lastInsertRowid;
-  const product=(await db.run("INSERT INTO menu_items(name,category_id,base_price,is_available) VALUES ('Dryer',?,300,1)",[category])).lastInsertRowid;
-  const [sku]=await ensureStandardVariant(db,product,{price:300,stockUnit:'pcs'});await db.run("UPDATE menu_item_variants SET tracking_mode='serial' WHERE id=?",[sku.id]);
+  const category=(await db.run("INSERT INTO product_categories(name,display_order) VALUES ('Warranty test',1)")).lastInsertRowid;
+  const product=(await db.run("INSERT INTO products(name,category_id,base_price,is_available) VALUES ('Dryer',?,300,1)",[category])).lastInsertRowid;
+  const [sku]=await ensureStandardVariant(db,product,{price:300,stockUnit:'pcs'});await db.run("UPDATE product_variants SET tracking_mode='serial' WHERE id=?",[sku.id]);
   const receipt=await createGoodsReceipt(db,{supplierId:supplier,locationId:location.id,paymentMethod:'credit',invoiceNumber:'PHASE2D',lines:[{variantId:sku.id,quantityReceived:8,unitCost:92.73,serialNumbers:Array.from({length:8},(_,i)=>'WARRANTY-'+i)}]});await postGoodsReceipt(db,receipt.id,{postedBy:1,businessDayId:day.id});
   const p={name:'12 months',scope:'BUSINESS',duration:12,duration_unit:'MONTHS',coverage:'Motor defects',proof_required:true,replacement_rule:'ORIGINAL_EXPIRY'};
   await saveWarrantyPolicy(db,p,1);
@@ -106,8 +106,8 @@ test('Phase 2D PostgreSQL acceptance',async t=>{
   });
   await t.test('inventory, accounting and trial balance reconcile',async()=>{const result=await runRetailReconciliation(db);assert.equal(result.reconciled,true,JSON.stringify(result));assert.equal((await trialBalance(db)).balanced,true);});
   await t.test('partial non-serial refunds preserve remaining coverage and batch RMA identity',async()=>{
-    const productId=(await db.run("INSERT INTO menu_items(name,category_id,base_price,is_available) VALUES ('Batch warranty',?,100,1)",[category])).lastInsertRowid;
-    const [batchSku]=await ensureStandardVariant(db,productId,{price:100,stockUnit:'pcs'});await db.run("UPDATE menu_item_variants SET tracking_mode='batch' WHERE id=?",[batchSku.id]);
+    const productId=(await db.run("INSERT INTO products(name,category_id,base_price,is_available) VALUES ('Batch warranty',?,100,1)",[category])).lastInsertRowid;
+    const [batchSku]=await ensureStandardVariant(db,productId,{price:100,stockUnit:'pcs'});await db.run("UPDATE product_variants SET tracking_mode='batch' WHERE id=?",[batchSku.id]);
     const grn=await createGoodsReceipt(db,{supplierId:supplier,locationId:location.id,paymentMethod:'credit',invoiceNumber:'BATCH-2D',lines:[{variantId:batchSku.id,quantityReceived:4,unitCost:25,batches:[{batchNumber:'PHASE2D-LOT',quantity:4,expiryDate:'2099-01-01'}]}]});await postGoodsReceipt(db,grn.id,{postedBy:1,businessDayId:day.id});
     const lines=[{variant_id:batchSku.id,quantity:2}],held=await holdSale(db,{lines,customerId:customer,cashierId:1}),s=await checkoutSale(db,held.id,{lines,customerId:customer,cashierId:1,payments:[{method:'cash',amount:200,cash_tendered:200}],idempotencyKey:'batch-warranty-sale'});
     const claimInput={sale_line_id:s.lines[0].id,quantity:1,issue:'Defect',description:'Batch defect',proof:true};

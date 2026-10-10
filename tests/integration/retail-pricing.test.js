@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import Database from '../../lib/db/index.js';
-import { ensureStandardVariant } from '../../lib/menu-variants.js';
+import { ensureStandardVariant } from '../../lib/product-variants.js';
 import { resolveRetailPrices } from '../../lib/retail-pricing.js';
 import { savePriceList,saveCustomerGroup,assignCustomerGroup } from '../../lib/retail-price-management.js';
 import { quoteRetailSale,holdSale,checkoutSale } from '../../lib/retail-sales.js';
@@ -19,13 +19,13 @@ test.after(()=>db.close());
 test('Canonical pricing precedence and safe POS economics',async t=>{
   await ensureAccountingSchema(db);
   const day=await openBusinessDay(db,{business_date:getNepaliDateString(),opening_cash:0},{id:1,role:'admin',full_name:'Pricing test'});
-  const category=(await db.run("INSERT INTO menu_categories(name) VALUES ('Price tests')")).lastInsertRowid;
-  const product=(await db.run("INSERT INTO menu_items(name,category_id,base_price,is_available) VALUES ('Lip price',?,100,1)",[category])).lastInsertRowid;
+  const category=(await db.run("INSERT INTO product_categories(name) VALUES ('Price tests')")).lastInsertRowid;
+  const product=(await db.run("INSERT INTO products(name,category_id,base_price,is_available) VALUES ('Lip price',?,100,1)",[category])).lastInsertRowid;
   const [variant]=await ensureStandardVariant(db,product,{price:100});
   const location=await getDefaultLocation(db),supplier=(await db.run("INSERT INTO suppliers(name,normalized_name) VALUES ('Pricing supplier','pricing supplier')")).lastInsertRowid;
   const receipt=await createGoodsReceipt(db,{supplierId:supplier,locationId:location.id,paymentMethod:'credit',invoiceNumber:'PRICING-RECEIPT',lines:[{variantId:variant.id,quantityReceived:10,unitCost:70}]});
   await postGoodsReceipt(db,receipt.id,{postedBy:1,businessDayId:day.id});
-  await db.run('UPDATE menu_item_variants SET wholesale_price=80,wholesale_min_quantity=3 WHERE id=?',[variant.id]);
+  await db.run('UPDATE product_variants SET wholesale_price=80,wholesale_min_quantity=3 WHERE id=?',[variant.id]);
   const customer=(await db.run("INSERT INTO customers(name,phone) VALUES ('Wholesale test','9800009911')")).lastInsertRowid;
   const group=await saveCustomerGroup(db,{name:'Trade',code:'TRADE',pricing_mode:'wholesale',reason:'Wholesale test'},1);
   await assignCustomerGroup(db,{customer_id:customer,group_id:group.id,reason:'Verified trader'},1);
@@ -90,21 +90,21 @@ test('Canonical pricing precedence and safe POS economics',async t=>{
     // Resuming a held sale retains its server-owned customer context.
     const sale=await checkoutSale(db,held.id,{lines:saleLines,cashierId:1,payments:[{method:'cash',amount:Number(held.grand_total),cash_tendered:Number(held.grand_total)}],idempotencyKey:'WHOLESALE-SALE'});
     assert.equal(Number(sale.lines[0].unit_price),80);
-    await db.run('UPDATE menu_item_variants SET price=150,wholesale_price=120 WHERE id=?',[variant.id]);
+    await db.run('UPDATE product_variants SET price=150,wholesale_price=120 WHERE id=?',[variant.id]);
     const returned=await createReturn(db,{originalSaleId:sale.id,cashierId:1,lines:[{originalSaleLineId:sale.lines[0].id,quantity:3,condition:'UNOPENED',disposition:'RETURN_TO_SELLABLE'}]});
     await postReturn(db,returned.id,{postedBy:1,refundMethod:'cash',idempotencyKey:'WHOLESALE-RETURN'});
     assert.equal(Number((await db.get('SELECT carrying_value FROM inventory_costs WHERE variant_id=?',[variant.id])).carrying_value),700);
     assert.equal((await runRetailReconciliation(db)).reconciled,true);
   });
   await t.test('Cross-product mass prices preview changes, hide margins and replay safely',async()=>{
-    const other=(await db.run("INSERT INTO menu_items(name,category_id,base_price,is_available) VALUES ('Second price product',?,200,1)",[category])).lastInsertRowid;
+    const other=(await db.run("INSERT INTO products(name,category_id,base_price,is_available) VALUES ('Second price product',?,200,1)",[category])).lastInsertRowid;
     const [second]=await ensureStandardVariant(db,other,{price:200});
     const preview=await previewMassPrices(db,{category_id:category,mode:'percent',amount:5,round_to:0.5,reason:'Five percent category review'},1);
     assert.equal(preview.rows.length,2);assert.equal(preview.rows[0].price,157.5);assert.equal(preview.rows[1].price,210);
     assert.ok(!('before_margin' in preview.rows[0]));
     const result=await applyMassPrices(db,{job_id:preview.id},1);assert.equal(result.count,2);assert.deepEqual(await applyMassPrices(db,{job_id:preview.id},1),result);
     const stale=await previewMassPrices(db,{ids:[second.id],mode:'fixed',amount:250,reason:'Stale price'},1);
-    await db.run('UPDATE menu_item_variants SET price=211 WHERE id=?',[second.id]);
+    await db.run('UPDATE product_variants SET price=211 WHERE id=?',[second.id]);
     await assert.rejects(applyMassPrices(db,{job_id:stale.id},1),/changed after preview/);
     assert.equal((await runRetailReconciliation(db)).reconciled,true);
   });

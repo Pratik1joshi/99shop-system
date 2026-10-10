@@ -26,7 +26,7 @@ import { REPORT_CATALOG as TABS, REPORT_PERIODS as PERIODS } from '@/components/
  * the one signal that makes "which report am I in" legible at a glance,
  * without inventing a second colour language.
  */
-// Menu category / master-category are no longer per-report filters — the
+// Product category / master-category are no longer per-report filters — the
 // dedicated Category Report answers that in full instead.
 const ALL_FILTERS = ['businessDayId', 'employeeId', 'paymentMethod', 'orderType', 'search'];
 const NO_FILTERS = [];

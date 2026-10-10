@@ -19,7 +19,7 @@ const ROLES = {
 const PERMISSION_MODULES = [
   { id: 'dashboard', label: 'Dashboard', description: 'Dashboard, analytics and owner summaries.', matches: (key) => ['dashboard.view', 'summary.view', 'retail_analytics.view'].includes(key) || key.startsWith('operations.') },
   { id: 'reports', label: 'Reports', description: 'Reports access and every individual report.', matches: (key) => key === 'reports.view' || key.startsWith('report.') },
-  { id: 'catalog', label: 'Catalog', description: 'Products, categories, promotions and loyalty.', matches: (key) => key.startsWith('menu.') || key.startsWith('promotions.') || key.startsWith('retail_loyalty.') },
+  { id: 'catalog', label: 'Catalog', description: 'Products, categories, promotions and loyalty.', matches: (key) => key.startsWith('catalog.') || key.startsWith('promotions.') || key.startsWith('retail_loyalty.') },
   { id: 'pos_orders', label: 'Till & Sales', description: 'Billing, sales, returns and store credit.', matches: (key) => key.startsWith('pos.') || key.startsWith('retail_pos.') || key.startsWith('retail_sale.') || key.startsWith('retail_return.') || key.startsWith('retail_store_credit.') },
   { id: 'online', label: 'Online Orders', description: 'Storefront orders, payment checks and fulfilment.', matches: (key) => key.startsWith('retail_online_orders.') },
   { id: 'inventory', label: 'Inventory & Purchasing', description: 'Stock, counts, transfers, purchases and suppliers.', matches: (key) => key.startsWith('retail_inventory.') || key.startsWith('retail_purchasing.') || key.startsWith('purchases.') || key.startsWith('suppliers.') },
@@ -46,7 +46,7 @@ export default function PermissionsPage() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [auditLoading, setAuditLoading] = useState(false);
-  const [expanded, setExpanded] = useState({ dashboard: true, reports: true, menu: true });
+  const [expanded, setExpanded] = useState({ dashboard: true, reports: true, catalog: true });
 
   const load = useCallback(async () => {
     setLoading(true);

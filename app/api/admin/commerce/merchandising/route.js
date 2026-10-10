@@ -8,7 +8,7 @@ import { isPermissionAllowedSync } from '@/lib/permissions.js';
 import { redactRetailCost } from '@/lib/retail-cost-visibility.js';
 export async function GET(request){
   try{
-    const auth=await requireAuth(request,{roles:['admin','cashier'],permission:'menu.manage'});if(auth.error)return auth.error;await ensureRetailCommerceSchema(Database.getInstance());
+    const auth=await requireAuth(request,{roles:['admin','cashier'],permission:'catalog.manage'});if(auth.error)return auth.error;await ensureRetailCommerceSchema(Database.getInstance());
     const db=Database.getInstance(),url=new URL(request.url),id=Number(url.searchParams.get('product_id'));
     const rows=redactRetailCost(await catalogRows(db,id),auth.user.role);
     if(url.searchParams.get('format')==='csv'){
@@ -20,7 +20,7 @@ export async function GET(request){
 }
 export async function POST(request){
   try{
-    const auth=await requireAuth(request,{roles:['admin','cashier'],permission:'menu.manage'});if(auth.error)return auth.error;await ensureRetailCommerceSchema(Database.getInstance());
+    const auth=await requireAuth(request,{roles:['admin','cashier'],permission:'catalog.manage'});if(auth.error)return auth.error;await ensureRetailCommerceSchema(Database.getInstance());
     const db=Database.getInstance(),input=await request.json();
     if(input.action==='matrix'){
       if(input.sku_style==='attributes'&&Array.isArray(input.axes)&&input.axes.length<=6){

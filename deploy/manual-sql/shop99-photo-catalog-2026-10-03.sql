@@ -49,14 +49,14 @@ INSERT INTO photo_categories (name, description, display_order, image_url) VALUE
   ('Gift Supplies', 'Gift wrapping supplies.', 25, NULL),
   ('Novelty Gifts', 'Novelty gifts and small toys.', 26, NULL);
 
-INSERT INTO menu_categories
+INSERT INTO product_categories
   (name, description, display_order, image_url, is_active, merchandising_active, online_enabled)
 SELECT name, description, display_order, image_url, 1, 1, 0
 FROM photo_categories
 ON CONFLICT (name) DO UPDATE SET
   description = EXCLUDED.description,
   display_order = EXCLUDED.display_order,
-  image_url = COALESCE(EXCLUDED.image_url, menu_categories.image_url),
+  image_url = COALESCE(EXCLUDED.image_url, product_categories.image_url),
   is_active = 1;
 
 -- Replace any older shop logo saved in the production site settings.
@@ -135,14 +135,14 @@ DO $$
 BEGIN
   IF EXISTS (
     SELECT 1 FROM photo_products s
-    JOIN menu_items p ON p.online_slug = s.slug
+    JOIN products p ON p.online_slug = s.slug
     WHERE p.name <> s.name
   ) THEN
     RAISE EXCEPTION 'A catalog slug already belongs to a different product';
   END IF;
 END $$;
 
-INSERT INTO menu_items
+INSERT INTO products
   (name, category_id, base_price, unit, is_available, stock_usage,
    display_order, online_title, online_slug, online_enabled,
    merchandising_type)
@@ -150,7 +150,7 @@ SELECT s.name, c.id, s.base_price, 'pcs', 1, 1,
        s.display_order, s.name, s.slug, 0,
        CASE WHEN s.has_variants THEN 'variant' ELSE 'simple' END
 FROM photo_products s
-JOIN menu_categories c ON c.name = s.category_name
+JOIN product_categories c ON c.name = s.category_name
 ON CONFLICT (online_slug) WHERE online_slug IS NOT NULL DO UPDATE SET
   name = EXCLUDED.name,
   category_id = EXCLUDED.category_id,
@@ -183,24 +183,24 @@ INSERT INTO photo_variants (slug, variant_name, price, is_default) VALUES
   ('pouch', 'Rs 1150 option', 1150, 0);
 
 -- Update previously imported variants, then insert only missing variants.
-UPDATE menu_item_variants v SET
+UPDATE product_variants v SET
   price = s.price,
   price_modifier = 0,
   is_default = s.is_default,
   merchandising_active = 1
 FROM photo_variants s
-JOIN menu_items p ON p.online_slug = s.slug
-WHERE v.menu_item_id = p.id AND v.variant_name = s.variant_name;
+JOIN products p ON p.online_slug = s.slug
+WHERE v.product_id = p.id AND v.variant_name = s.variant_name;
 
-INSERT INTO menu_item_variants
-  (menu_item_id, variant_name, price, price_modifier, is_default,
+INSERT INTO product_variants
+  (product_id, variant_name, price, price_modifier, is_default,
    tracking_mode, merchandising_active)
 SELECT p.id, s.variant_name, s.price, 0, s.is_default, 'none', 1
 FROM photo_variants s
-JOIN menu_items p ON p.online_slug = s.slug
+JOIN products p ON p.online_slug = s.slug
 WHERE NOT EXISTS (
-  SELECT 1 FROM menu_item_variants v
-  WHERE v.menu_item_id = p.id AND v.variant_name = s.variant_name
+  SELECT 1 FROM product_variants v
+  WHERE v.product_id = p.id AND v.variant_name = s.variant_name
 );
 
 COMMIT;

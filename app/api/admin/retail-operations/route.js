@@ -11,7 +11,7 @@ export async function GET(request){try{
   else if(p.get('snapshot_id'))data=await forecastActual(db,Number(p.get('snapshot_id')));
   else if(p.get('view')==='history')data=(await db.all('SELECT id,generated_at,horizon,evidence FROM operations_snapshots WHERE variant_id=? ORDER BY id DESC LIMIT 20',[Number(p.get('variant_id'))])).map(r=>({id:r.id,generated_at:r.generated_at,horizon:r.horizon,expected:JSON.parse(r.evidence).forecast.expected}));
   else if(p.get('variant_id'))data=await skuOperations(db,Number(p.get('variant_id')),{horizon:Number(p.get('horizon')||14)});
-  else data=await db.all('SELECT v.id,v.sku,v.variant_name,p.name AS product_name FROM menu_item_variants v JOIN menu_items p ON p.id=v.menu_item_id WHERE LOWER(p.name) LIKE ? OR LOWER(v.sku) LIKE ? ORDER BY v.id LIMIT 40 OFFSET ?',['%'+String(p.get('q')||'').toLowerCase().slice(0,100)+'%','%'+String(p.get('q')||'').toLowerCase().slice(0,100)+'%',(Math.max(1,Math.min(10000,Number(p.get('page'))||1))-1)*40]);
+  else data=await db.all('SELECT v.id,v.sku,v.variant_name,p.name AS product_name FROM product_variants v JOIN products p ON p.id=v.product_id WHERE LOWER(p.name) LIKE ? OR LOWER(v.sku) LIKE ? ORDER BY v.id LIMIT 40 OFFSET ?',['%'+String(p.get('q')||'').toLowerCase().slice(0,100)+'%','%'+String(p.get('q')||'').toLowerCase().slice(0,100)+'%',(Math.max(1,Math.min(10000,Number(p.get('page'))||1))-1)*40]);
   return NextResponse.json({data},{headers:{'Cache-Control':'no-store'}});
 }catch(e){return handleRouteError(e,'Could not load operations intelligence.');}}
 export async function POST(request){try{

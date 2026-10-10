@@ -16,14 +16,14 @@ BEGIN
   END IF;
 END $$;
 
-INSERT INTO menu_categories
+INSERT INTO product_categories
   (name, description, display_order, image_url, is_active, merchandising_active, online_enabled)
 VALUES
   ('Hair Clips', 'Claw clips, cloud clips and bows.', 1,
    '/storefront/hair-claws-and-clips.jpg', 1, 1, 1)
 ON CONFLICT (name) DO NOTHING;
 
-INSERT INTO menu_items
+INSERT INTO products
   (name, description, category_id, base_price, image_url, is_available,
    merchandising_type, online_slug, online_summary, online_description,
    online_enabled, featured, online_sort)
@@ -33,10 +33,10 @@ SELECT 'Berry Cloud Claw Clip',
        'simple', 'berry-cloud-claw-clip',
        'Pink leopard-berry print on a soft cloud shape.',
        'Pink leopard-berry print on a soft cloud shape.', 1, 1, 1
-FROM menu_categories c WHERE c.name = 'Hair Clips'
+FROM product_categories c WHERE c.name = 'Hair Clips'
 ON CONFLICT (online_slug) WHERE online_slug IS NOT NULL DO NOTHING;
 
-INSERT INTO menu_items
+INSERT INTO products
   (name, description, category_id, base_price, image_url, is_available,
    merchandising_type, online_slug, online_summary, online_description,
    online_enabled, featured, online_sort)
@@ -44,7 +44,7 @@ SELECT 'Clips', 'Hair clips in assorted colours and sizes.', c.id, 100,
        '/storefront/hair-claws-and-clips.jpg', 1,
        'simple', 'clips', 'Hair clips in assorted colours and sizes.',
        'Hair clips in assorted colours and sizes.', 1, 1, 2
-FROM menu_categories c WHERE c.name = 'Hair Clips'
+FROM product_categories c WHERE c.name = 'Hair Clips'
 ON CONFLICT (online_slug) WHERE online_slug IS NOT NULL DO NOTHING;
 
 WITH seed_variants(product_slug, variant_name, price, is_default, barcode) AS (
@@ -91,17 +91,17 @@ WITH seed_variants(product_slug, variant_name, price, is_default, barcode) AS (
   ('clips', 'Black / M', 100, 0, 'INT-B039D90FE8D74675BC2A'),
   ('clips', 'Black / S', 100, 0, 'INT-85208F1C29BC4F2DB1A5')
 )
-INSERT INTO menu_item_variants
-  (menu_item_id, variant_name, price_modifier, is_default, price, barcode,
+INSERT INTO product_variants
+  (product_id, variant_name, price_modifier, is_default, price, barcode,
    tracking_mode, merchandising_active)
 SELECT p.id, s.variant_name, 0, s.is_default, s.price, s.barcode,
        'none', 1
-FROM seed_variants s JOIN menu_items p ON p.online_slug = s.product_slug
+FROM seed_variants s JOIN products p ON p.online_slug = s.product_slug
 ON CONFLICT (barcode) WHERE barcode IS NOT NULL DO NOTHING;
 
 INSERT INTO product_barcodes (variant_id, barcode, barcode_type, is_primary)
 SELECT v.id, v.barcode, 'primary', 1
-FROM menu_item_variants v JOIN menu_items p ON p.id = v.menu_item_id
+FROM product_variants v JOIN products p ON p.id = v.product_id
 WHERE p.online_slug IN ('berry-cloud-claw-clip', 'clips')
   AND v.barcode IS NOT NULL
 ON CONFLICT (barcode) DO NOTHING;
@@ -113,7 +113,7 @@ FROM (VALUES
   ('berry-cloud-claw-clip', '/storefront/berry-cloud-claw-clip.jpg'),
   ('clips', '/storefront/hair-claws-and-clips.jpg')
 ) AS image(slug, url)
-JOIN menu_items p ON p.online_slug = image.slug
+JOIN products p ON p.online_slug = image.slug
 WHERE NOT EXISTS (
   SELECT 1 FROM retail_product_media existing
   WHERE existing.product_id = p.id AND existing.url = image.url

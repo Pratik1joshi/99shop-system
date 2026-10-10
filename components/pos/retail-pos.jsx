@@ -129,7 +129,7 @@ export default function RetailPos() {
   }, []);
 
   useEffect(() => {
-    apiJson('/api/store/menu/categories').then((d) => setCategories(d.categories || [])).catch(() => {});
+    apiJson('/api/admin/categories').then((d) => setCategories(d.categories || [])).catch(() => {});
   }, []);
   // "3*" in front of a code or name means "add 3". The search itself ignores the multiplier.
   const multiplier = searchTerm.match(/^\s*(\d{1,3})\s*[*xX]\s*(.*)$/);

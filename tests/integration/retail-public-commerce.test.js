@@ -5,7 +5,7 @@ import Database from '../../lib/db/index.js';
 import { ensureAccountingSchema } from '../../lib/accounting.js';
 import { openBusinessDay } from '../../lib/business-days.js';
 import { getNepaliDateString } from '../../lib/time-utils.js';
-import { ensureStandardVariant } from '../../lib/menu-variants.js';
+import { ensureStandardVariant } from '../../lib/product-variants.js';
 import { getDefaultLocation } from '../../lib/retail-inventory.js';
 import { createGoodsReceipt,postGoodsReceipt } from '../../lib/retail-purchasing.js';
 import { publicCatalog,publicProduct,quoteOnlineCart,availableOnline } from '../../lib/retail-storefront.js';
@@ -24,11 +24,11 @@ const db=Database.getInstance();test.after(()=>db.close());
 test('Public commerce shares pricing, inventory and canonical posting',async t=>{
   await ensureAccountingSchema(db);const day=await openBusinessDay(db,{business_date:getNepaliDateString(),opening_cash:10000},{id:1,role:'admin',full_name:'Online test'});
   await db.run("UPDATE retail_online_settings SET enabled=1,delivery_enabled=1,delivery_fee=25,manual_payment_enabled=1 WHERE id=1");
-  const category=(await db.run("INSERT INTO menu_categories(name,online_enabled) VALUES ('Public cosmetics',1)")).lastInsertRowid;
+  const category=(await db.run("INSERT INTO product_categories(name,online_enabled) VALUES ('Public cosmetics',1)")).lastInsertRowid;
   const supplier=(await db.run("INSERT INTO suppliers(name,normalized_name) VALUES ('Online supplier','online supplier')")).lastInsertRowid;
   const loc=await getDefaultLocation(db);
-  const make=async(name,qty=4,tracking=false)=>{const serial=tracking===true;const product=(await db.run('INSERT INTO menu_items(name,category_id,base_price,is_available,online_enabled,online_slug) VALUES (?,?,100,1,1,?)',[name,category,randomUUID()])).lastInsertRowid;
-    const [v]=await ensureStandardVariant(db,product,{price:100});if(serial||tracking==='batch')await db.run('UPDATE menu_item_variants SET tracking_mode=? WHERE id=?',[serial?'serial':'batch',v.id]);
+  const make=async(name,qty=4,tracking=false)=>{const serial=tracking===true;const product=(await db.run('INSERT INTO products(name,category_id,base_price,is_available,online_enabled,online_slug) VALUES (?,?,100,1,1,?)',[name,category,randomUUID()])).lastInsertRowid;
+    const [v]=await ensureStandardVariant(db,product,{price:100});if(serial||tracking==='batch')await db.run('UPDATE product_variants SET tracking_mode=? WHERE id=?',[serial?'serial':'batch',v.id]);
     const serialNumbers=serial?Array.from({length:qty},(_,i)=>`${name}-${i}`):undefined;
     const receipt=await createGoodsReceipt(db,{supplierId:supplier,locationId:loc.id,paymentMethod:'credit',invoiceNumber:randomUUID(),lines:[{variantId:v.id,quantityReceived:qty,unitCost:33.33,serialNumbers,...(tracking==='batch'?{batches:[{batchNumber:'WEB-LATE',expiryDate:'2099-12-31',quantity:qty}]}:{})}]});await postGoodsReceipt(db,receipt.id,{postedBy:1,businessDayId:day.id});return {id:v.id,product,serialNumbers};};
   const fixture=await make('Ruby matte',10),owner={ownerHash:'owner-a',customerId:null};
@@ -36,7 +36,7 @@ test('Public commerce shares pricing, inventory and canonical posting',async t=>
   await t.test('Public projections exclude costs/suppliers and unpublished products',async()=>{
     const catalog=await publicCatalog(db);assert.equal(catalog.products.length,1);assert.ok(!/purchase_cost|supplier|average_cost|unit_cost|carrying_value/.test(JSON.stringify(catalog)));
     const product=await publicProduct(db,fixture.product);assert.equal(product.variants[0].available,10);assert.equal(product.variants[0].price.unit_price,100);
-    await db.run('UPDATE menu_items SET online_enabled=0 WHERE id=?',[fixture.product]);await assert.rejects(quoteOnlineCart(db,input(fixture.id)),/no longer available/);await db.run('UPDATE menu_items SET online_enabled=1 WHERE id=?',[fixture.product]);
+    await db.run('UPDATE products SET online_enabled=0 WHERE id=?',[fixture.product]);await assert.rejects(quoteOnlineCart(db,input(fixture.id)),/no longer available/);await db.run('UPDATE products SET online_enabled=1 WHERE id=?',[fixture.product]);
   });
   await t.test('Online lists resolve server-side, tampering and invalid quantities cannot alter economics',async()=>{
     const list=await savePriceList(db,{name:'Web price',code:'WEB-TEST',channel:'online',reason:'Online launch',items:[{variant_id:fixture.id,fixed_price:90}]},1);
@@ -60,20 +60,20 @@ test('Public commerce shares pricing, inventory and canonical posting',async t=>
     await publishOnlineProducts(db,{product_ids:[fixture.product],operation:'disable',reason:'Test hidden assortment'},1);
     await assert.rejects(publicProduct(db,fixture.product),/not found/);
     assert.equal((await publicProduct(db,fixture.product,{preview:true})).title,'Ruby matte');
-    await db.run('UPDATE menu_items SET is_available=0 WHERE id=?',[fixture.product]);
+    await db.run('UPDATE products SET is_available=0 WHERE id=?',[fixture.product]);
     await assert.rejects(publishOnlineProducts(db,{product_ids:[fixture.product],operation:'enable',reason:'Reject archive'},1),/Archived/);
-    await db.run('UPDATE menu_items SET is_available=1 WHERE id=?',[fixture.product]);
+    await db.run('UPDATE products SET is_available=1 WHERE id=?',[fixture.product]);
     await publishOnlineProducts(db,{product_ids:[fixture.product],operation:'enable',reason:'Publish deliberate selection'},1);
   });
   await t.test('Checkout requires acknowledgement of changed prices and ignores payment/customer authority',async()=>{
     const request=input(fixture.id,{paymentStatus:'PAID',payment_status:'PAID',customer_id:1,total:0.01});
     const quote=await quoteOnlineCart(db,request);
-    await db.run('UPDATE menu_item_variants SET price=105 WHERE id=?',[fixture.id]);
+    await db.run('UPDATE product_variants SET price=105 WHERE id=?',[fixture.id]);
     await assert.rejects(submitPublicOrder(db,{...request,quote_token:quote.quote_token},owner),/changed/);
     assert.equal(Number((await db.get('SELECT COUNT(*) AS n FROM retail_online_orders')).n),0);
     const order=await placePublicOrder(db,request,owner);assert.equal(order.payment_status,'UNPAID');assert.equal(Number(order.total),105);
     assert.equal((await db.get('SELECT customer_id FROM retail_online_orders WHERE id=?',[order.id])).customer_id,null);
-    await cancelPublicOrder(db,order.id,owner);await db.run('UPDATE menu_item_variants SET price=100 WHERE id=?',[fixture.id]);
+    await cancelPublicOrder(db,order.id,owner);await db.run('UPDATE product_variants SET price=100 WHERE id=?',[fixture.id]);
   });
   let order;
   await t.test('Place/retry reserves once, creates no sale/movement, and enforces ownership',async()=>{
@@ -133,17 +133,17 @@ test('Public commerce shares pricing, inventory and canonical posting',async t=>
     const sale=await fulfillOrder(db,o.id,{cashierId:1,paymentVerified:true,paymentMethod:'online',paymentReference:'BANK-VERIFIED-123'});assert.equal(Number(sale.delivery_charge),25);assert.equal(Number(sale.grand_total),125);
   });
   await t.test('Changed price blocks fulfillment and rolls back sale/reservation changes',async()=>{
-    const o=await placePublicOrder(db,input(fixture.id),{ownerHash:'changed-price'});await db.run('UPDATE menu_item_variants SET price=110 WHERE id=?',[fixture.id]);await assert.rejects(fulfillOrder(db,o.id,{cashierId:1,paymentVerified:true}),/price changed/);assert.equal((await db.get('SELECT retail_sale_id FROM retail_online_orders WHERE id=?',[o.id])).retail_sale_id,null);await db.run('UPDATE menu_item_variants SET price=100 WHERE id=?',[fixture.id]);await cancelPublicOrder(db,o.id,{ownerHash:'changed-price'});
+    const o=await placePublicOrder(db,input(fixture.id),{ownerHash:'changed-price'});await db.run('UPDATE product_variants SET price=110 WHERE id=?',[fixture.id]);await assert.rejects(fulfillOrder(db,o.id,{cashierId:1,paymentVerified:true}),/price changed/);assert.equal((await db.get('SELECT retail_sale_id FROM retail_online_orders WHERE id=?',[o.id])).retail_sale_id,null);await db.run('UPDATE product_variants SET price=100 WHERE id=?',[fixture.id]);await cancelPublicOrder(db,o.id,{ownerHash:'changed-price'});
   });
   await t.test('Only the order owner can accept a changed fulfillment price',async()=>{
     const identity={ownerHash:'reprice-owner'},o=await placePublicOrder(db,input(fixture.id),identity);
-    await db.run('UPDATE menu_item_variants SET price=101 WHERE id=?',[fixture.id]);
+    await db.run('UPDATE product_variants SET price=101 WHERE id=?',[fixture.id]);
     await assert.rejects(repricePublicOrder(db,{id:o.id},{ownerHash:'intruder'}),/not found/);
     const quote=await repricePublicOrder(db,{id:o.id},identity);assert.equal(quote.previous_total,100);assert.equal(quote.total,101);
     await assert.rejects(repricePublicOrder(db,{id:o.id,accept:true,quote_token:'forged'},identity),/changed again/);
     await repricePublicOrder(db,{id:o.id,accept:true,quote_token:quote.quote_token},identity);
     const sale=await fulfillOrder(db,o.id,{cashierId:1,paymentVerified:true});assert.equal(Number(sale.grand_total),101);
-    await db.run('UPDATE menu_item_variants SET price=100 WHERE id=?',[fixture.id]);
+    await db.run('UPDATE product_variants SET price=100 WHERE id=?',[fixture.id]);
   });
   await t.test('Cancellation racing fulfillment has one economic outcome and channel reporting agrees',async()=>{
     const o=await placePublicOrder(db,input(fixture.id),{ownerHash:'cancel-race'});

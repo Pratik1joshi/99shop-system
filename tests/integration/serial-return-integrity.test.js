@@ -5,7 +5,7 @@ import { ensureAccountingSchema, accountBalance } from '../../lib/accounting.js'
 import { trialBalance } from '../../lib/accounting-reports.js';
 import { openBusinessDay } from '../../lib/business-days.js';
 import { getNepaliDateString } from '../../lib/time-utils.js';
-import { ensureStandardVariant } from '../../lib/menu-variants.js';
+import { ensureStandardVariant } from '../../lib/product-variants.js';
 import { getDefaultLocation, getInventoryValuation } from '../../lib/retail-inventory.js';
 import { createGoodsReceipt, postGoodsReceipt } from '../../lib/retail-purchasing.js';
 import { holdSale, checkoutSale } from '../../lib/retail-sales.js';
@@ -24,11 +24,11 @@ test('PostgreSQL: repeated serial returns preserve inventory and accounting on e
   const day = await openBusinessDay(db, { business_date: getNepaliDateString(), opening_cash: 0 }, actor);
   const location = await getDefaultLocation(db);
   const supplierId = (await db.run(`INSERT INTO suppliers(name,normalized_name) VALUES ('Serial gate','serial gate')`)).lastInsertRowid;
-  const categoryId = (await db.run(`INSERT INTO menu_categories(name,display_order) VALUES ('Serial integrity',1)`)).lastInsertRowid;
+  const categoryId = (await db.run(`INSERT INTO product_categories(name,display_order) VALUES ('Serial integrity',1)`)).lastInsertRowid;
   for (const quantity of [1, 2]) await t.test(`${quantity} serial(s) per line, three economic cycles`, async () => {
-    const productId = (await db.run(`INSERT INTO menu_items(name,category_id,base_price,is_available) VALUES (?,?,300,1)`, [`Serial gate ${quantity}`, categoryId])).lastInsertRowid;
+    const productId = (await db.run(`INSERT INTO products(name,category_id,base_price,is_available) VALUES (?,?,300,1)`, [`Serial gate ${quantity}`, categoryId])).lastInsertRowid;
     const [variant] = await ensureStandardVariant(db, productId, { price: 300, stockUnit: 'pcs' });
-    await db.run(`UPDATE menu_item_variants SET tracking_mode='serial' WHERE id=?`, [variant.id]);
+    await db.run(`UPDATE product_variants SET tracking_mode='serial' WHERE id=?`, [variant.id]);
     const serials = Array.from({ length: quantity }, (_, i) => `GATE-${quantity}-${i}`);
     const cost = 92.73;
     const openingAsset = money(await accountBalance(db, '1210'));
@@ -83,9 +83,9 @@ test('PostgreSQL: repeated serial returns preserve inventory and accounting on e
   });
 
   await t.test('fractional moving-average costs must also reconcile after three returns', async () => {
-    const productId = (await db.run(`INSERT INTO menu_items(name,category_id,base_price,is_available) VALUES (?,?,300,1)`, ['Fractional serial gate', categoryId])).lastInsertRowid;
+    const productId = (await db.run(`INSERT INTO products(name,category_id,base_price,is_available) VALUES (?,?,300,1)`, ['Fractional serial gate', categoryId])).lastInsertRowid;
     const [variant] = await ensureStandardVariant(db, productId, { price: 300, stockUnit: 'pcs' });
-    await db.run(`UPDATE menu_item_variants SET tracking_mode='serial' WHERE id=?`, [variant.id]);
+    await db.run(`UPDATE product_variants SET tracking_mode='serial' WHERE id=?`, [variant.id]);
     const serials = Array.from({ length: 11 }, (_, i) => `FRACTIONAL-GATE-${i}`);
     for (const [batch, cost] of [[serials.slice(0, 2), 150], [serials.slice(2), 80]]) {
       const receipt = await createGoodsReceipt(db, { supplierId, locationId: location.id, paymentMethod: 'credit',

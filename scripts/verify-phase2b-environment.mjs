@@ -18,11 +18,11 @@ try{
         for(const file of fs.readdirSync('migrations').filter(f=>/^\d+.*\.sql$/.test(f)&&Number(f.slice(0,3))<=104).sort()){
           await client.query(fs.readFileSync('migrations/'+file,'utf8'));await client.query('INSERT INTO schema_migrations(version) VALUES ($1)',[file.replace(/\.sql$/,'')]);
         }
-        const category=(await client.query("INSERT INTO menu_categories(name) VALUES ('Preserved category') RETURNING id")).rows[0].id;
-        original=(await client.query("INSERT INTO menu_items(name,category_id,base_price,is_available) VALUES ('Preserved in-store product',$1,123.45,1) RETURNING id,name,base_price,online_enabled",[category])).rows[0];
+        const category=(await client.query("INSERT INTO product_categories(name) VALUES ('Preserved category') RETURNING id")).rows[0].id;
+        original=(await client.query("INSERT INTO products(name,category_id,base_price,is_available) VALUES ('Preserved in-store product',$1,123.45,1) RETURNING id,name,base_price,online_enabled",[category])).rows[0];
       }
       run('scripts/migrate.mjs');run('scripts/migrate.mjs');
-      if(original)assert.deepEqual((await client.query('SELECT id,name,base_price,online_enabled FROM menu_items WHERE id=$1',[original.id])).rows[0],original);
+      if(original)assert.deepEqual((await client.query('SELECT id,name,base_price,online_enabled FROM products WHERE id=$1',[original.id])).rows[0],original);
       assert.equal((await client.query('SELECT enabled FROM retail_online_settings WHERE id=1')).rows[0].enabled,0);
       assert.equal((await client.query('SELECT COUNT(*)::int AS n FROM journal_entries')).rows[0].n,0);
       checks.push({mode:mode==='upgrade'?'upgrade_from_104':'fresh',rerun:'PASS',publication_off:true,economics_unchanged:true,migration_files:(await client.query('SELECT COUNT(*)::int AS n FROM schema_migrations')).rows[0].n});

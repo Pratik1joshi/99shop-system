@@ -13,7 +13,7 @@ export const REPORT_CATALOG = [
   { id: 'changes', label: 'Returns by Reason', shortLabel: 'Returns', blurb: 'Posted retail return value and line count grouped by reason.', icon: Undo2, chip: 'bg-red-50 text-red-600', accent: 'border-t-red-400' },
   { id: 'inventory', label: 'Current Stock Report', shortLabel: 'Current stock', blurb: 'Current inventory balance and valuation; period selection does not change this snapshot.', icon: Warehouse, chip: 'bg-lime-50 text-lime-700', accent: 'border-t-lime-400' },
   { id: 'employees', label: 'Cashier Sales Report', shortLabel: 'Cashiers', blurb: 'Retail sales attributed to cashier; attendance and payroll are separate.', icon: Users, chip: 'bg-fuchsia-50 text-fuchsia-600', accent: 'border-t-fuchsia-400' },
-  { id: 'menu', label: 'Product Sales Report', shortLabel: 'Products', blurb: 'Retail sales, historical cost and margin by product.', icon: Package, chip: 'bg-orange-50 text-orange-600', accent: 'border-t-orange-400' },
+  { id: 'products', label: 'Product Sales Report', shortLabel: 'Products', blurb: 'Retail sales, historical cost and margin by product.', icon: Package, chip: 'bg-orange-50 text-orange-600', accent: 'border-t-orange-400' },
   { id: 'categories', label: 'Category Sales Report', shortLabel: 'Categories', blurb: 'Retail sales, historical cost and margin by category.', icon: Layers, chip: 'bg-teal-50 text-teal-600', accent: 'border-t-teal-400' },
   { id: 'customers', label: 'Customer Sales Report', shortLabel: 'Customers', blurb: 'Customer sales and average spend within the selected period.', icon: Contact, chip: 'bg-pink-50 text-pink-600', accent: 'border-t-pink-400' },
 ];

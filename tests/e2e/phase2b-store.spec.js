@@ -52,7 +52,7 @@ test('changed checkout price needs a second explicit acknowledgement',async({pag
   const db=new pg.Client({connectionString:connection});await db.connect();
   try{
     await page.goto('/store');await page.evaluate(id=>localStorage.setItem('aadhar_bag',JSON.stringify([{variant_id:id,quantity:1}])),fixture.variant);await page.goto('/store/cart');await page.getByLabel('Full name').fill('Price Browser');await page.getByLabel('Phone',{exact:true}).fill('9801231231');await expect(page.getByRole('button',{name:'Place order',exact:true})).toBeEnabled();
-    await db.query('UPDATE menu_item_variants SET price=105 WHERE id=$1',[fixture.variant]);await page.getByRole('button',{name:'Place order',exact:true}).click();await expect(page.getByRole('alert').filter({hasText:'Price updated'})).toContainText('Price updated from Rs 100.00 to Rs 105.00');expect(page.url()).toContain('/store/cart');
+    await db.query('UPDATE product_variants SET price=105 WHERE id=$1',[fixture.variant]);await page.getByRole('button',{name:'Place order',exact:true}).click();await expect(page.getByRole('alert').filter({hasText:'Price updated'})).toContainText('Price updated from Rs 100.00 to Rs 105.00');expect(page.url()).toContain('/store/cart');
     await page.getByRole('button',{name:'Place order',exact:true}).click();await expect(page).toHaveURL(/\/store\/orders\/\d+/);await page.getByRole('button',{name:'Cancel order',exact:true}).click();await expect(page.getByText(/CANCELLED/).first()).toBeVisible();
-  }finally{await db.query('UPDATE menu_item_variants SET price=100 WHERE id=$1',[fixture.variant]);await db.end();}
+  }finally{await db.query('UPDATE product_variants SET price=100 WHERE id=$1',[fixture.variant]);await db.end();}
 });

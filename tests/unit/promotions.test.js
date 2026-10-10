@@ -2,18 +2,18 @@ import test from 'node:test'
 import assert from 'node:assert/strict'
 
 import { allocatePromotionLines, normalizePromotion } from '../../lib/promotions.js'
-import { promotionMenuBadgeLabel } from '../../lib/promotion-display.js'
+import { promotionBadgeLabel } from '../../lib/promotion-display.js'
 
 const promotionDiscount = (promotion, lines) => allocatePromotionLines(promotion, lines).discount
 
 const items = [
-  { menu_item_id: 1, category_id: 10, quantity: 2, price: 200, subtotal: 400 },
-  { menu_item_id: 2, category_id: 20, quantity: 1, price: 300, subtotal: 300 },
+  { product_id: 1, category_id: 10, quantity: 2, price: 200, subtotal: 400 },
+  { product_id: 2, category_id: 20, quantity: 1, price: 300, subtotal: 300 },
 ]
 
 test('offer labels show percent and rupee discounts', () => {
-  assert.equal(promotionMenuBadgeLabel({ discount_type: 'percent', discount_value: 10 }), '10% off')
-  assert.equal(promotionMenuBadgeLabel({ discount_type: 'fixed', discount_value: 75 }), 'Rs 75 off')
+  assert.equal(promotionBadgeLabel({ discount_type: 'percent', discount_value: 10 }), '10% off')
+  assert.equal(promotionBadgeLabel({ discount_type: 'fixed', discount_value: 75 }), 'Rs 75 off')
 })
 
 test('item/category offers with no targets never discount the whole sale', () => {
@@ -47,8 +47,8 @@ test('buy two get one free discounts the cheapest qualifying units', () => {
     offer_type: 'buy_x_get_y', scope: 'category', target_ids: [10],
     buy_quantity: 2, reward_quantity: 1, reward_discount_percent: 100,
   }, [
-    { menu_item_id: 1, category_id: 10, quantity: 2, price: 200, subtotal: 400 },
-    { menu_item_id: 3, category_id: 10, quantity: 1, price: 150, subtotal: 150 },
+    { product_id: 1, category_id: 10, quantity: 2, price: 200, subtotal: 400 },
+    { product_id: 3, category_id: 10, quantity: 1, price: 150, subtotal: 150 },
   ], 550)
   assert.equal(discount, 150)
 })

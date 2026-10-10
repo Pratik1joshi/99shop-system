@@ -38,7 +38,7 @@ export async function GET(request, context) {
         COUNT(*) AS receipt_count,SUM(grl.stock_quantity) AS received_quantity,
         MAX(grn.posted_at) AS last_purchase_at
         FROM goods_receipt_lines grl JOIN goods_receipts grn ON grn.id=grl.goods_receipt_id AND grn.status='POSTED'
-        JOIN menu_item_variants v ON v.id=grl.variant_id JOIN menu_items mi ON mi.id=v.menu_item_id
+        JOIN product_variants v ON v.id=grl.variant_id JOIN products mi ON mi.id=v.product_id
         WHERE grn.supplier_id=? GROUP BY grl.variant_id,mi.name,v.variant_name,v.sku
         ORDER BY last_purchase_at DESC LIMIT 100`, [supplierId]),
     ]);

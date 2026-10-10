@@ -7,7 +7,7 @@ import { importProducts, planProductImport } from '@/lib/retail-product-import.j
 /** Bulk product upload: { csv } checks the file, { csv, confirm: true } adds the products. */
 export async function POST(request) {
   try {
-    const auth = await requireAuth(request, { roles: ['admin', 'cashier'], permission: 'menu.manage' });
+    const auth = await requireAuth(request, { roles: ['admin', 'cashier'], permission: 'catalog.manage' });
     if (auth.error) return auth.error;
     const db = Database.getInstance();
     await ensureRetailCommerceSchema(db);

@@ -46,23 +46,23 @@ const PRODUCTS = [
 ];
 
 async function ensureCategory(db, cat) {
-  const existing = await db.get('SELECT id FROM menu_categories WHERE name = ?', [cat.name]);
+  const existing = await db.get('SELECT id FROM product_categories WHERE name = ?', [cat.name]);
   if (existing) return existing.id;
   if (DRY_RUN) return null;
   await db.run(
-    'INSERT INTO menu_categories (name, description, display_order, is_active) VALUES (?, ?, ?, 1)',
+    'INSERT INTO product_categories (name, description, display_order, is_active) VALUES (?, ?, ?, 1)',
     [cat.name, cat.description, cat.order]
   );
-  const row = await db.get('SELECT id FROM menu_categories WHERE name = ?', [cat.name]);
+  const row = await db.get('SELECT id FROM product_categories WHERE name = ?', [cat.name]);
   return row?.id ?? null;
 }
 
 async function upsertProduct(db, product, categoryId) {
-  const existing = await db.get('SELECT id FROM menu_items WHERE barcode = ?', [product.barcode]);
+  const existing = await db.get('SELECT id FROM products WHERE barcode = ?', [product.barcode]);
   if (existing) {
     if (!DRY_RUN) {
       await db.run(
-        `UPDATE menu_items
+        `UPDATE products
          SET name = ?, description = ?, category_id = ?, unit = 'pcs', updated_at = CURRENT_TIMESTAMP
          WHERE id = ?`,
         [product.name, product.description, categoryId, existing.id]
@@ -72,7 +72,7 @@ async function upsertProduct(db, product, categoryId) {
   }
   if (!DRY_RUN) {
     await db.run(
-      `INSERT INTO menu_items (name, description, category_id, base_price, barcode, unit, is_available)
+      `INSERT INTO products (name, description, category_id, base_price, barcode, unit, is_available)
        VALUES (?, ?, ?, ?, ?, 'pcs', 1)`,
       [product.name, product.description, categoryId, DEFAULT_PRICE, product.barcode]
     );

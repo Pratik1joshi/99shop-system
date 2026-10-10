@@ -7,7 +7,7 @@ if(!['localhost','127.0.0.1'].includes(url.hostname)||!/^\/phase1f_browser_\d+_\
 const db=Database.getInstance();
 try{
   const admin=await db.get("SELECT id FROM users WHERE username='admin'");
-  const variant=await db.get("SELECT id FROM menu_item_variants WHERE sku='E2E-SERIAL'");
+  const variant=await db.get("SELECT id FROM product_variants WHERE sku='E2E-SERIAL'");
   const supplier=await db.get("SELECT id FROM suppliers WHERE normalized_name='e2e supplier'");
   const day=await db.get("SELECT id FROM business_days WHERE status='open' ORDER BY id DESC LIMIT 1");
   const location=await getDefaultLocation(db);

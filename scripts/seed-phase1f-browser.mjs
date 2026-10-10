@@ -14,7 +14,7 @@ try {
   if (!day) day = await openBusinessDay(db, { business_date: getNepaliDateString(), opening_cash: 0 }, admin);
   if (!await db.get("SELECT id FROM customers WHERE phone='9800011999'")) await db.run("INSERT INTO customers(name,phone,credit_limit) VALUES ('Billing E2E','9800011999',10000)");
   const supplier = await db.get("SELECT id FROM suppliers WHERE normalized_name='e2e supplier'");
-  const variant = await db.get("SELECT id FROM menu_item_variants WHERE sku='E2E-STANDARD'");
+  const variant = await db.get("SELECT id FROM product_variants WHERE sku='E2E-STANDARD'");
   const location = await getDefaultLocation(db);
   let receipt = await db.get("SELECT id,status FROM goods_receipts WHERE supplier_id=? AND invoice_number='PHASE1F-BROWSER-OPENING'", [supplier.id]);
   if (!receipt) receipt = await createGoodsReceipt(db, { supplierId: supplier.id, locationId: location.id, invoiceNumber: 'PHASE1F-BROWSER-OPENING', paymentMethod: 'credit', receivedBy: admin.id,

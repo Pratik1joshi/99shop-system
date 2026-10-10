@@ -13,11 +13,11 @@ const can = () => true;
 let variantId;
 test.after(async () => db.close());
 test('seed 10,000 products and alternate barcodes through catalog schema', async () => {
-  await db.run("INSERT INTO menu_categories(name) VALUES ('Commerce fixtures')");
-  await db.run(`INSERT INTO menu_items(name,base_price,is_available,category_id) SELECT 'Commerce Product ' || n,100,1,(SELECT id FROM menu_categories ORDER BY id LIMIT 1) FROM generate_series(1,10000) AS n`);
-  await db.run(`INSERT INTO menu_item_variants(menu_item_id,variant_name,price,is_default,sku,barcode,tracking_mode)
-    SELECT id,'Standard',100,1,'COM-' || id,'99COM' || id,'none' FROM menu_items WHERE name LIKE 'Commerce Product %'`);
-  const v = await db.get("SELECT id,menu_item_id FROM menu_item_variants WHERE sku LIKE 'COM-%' ORDER BY id LIMIT 1");
+  await db.run("INSERT INTO product_categories(name) VALUES ('Commerce fixtures')");
+  await db.run(`INSERT INTO products(name,base_price,is_available,category_id) SELECT 'Commerce Product ' || n,100,1,(SELECT id FROM product_categories ORDER BY id LIMIT 1) FROM generate_series(1,10000) AS n`);
+  await db.run(`INSERT INTO product_variants(product_id,variant_name,price,is_default,sku,barcode,tracking_mode)
+    SELECT id,'Standard',100,1,'COM-' || id,'99COM' || id,'none' FROM products WHERE name LIKE 'Commerce Product %'`);
+  const v = await db.get("SELECT id,product_id FROM product_variants WHERE sku LIKE 'COM-%' ORDER BY id LIMIT 1");
   variantId = v.id;
   await db.run('INSERT INTO product_barcodes(variant_id,barcode) VALUES (?,?)', [variantId,'EXACT-ALT-100']);
 });
@@ -69,7 +69,7 @@ test('server quote matches posted VAT, payment retry posts one economic sale', a
   assert.equal(sale.id, replay.id);
   const movements = await db.get("SELECT COUNT(*) AS n FROM inventory_movements WHERE reference_type='retail_sale' AND variant_id=?", [variantId]);
   assert.ok(Number(movements.n) <= 1);
-  const bySku = await listRetailSales(db, { search: `COM-${(await db.get('SELECT menu_item_id FROM menu_item_variants WHERE id=?', [variantId])).menu_item_id}`, pageSize: 1 });
+  const bySku = await listRetailSales(db, { search: `COM-${(await db.get('SELECT product_id FROM product_variants WHERE id=?', [variantId])).product_id}`, pageSize: 1 });
   assert.equal(Number(bySku.rows[0].id), Number(sale.id));
   const byBarcode = await listRetailSales(db, { search: 'EXACT-ALT-100', pageSize: 1 });
   assert.equal(Number(byBarcode.rows[0].id), Number(sale.id));
@@ -89,8 +89,8 @@ test('catalog stock status is filtered before pagination', async () => {
 test('movement search preserves joined-query results, pagination and cost filtering', async () => {
   for (const query of ['Commerce Product', 'COM-', 'retail_sale', '%', '_', "' OR 1=1 --", 'missing identity']) {
     const pattern = `%${query.toLowerCase().replace(/[\\%_]/g, '\\$&')}%`;
-    const expected = await db.all(`SELECT m.id FROM inventory_movements m JOIN menu_item_variants v ON v.id=m.variant_id
-      JOIN menu_items p ON p.id=v.menu_item_id LEFT JOIN inventory_batches b ON b.id=m.batch_id
+    const expected = await db.all(`SELECT m.id FROM inventory_movements m JOIN product_variants v ON v.id=m.variant_id
+      JOIN products p ON p.id=v.product_id LEFT JOIN inventory_batches b ON b.id=m.batch_id
       WHERE lower(p.name) LIKE ? ESCAPE '\\' OR lower(COALESCE(v.sku,'')) LIKE ? ESCAPE '\\'
       OR lower(COALESCE(b.batch_number,'')) LIKE ? ESCAPE '\\' OR lower(COALESCE(m.reference_type,'')) LIKE ? ESCAPE '\\'
       ORDER BY m.id DESC`, [pattern,pattern,pattern,pattern]);

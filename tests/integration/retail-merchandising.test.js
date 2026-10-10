@@ -8,8 +8,8 @@ import { getProductMerchandising,saveProductMerchandising } from '../../lib/reta
 import { resolveRetailPrices } from '../../lib/retail-pricing.js';
 const db=Database.getInstance();test.after(()=>db.close());
 test('Cosmetics matrix, atomic bulk edits and stable reimport',async t=>{
-  const category=(await db.run("INSERT INTO menu_categories(name) VALUES ('Cosmetics matrix')")).lastInsertRowid;
-  const product=(await db.run("INSERT INTO menu_items(name,category_id,base_price,is_available) VALUES ('Luxe Lip Color',?,500,1)",[category])).lastInsertRowid;
+  const category=(await db.run("INSERT INTO product_categories(name) VALUES ('Cosmetics matrix')")).lastInsertRowid;
+  const product=(await db.run("INSERT INTO products(name,category_id,base_price,is_available) VALUES ('Luxe Lip Color',?,500,1)",[category])).lastInsertRowid;
   const matrix=previewVariantMatrix({prefix:'LUXE',price:500,axes:[{name:'Shade',values:Array.from({length:50},(_,i)=>`Shade ${i+1}`)},{name:'Finish',values:['Matte','Gloss']}]});
   const selected=matrix.slice(0,82).map((row,i)=>({...row,barcode:`INT-LUXE-${i}`,barcodes:[`SUPPLIER-LUXE-${i}`],purchase_cost:200,wholesale_price:450}));
   let saved;
@@ -39,9 +39,9 @@ test('Cosmetics matrix, atomic bulk edits and stable reimport',async t=>{
     const rows=await catalogRows(db,product);
     const job=await previewCatalogChange(db,{product_id:product,rows:[{...rows[0],price:530}],reason:'Stale price edit'},1);
     await assert.rejects(applyCatalogChange(db,job.id,999),/not found/i);
-    await db.run('UPDATE menu_item_variants SET price=526 WHERE id=?',[rows[0].id]);
+    await db.run('UPDATE product_variants SET price=526 WHERE id=?',[rows[0].id]);
     await assert.rejects(applyCatalogChange(db,job.id,1),/changed after preview/i);
-    assert.equal(Number((await db.get('SELECT price FROM menu_item_variants WHERE id=?',[rows[0].id])).price),526);
+    assert.equal(Number((await db.get('SELECT price FROM product_variants WHERE id=?',[rows[0].id])).price),526);
   });
   await t.test('Online fields, media and supplier data stay on the canonical product',async()=>{
     const supplier=(await db.run("INSERT INTO suppliers(name,normalized_name) VALUES ('Luxe supplier','luxe supplier')")).lastInsertRowid;
@@ -52,7 +52,7 @@ test('Cosmetics matrix, atomic bulk edits and stable reimport',async t=>{
     assert.deepEqual((await getProductMerchandising(db,product)).media,details.media);
   });
   await t.test('84-combination acceptance reports two duplicates then scans every corrected SKU',async()=>{
-    const id=(await db.run("INSERT INTO menu_items(name,category_id,base_price,is_available) VALUES ('Professional Lip Color',?,600,1)",[category])).lastInsertRowid;
+    const id=(await db.run("INSERT INTO products(name,category_id,base_price,is_available) VALUES ('Professional Lip Color',?,600,1)",[category])).lastInsertRowid;
     const rows=matrix.slice(0,84).map((row,index)=>({...row,sku:`PRO-LIP-${index+1}`,barcode:`INT-PRO-LIP-${index+1}`,price:600,mrp:700,purchase_cost:250,wholesale_price:550,reorder_point:5,reorder_quantity:12}));
     const invalid=rows.map((row,index)=>({...row,barcode:index===82?rows[0].barcode:index===83?rows[1].barcode:row.barcode}));
     await assert.rejects(previewCatalogChange(db,{product_id:id,rows:invalid,reason:'84 shade launch'},1),/Row 83: duplicate.*Row 84: duplicate/);
@@ -65,12 +65,12 @@ test('Cosmetics matrix, atomic bulk edits and stable reimport',async t=>{
   await t.test('Concurrent jobs cannot assign one barcode to two different SKUs',async()=>{
     const jobs=[];
     for(let index=0;index<2;index++){
-      const id=(await db.run('INSERT INTO menu_items(name,category_id,base_price,is_available) VALUES (?,?,100,1)',[`Concurrent catalog ${index}`,category])).lastInsertRowid;
+      const id=(await db.run('INSERT INTO products(name,category_id,base_price,is_available) VALUES (?,?,100,1)',[`Concurrent catalog ${index}`,category])).lastInsertRowid;
       jobs.push(await previewCatalogChange(db,{product_id:id,reason:'Concurrent barcode',rows:[{sku:`CONCURRENT-${index}`,variant_name:'Standard',price:100,barcode:'INT-CONCURRENT-SAME'}]},1));
     }
     const results=await Promise.allSettled(jobs.map(job=>applyCatalogChange(db,job.id,1)));
     assert.equal(results.filter(result=>result.status==='fulfilled').length,1);
     assert.equal(results.filter(result=>result.status==='rejected').length,1);
-    assert.equal(Number((await db.get("SELECT COUNT(*) AS count FROM menu_item_variants WHERE barcode='INT-CONCURRENT-SAME'")).count),1);
+    assert.equal(Number((await db.get("SELECT COUNT(*) AS count FROM product_variants WHERE barcode='INT-CONCURRENT-SAME'")).count),1);
   });
 });

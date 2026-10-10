@@ -14,7 +14,7 @@ const time = async (name, run) => {
     rows: result.rows?.length ?? result.suggestions?.length ?? result.length ?? result.groups?.length ?? null }));
 };
 try {
-  const counts = await db.get(`SELECT (SELECT COUNT(*) FROM menu_item_variants) AS skus,
+  const counts = await db.get(`SELECT (SELECT COUNT(*) FROM product_variants) AS skus,
     (SELECT COUNT(*) FROM inventory_movements) AS movements`);
   console.log(JSON.stringify(counts));
   await time('stock_first_page', () => queryRetailStock(db, { pageSize: 40 }));

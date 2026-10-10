@@ -15,13 +15,13 @@ try {
     c.quantity_on_hand*c.average_cost AS unrounded_value,
     ROUND(c.quantity_on_hand*c.average_cost,2) AS rounded_value,
     (SELECT SUM(CASE WHEN m.quantity>0 THEN m.total_cost ELSE -m.total_cost END) FROM inventory_movements m WHERE m.variant_id=v.id) AS signed_movement_value
-    FROM inventory_costs c JOIN menu_item_variants v ON v.id=c.variant_id ORDER BY v.id`);
+    FROM inventory_costs c JOIN product_variants v ON v.id=c.variant_id ORDER BY v.id`);
   const serialMovements = await db.all(`SELECT m.id,m.variant_id,m.movement_type,m.quantity,m.unit_cost,m.total_cost,m.reference_type,m.reference_id,
     e.return_line_id,e.serial_id FROM inventory_movements m LEFT JOIN retail_return_serial_events e ON m.reference_type='retail_return_serial_event' AND e.id=m.reference_id
-    WHERE m.variant_id IN (SELECT id FROM menu_item_variants WHERE tracking_mode='serial') ORDER BY m.id`);
+    WHERE m.variant_id IN (SELECT id FROM product_variants WHERE tracking_mode='serial') ORDER BY m.id`);
   const missingReturnMovements = await db.all(`SELECT l.id,l.retail_return_id,l.quantity,COUNT(e.id) AS events
     FROM retail_return_lines l JOIN retail_returns r ON r.id=l.retail_return_id
-    JOIN menu_item_variants v ON v.id=l.variant_id
+    JOIN product_variants v ON v.id=l.variant_id
     LEFT JOIN retail_return_serial_events e ON e.return_line_id=l.id
     WHERE r.status='POSTED' AND v.tracking_mode='serial' AND l.disposition<>'NO_STOCK_RETURN'
     GROUP BY l.id,l.retail_return_id,l.quantity HAVING COUNT(e.id)<>l.quantity`);

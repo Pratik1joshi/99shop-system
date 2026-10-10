@@ -4,7 +4,7 @@ import Database from '../../lib/db/index.js';
 import { accountBalance, ensureAccountingSchema } from '../../lib/accounting.js';
 import { openBusinessDay } from '../../lib/business-days.js';
 import { getNepaliDateString } from '../../lib/time-utils.js';
-import { ensureMenuVariantsSchema, ensureStandardVariant } from '../../lib/menu-variants.js';
+import { ensureProductVariantsSchema, ensureStandardVariant } from '../../lib/product-variants.js';
 import { getDefaultLocation } from '../../lib/retail-inventory.js';
 import { createGoodsReceipt, postGoodsReceipt, createPurchaseReturn, postPurchaseReturn } from '../../lib/retail-purchasing.js';
 import { holdSale, checkoutSale } from '../../lib/retail-sales.js';
@@ -24,13 +24,13 @@ const money = (value) => Math.round(Number(value || 0) * 100) / 100;
 test.after(async () => { await db.close(); });
 
 async function product({ price, tracking = 'none' }) {
-  const category = await db.get(`SELECT id FROM menu_categories ORDER BY id LIMIT 1`);
+  const category = await db.get(`SELECT id FROM product_categories ORDER BY id LIMIT 1`);
   const id = (await db.run(
-    `INSERT INTO menu_items (name,category_id,base_price,is_available) VALUES (?,?,?,1)`,
+    `INSERT INTO products (name,category_id,base_price,is_available) VALUES (?,?,?,1)`,
     [`Gate Product ${++serial}`, category.id, price]
   )).lastInsertRowid;
   const [variant] = await ensureStandardVariant(db, id, { price, stockUnit: 'pcs' });
-  await db.run(`UPDATE menu_item_variants SET tracking_mode=? WHERE id=?`, [tracking, variant.id]);
+  await db.run(`UPDATE product_variants SET tracking_mode=? WHERE id=?`, [tracking, variant.id]);
   return { id, variantId: variant.id, price };
 }
 
@@ -65,9 +65,9 @@ async function returned(original, quantity, refundMethod, disposition = 'RETURN_
 test('Phase 0.6 fully journaled PostgreSQL foundation matrix', async (t) => {
   assert.equal(db.driver, 'postgres');
   await ensureAccountingSchema(db);
-  await ensureMenuVariantsSchema(db);
-  if (!(await db.get(`SELECT id FROM menu_categories LIMIT 1`))) {
-    await db.run(`INSERT INTO menu_categories(name,display_order) VALUES ('Gate',1)`);
+  await ensureProductVariantsSchema(db);
+  if (!(await db.get(`SELECT id FROM product_categories LIMIT 1`))) {
+    await db.run(`INSERT INTO product_categories(name,display_order) VALUES ('Gate',1)`);
   }
   const day = await openBusinessDay(db, { business_date: getNepaliDateString(), opening_cash: 0 }, actor);
   const location = await getDefaultLocation(db);

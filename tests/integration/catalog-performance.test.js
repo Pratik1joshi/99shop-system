@@ -6,12 +6,12 @@ import { resolveRetailPrices } from '../../lib/retail-pricing.js';
 import { searchCommerce } from '../../lib/commerce-search.js';
 const db=Database.getInstance();test.after(()=>db.close());
 test('25,000-SKU catalog uses bounded lookup and batch price resolution',async()=>{
-  const category=(await db.run("INSERT INTO menu_categories(name) VALUES ('Scale catalog')")).lastInsertRowid;
-  await db.run("INSERT INTO menu_items(name,category_id,base_price,is_available) SELECT 'Scale product '||g,?,100,1 FROM generate_series(1,1000) g",[category]);
-  await db.run("INSERT INTO menu_item_variants(menu_item_id,variant_name,sku,price,price_modifier,is_default) SELECT p.id,'Variant '||g,'SCALE-'||p.id||'-'||g,100,0,CASE WHEN g=1 THEN 1 ELSE 0 END FROM menu_items p CROSS JOIN generate_series(1,25) g WHERE p.category_id=?",[category]);
+  const category=(await db.run("INSERT INTO product_categories(name) VALUES ('Scale catalog')")).lastInsertRowid;
+  await db.run("INSERT INTO products(name,category_id,base_price,is_available) SELECT 'Scale product '||g,?,100,1 FROM generate_series(1,1000) g",[category]);
+  await db.run("INSERT INTO product_variants(product_id,variant_name,sku,price,price_modifier,is_default) SELECT p.id,'Variant '||g,'SCALE-'||p.id||'-'||g,100,0,CASE WHEN g=1 THEN 1 ELSE 0 END FROM products p CROSS JOIN generate_series(1,25) g WHERE p.category_id=?",[category]);
   // Fresh bulk-loaded fixtures need planner statistics, as production autovacuum provides.
-  await db.run('ANALYZE menu_items');await db.run('ANALYZE menu_item_variants');await db.run('ANALYZE menu_categories');
-  const ids=(await db.all('SELECT v.id FROM menu_item_variants v JOIN menu_items p ON p.id=v.menu_item_id WHERE p.category_id=? ORDER BY v.id LIMIT 200',[category])).map(row=>Number(row.id));
+  await db.run('ANALYZE products');await db.run('ANALYZE product_variants');await db.run('ANALYZE product_categories');
+  const ids=(await db.all('SELECT v.id FROM product_variants v JOIN products p ON p.id=v.product_id WHERE p.category_id=? ORDER BY v.id LIMIT 200',[category])).map(row=>Number(row.id));
   let queries=0;const measured={driver:'postgres',all:async(...args)=>{queries++;return db.all(...args);},get:async(...args)=>{queries++;return db.get(...args);}};
   const start=performance.now(),prices=await resolveRetailPrices(measured,ids.map(id=>({variant_id:id,quantity:3}))),pricingMs=performance.now()-start;
   assert.equal(prices.length,200);assert.equal(queries,2);assert.ok(prices.every(row=>row.unit_price===100));

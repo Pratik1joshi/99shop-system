@@ -138,11 +138,11 @@ const cashierNav = [
     { name: 'Transactions', href: '/cashier/retail-transactions', icon: ArrowRightLeft, color: 'text-indigo-600', permission: 'retail_sale.view', advanced: true },
   ] },
   { name: 'Catalog', tint: 'amber', items: [
-    { name: 'Products', href: '/cashier/products', icon: Package, color: 'text-blue-600', permission: 'menu.view', advanced: true },
-    { name: 'Categories & brands', href: '/cashier/categories', icon: FolderOpen, color: 'text-purple-600', permission: 'menu.manage', advanced: true },
+    { name: 'Products', href: '/cashier/products', icon: Package, color: 'text-blue-600', permission: 'catalog.view', advanced: true },
+    { name: 'Categories & brands', href: '/cashier/categories', icon: FolderOpen, color: 'text-purple-600', permission: 'catalog.manage', advanced: true },
   ] },
   { name: 'Inventory', tint: 'lime', items: [
-    { name: 'Stock lookup', href: '/cashier/retail-stock', icon: Boxes, color: 'text-indigo-600', permission: 'menu.view' },
+    { name: 'Stock lookup', href: '/cashier/retail-stock', icon: Boxes, color: 'text-indigo-600', permission: 'catalog.view' },
   ] },
   { name: 'Purchasing', tint: 'emerald', items: [
     { name: 'Goods receipts', href: '/cashier/purchases', icon: PackageCheck, color: 'text-teal-600', permission: 'purchases.view', advanced: true },

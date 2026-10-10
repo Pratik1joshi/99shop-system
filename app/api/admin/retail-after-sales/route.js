@@ -14,7 +14,7 @@ export async function GET(request){try{
   let data;
   if(p.get('view')==='skus'||p.get('view')==='suppliers'){
     const q='%'+String(p.get('q')||'').trim().slice(0,100).toLowerCase()+'%';
-    data=p.get('view')==='suppliers'?await db.all('SELECT id,name FROM suppliers WHERE LOWER(name) LIKE ? ORDER BY name LIMIT 20',[q]):await db.all(`SELECT v.id,v.sku,p.name||' / '||v.variant_name AS name FROM menu_item_variants v JOIN menu_items p ON p.id=v.menu_item_id WHERE LOWER(p.name) LIKE ? OR LOWER(v.sku) LIKE ? OR v.barcode LIKE ? OR EXISTS(SELECT 1 FROM product_barcodes b WHERE b.variant_id=v.id AND b.barcode LIKE ?) ORDER BY v.id LIMIT 20`,[q,q,q,q]);
+    data=p.get('view')==='suppliers'?await db.all('SELECT id,name FROM suppliers WHERE LOWER(name) LIKE ? ORDER BY name LIMIT 20',[q]):await db.all(`SELECT v.id,v.sku,p.name||' / '||v.variant_name AS name FROM product_variants v JOIN products p ON p.id=v.product_id WHERE LOWER(p.name) LIKE ? OR LOWER(v.sku) LIKE ? OR v.barcode LIKE ? OR EXISTS(SELECT 1 FROM product_barcodes b WHERE b.variant_id=v.id AND b.barcode LIKE ?) ORDER BY v.id LIMIT 20`,[q,q,q,q]);
     return NextResponse.json({data},{headers:{'Cache-Control':'no-store'}});
   }
   if(p.get('view')==='policies'){const check=await requireAuth(request,{permission:'warranty.configure'});if(check.error)return check.error;data=await db.all('SELECT * FROM warranty_policies ORDER BY id DESC LIMIT 100');}

@@ -39,7 +39,7 @@ function ProductImage({ src, alt, size = 'h-12 w-12' }) {
 
 export default function Catalog() {
   const { can } = useCapabilities();
-  const canEdit = can('menu.manage');
+  const canEdit = can('catalog.manage');
   const [query, setQuery] = useState('');
   const [page, setPage] = useState(1);
   const [categoryId, setCategoryId] = useState('');
@@ -58,7 +58,7 @@ export default function Catalog() {
   const group = search.groups[0];
   const results = group?.results || [];
 
-  useEffect(() => { apiJson('/api/store/menu/categories').then((d) => setCategories(d.categories || [])).catch(() => {}); }, [refresh]);
+  useEffect(() => { apiJson('/api/admin/categories').then((d) => setCategories(d.categories || [])).catch(() => {}); }, [refresh]);
   // Saved colour/size lists and brands, offered as quick picks while editing.
   useEffect(() => { if (canEdit) apiJson('/api/admin/commerce/catalog-setup').then((d) => setLists({ attributes: d.attributes || [], brands: d.brands || [] })).catch(() => {}); }, [canEdit, refresh]);
   async function open(id, note = '', problem = '') {
@@ -185,7 +185,7 @@ function NewProduct({ draft, setDraft, categories, onCategoryCreated, onCreated,
     if (!categoryName.trim()) return;
     setCategoryBusy(true); setError('');
     try {
-      const result = await apiJson('/api/store/menu/categories', { method: 'POST', body: JSON.stringify({ name: categoryName.trim() }) });
+      const result = await apiJson('/api/admin/categories', { method: 'POST', body: JSON.stringify({ name: categoryName.trim() }) });
       onCategoryCreated(result.category);
       set({ category_id: String(result.category.id) });
       setCategoryName(''); setAddingCategory(false);
@@ -481,7 +481,7 @@ function ProductEditor({ initial, categories, attributes, canEdit, can, note, on
           <button type="button" className={primaryButton} disabled={busy || !p.name?.trim() || (trackingChanged && !confirmTracking)} onClick={save}>{busy ? 'Saving…' : 'Save'}</button>
         </div>
       )}
-      {!can('menu.manage') && <p className="text-xs text-gray-500">You can view products. Ask an admin for permission to change them.</p>}
+      {!can('catalog.manage') && <p className="text-xs text-gray-500">You can view products. Ask an admin for permission to change them.</p>}
 
       <Dialog.Root open={confirmDelete} onOpenChange={(value) => { if (!busy) setConfirmDelete(value); }}>
         <Dialog.Portal>
