@@ -10,9 +10,7 @@ import { formatCurrency } from '@/lib/currency';
 /**
  * Counter landing screen.
  *
- * A retail till has no floor plan, so this lists this cashier's held Retail
- * sales and hands each one back to Billing. Legacy 99 Shop bills are not
- * shown here; Retail never writes them.
+ * Lists this cashier's held sales and hands each one back to Billing.
  */
 export default function CashierDashboard() {
   const router = useRouter();

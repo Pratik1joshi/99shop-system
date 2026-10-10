@@ -324,12 +324,12 @@ test('GRN, partial GRN and purchase return reconcile inventory, AP and journals'
   assert.ok(await db.get(`SELECT id FROM journal_entries WHERE source_type='goods_receipt' AND source_id=?`, [grn.id]));
     assert.ok(await db.get(`SELECT id FROM journal_entries WHERE source_type='purchase_return' AND source_id=?`, [ret.id]));
     const apBefore = await accountBalance(db, '2010', { supplierId: supplier.id });
-    const expenseBefore = await accountBalance(db, '5010');
+    const expenseBefore = await accountBalance(db, '5020');
     await paySupplier(db, { supplier_id: supplier.id, amount: 10, method: 'cash', created_by: actor.id,
       external_ref: `retail-supplier-payment-${Date.now()}-${seq}` });
     const apAfter = await accountBalance(db, '2010', { supplierId: supplier.id });
     assert.equal(Math.round((apAfter - apBefore) * 100), 1000);
-    assert.equal(await accountBalance(db, '5010'), expenseBefore);
+    assert.equal(await accountBalance(db, '5020'), expenseBefore);
     const invoice = (await supplierOpenInvoices(db, supplier.id)).find((row) => Number(row.goods_receipt_id) === Number(grn.id));
     assert.ok(invoice?.journal_id);
     const paymentRef = `retail-allocated-payment-${Date.now()}-${seq}`;
@@ -339,7 +339,7 @@ test('GRN, partial GRN and purchase return reconcile inventory, AP and journals'
       external_ref: paymentRef, allocations: [{ journal_id: invoice.journal_id, amount: 5 }] }), paymentId);
     const afterInvoice = (await supplierOpenInvoices(db, supplier.id)).find((row) => Number(row.goods_receipt_id) === Number(grn.id));
     assert.equal(Math.round((invoice.outstanding - afterInvoice.outstanding) * 100), 500);
-    assert.equal(await accountBalance(db, '5010'), expenseBefore);
+    assert.equal(await accountBalance(db, '5020'), expenseBefore);
 });
 
 test('partial GRN advances the purchase order only by received quantity', async () => {

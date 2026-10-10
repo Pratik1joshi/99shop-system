@@ -47,23 +47,15 @@ const controlClass = 'h-10 rounded-lg border border-gray-300 bg-white px-3 text-
 // in CSV exports and the row detail view.
 const TABLE_COLUMNS = {
   'sales:transactions': ['created_at', 'sale_number', 'customer_name', 'payment', 'grand_total'],
-  'finance:ledger': ['spent_on', 'description', 'category', 'supplier', 'payment_method', 'amount'],
-  'expenses:ledger': ['spent_on', 'description', 'category', 'supplier', 'payment_method', 'amount'],
   'orders:transactions': ['created_at', 'sale_number', 'customer_name', 'payment', 'grand_total'],
   'finance:transactions': ['created_at', 'sale_number', 'customer_name', 'payment', 'grand_total'],
-  'orders:voided-bills': ['voided_at', 'bill_number', 'status', 'payment_method', 'reason', 'grand_total'],
-  'menu:detail': ['name', 'category_name', 'quantity', 'revenue', 'profit', 'margin'],
-  'categories:category-summary': ['category', 'master_category', 'quantity', 'revenue', 'profit', 'share'],
-  'categories:master-category-summary': ['master_category', 'quantity', 'revenue', 'profit', 'share'],
-  'inventory:inventory': ['item_name', 'quantity', 'unit', 'min_level', 'value', 'stock_status'],
-  'customers:detail': ['name', 'phone', 'is_vip', 'orders', 'spending', 'last_visit'],
-  'suppliers:supplier-ledger': ['supplier', 'purchases', 'amount', 'share', 'stock_value', 'last_purchase'],
-  'changes:cancelled-orders': ['cancelled_at', 'order_number', 'order_type', 'value', 'cancelled_by', 'reason'],
-  'changes:item-changes': ['created_at', 'order_number', 'item', 'action', 'value_difference', 'reason'],
-  'changes:voids-refunds': ['created_at', 'type', 'bill_number', 'original_amount', 'amount', 'reason'],
-  'changes:bill-revisions': ['created_at', 'bill_number', 'status', 'original_total', 'new_total', 'reason'],
-  'changes:discounted-bills': ['created_at', 'bill_number', 'order_type', 'gross', 'discount', 'net_items'],
-  'purchases:purchases': ['invoice_date', 'recorded_at', 'invoice_number', 'supplier', 'status', 'payment_method', 'total'],
+  'finance:ledger': ['spent_on', 'description', 'category', 'payment_method', 'amount'],
+  'expenses:ledger': ['spent_on', 'description', 'category', 'payment_method', 'amount'],
+  'inventory:inventory': ['item_name', 'variant_name', 'quantity', 'unit', 'value', 'stock_status'],
+  'customers:detail': ['name', 'visits', 'revenue'],
+  'suppliers:supplier-ledger': ['supplier', 'receipts', 'value'],
+  'changes:voids-refunds': ['reason', 'count', 'value'],
+  'purchases:purchases': ['invoice_date', 'invoice_number', 'supplier', 'payment_method', 'status', 'total'],
 };
 
 function tabFromSearchParams(searchParams) {

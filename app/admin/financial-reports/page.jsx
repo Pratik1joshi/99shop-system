@@ -113,7 +113,7 @@ function PnL({ data, showOperating, range }) {
   if (!data) return null;
   return (
     <div className="space-y-5">
-      {showOperating && <Section title="Operating expenses" rows={(data.expense || []).filter(r=>r.code !== '5010')} total={Number(data.totalExpense || 0) - Number((data.expense || []).find(r=>r.code==='5010')?.amount || 0)} tone="text-rose-700" range={range} />}
+      {showOperating && <Section title="Operating expenses" rows={data.expense || []} total={Number(data.totalExpense || 0)} tone="text-rose-700" range={range} />}
       <Section title="Income" rows={data.income} total={data.totalIncome} tone="text-emerald-700" range={range} />
       <Section title="Expenses" rows={data.expense} total={data.totalExpense} tone="text-rose-700" range={range} />
       <div className="rounded-2xl border border-gray-900 bg-gray-900 px-5 py-4 text-white">

@@ -1,10 +1,10 @@
 'use client';
 
 /**
- * Retail POS — independent of the 99 Shop orders/bills/tables/KOT stack.
+ * Retail POS.
  * Every mutation goes through /api/admin/retail-sales*, which is backed by
  * lib/retail-sales.js (checkoutSale -> issueStock -> moving-average COGS ->
- * one journal). Nothing here calls the legacy bill/order/KOT endpoints.
+ * one journal).
  */
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';

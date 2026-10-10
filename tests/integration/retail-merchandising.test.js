@@ -5,7 +5,6 @@ import { previewVariantMatrix,exportCatalogCsv } from '../../lib/retail-catalog-
 import { previewCatalogChange,applyCatalogChange,catalogRows,CATALOG_COLUMNS } from '../../lib/retail-merchandising.js';
 import { findByBarcode } from '../../lib/product-catalog.js';
 import { getProductMerchandising,saveProductMerchandising } from '../../lib/retail-product-merchandising.js';
-import { replaceVariants } from '../../lib/menu-variants.js';
 import { resolveRetailPrices } from '../../lib/retail-pricing.js';
 const db=Database.getInstance();test.after(()=>db.close());
 test('Cosmetics matrix, atomic bulk edits and stable reimport',async t=>{
@@ -51,14 +50,6 @@ test('Cosmetics matrix, atomic bulk edits and stable reimport',async t=>{
     assert.equal(details.product.online_slug,'luxe-lip-color');assert.equal(details.media.length,1);assert.equal(details.suppliers[0].supplier_sku,'LUXE-RM');assert.deepEqual(details.history,[]);
     await assert.rejects(saveProductMerchandising(db,{product_id:product,reason:'Unsafe image',media:[{url:'javascript:alert(1)'}]},1),/HTTPS/);
     assert.deepEqual((await getProductMerchandising(db,product)).media,details.media);
-  });
-  await t.test('Legacy product form preserves retained SKU identity and archives omitted rows',async()=>{
-    const id=(await db.run("INSERT INTO menu_items(name,category_id,base_price,is_available) VALUES ('Legacy identity',?,10,1)",[category])).lastInsertRowid;
-    const created=await db.transaction(tx=>replaceVariants(tx,id,[{variant_name:'Small',price:10},{variant_name:'Large',price:20}]));
-    const retained=await db.transaction(tx=>replaceVariants(tx,id,[{variant_name:'Small',price:12}]));
-    assert.equal(retained[0].id,created[0].id);
-    assert.equal(Number((await db.get('SELECT merchandising_active FROM menu_item_variants WHERE id=?',[created[1].id])).merchandising_active),0);
-    assert.equal(Number((await db.get('SELECT COUNT(*) AS count FROM menu_item_variants WHERE menu_item_id=?',[id])).count),2);
   });
   await t.test('84-combination acceptance reports two duplicates then scans every corrected SKU',async()=>{
     const id=(await db.run("INSERT INTO menu_items(name,category_id,base_price,is_available) VALUES ('Professional Lip Color',?,600,1)",[category])).lastInsertRowid;

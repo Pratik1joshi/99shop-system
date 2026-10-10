@@ -65,26 +65,13 @@ export async function GET(request) {
     };
 
     const db = Database.getInstance();
-    // Every optional table/column this engine reads lives in one place next to
-    // the queries, so direct callers (tests, jobs, the probe script) get the
-    // same preparation this route does.
     await ensureExpenseVoidSchema(db);
     /*
-     * "Today" means the CURRENT BUSINESS DAY, not the calendar date — the same
-     * rule /api/admin/analytics already applies.
-     *
-     * Without this the two screens answered different questions and disagreed
-     * on the owner's headline number: Reports summed every bill whose
-     * created_at fell inside the Nepal calendar day, while Analytics summed the
-     * bills stamped with the open business day's id. A shift that runs past
-     * midnight, or a day opened late, puts bills on one side and not the other
-     * — which is exactly the gap seen between Reports > Sales and Analytics >
-     * Sales & Money on the same afternoon.
-     *
-     * The business day is an operator-declared boundary, so it outranks the
-     * clock (see billDateColumn() in lib/report-scope.js). An explicitly chosen
-     * businessDayId still wins over this, and when no day is open the calendar
-     * range stands as the only thing left to report on.
+     * "Today" means the CURRENT BUSINESS DAY, not the calendar date: a shift
+     * that runs past midnight, or a day opened late, would otherwise put sales
+     * on both sides of the date line. The business day is an operator-declared
+     * boundary, so it outranks the clock. An explicitly chosen businessDayId
+     * still wins, and when no day is open the calendar range stands.
      */
     let autoBusinessDay = false;
     if (['sales','orders','finance'].includes(tab) && !filters.businessDayId && range.period === 'today') {

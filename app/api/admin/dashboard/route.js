@@ -15,7 +15,7 @@ function dayOffset(iso, offset) {
   return nepalDateString(d);
 }
 
-/** Retail dashboard only: no 99 Shop orders, bills, KOTs, tables or legacy stock. */
+/** Owner dashboard: sales, stock, purchases and cash for the selected period. */
 export async function GET(request) {
   let user = null;
   try {
