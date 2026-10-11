@@ -25,7 +25,7 @@ const TYPES = [
   { value: 'QUARANTINE_RELEASE', label: 'Release from quarantine', permission: 'retail_inventory.quarantine_release' },
 ];
 
-const MANUAL_REASONS = ['DAMAGE', 'EXPIRY', 'SHRINKAGE', 'THEFT', 'FOUND_STOCK', 'COUNT_VARIANCE', 'DATA_CORRECTION', 'OTHER'];
+const MANUAL_REASONS = ['OPENING_STOCK', 'DAMAGE', 'EXPIRY', 'SHRINKAGE', 'THEFT', 'FOUND_STOCK', 'COUNT_VARIANCE', 'DATA_CORRECTION', 'OTHER'];
 
 export default function RetailInventoryOpsPage() {
   const { addToast } = useToast();

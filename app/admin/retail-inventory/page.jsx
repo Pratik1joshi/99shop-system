@@ -9,7 +9,7 @@ import { apiJson } from '@/lib/authed-fetch';
 import { useCapabilities } from '@/lib/use-capabilities';
 import { Button } from '@/components/ui/button';
 
-const adjustmentReasons = ['FOUND_STOCK', 'COUNT_VARIANCE', 'DAMAGE', 'EXPIRY', 'SHRINKAGE', 'THEFT', 'DATA_CORRECTION', 'OTHER'];
+const adjustmentReasons = ['OPENING_STOCK', 'FOUND_STOCK', 'COUNT_VARIANCE', 'DAMAGE', 'EXPIRY', 'SHRINKAGE', 'THEFT', 'DATA_CORRECTION', 'OTHER'];
 const reasonLabel = (reason) => reason.toLowerCase().replaceAll('_', ' ').replace(/^./, (letter) => letter.toUpperCase());
 const adjustmentKey = () => crypto.randomUUID();
 

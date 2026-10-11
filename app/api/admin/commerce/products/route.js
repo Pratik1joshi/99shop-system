@@ -8,6 +8,7 @@ import { attributeSignature } from '@/lib/retail-catalog-matrix.js';
 import { lockCatalogWrite } from '@/lib/retail-catalog-lock.js';
 import { internalCatalogBarcode } from '@/lib/retail-merchandising.js';
 import { getDefaultLocation, getSellableStockBulk } from '@/lib/retail-inventory.js';
+import { applyManualAdjustment, ensureRetailInventoryAdjustmentsSchema } from '@/lib/retail-inventory-adjustments.js';
 
 const bad = (message, status = 400) => Object.assign(new Error(message), { status });
 export async function GET(request) {
@@ -38,22 +39,57 @@ export async function GET(request) {
     return NextResponse.json({ product });
   } catch (error) { return handleRouteError(error, 'Could not load product.'); }
 }
+/** Stock typed on the create form: whole, non-negative pieces, and an optional cost each. */
+function openingStockOf(row) {
+  const stock = row.stock === '' || row.stock == null ? 0 : Number(row.stock);
+  if (!Number.isInteger(stock) || stock < 0) throw bad('Opening stock must be a whole number of pieces, 0 or more.');
+  const cost = row.cost === '' || row.cost == null ? null : Number(row.cost);
+  if (cost != null && (!Number.isFinite(cost) || cost < 0)) throw bad('Cost each must be a non-negative number.');
+  return { stock, cost };
+}
+
+/**
+ * Creates a product with its variants and the stock already on the shelf, in
+ * one transaction: either everything is saved or nothing is.
+ *
+ * Without `variants` the product gets one standard SKU priced at `price`.
+ * With `variants` ([{ variant_name, price, barcode, mrp, stock, cost }]) each
+ * row becomes its own SKU with its own barcode and opening stock.
+ */
 export async function POST(request) {
   try {
     const auth = await requireAuth(request, { roles: ['admin', 'cashier'], permission: 'catalog.manage' });
     if (auth.error) return auth.error;await ensureRetailCommerceSchema(Database.getInstance());
     const data = await request.json();
     const name = String(data.name || '').trim();
-    const price = Number(data.price);
+    const rows = Array.isArray(data.variants) ? data.variants.filter((v) => String(v.variant_name || '').trim()) : [];
+    if (rows.length > 200) throw bad('Add up to 200 variants at a time.');
+    const price = rows.length ? Number(rows[0].price) : Number(data.price);
     if (!name || !Number.isFinite(price) || price < 0) throw bad('Name and a valid non-negative selling price are required.');
+    for (const row of rows) {
+      if (!Number.isFinite(Number(row.price)) || Number(row.price) < 0) throw bad(`“${row.variant_name}” needs a valid selling price.`);
+      if (row.mrp !== '' && row.mrp != null && (!Number.isFinite(Number(row.mrp)) || Number(row.mrp) < 0)) throw bad(`“${row.variant_name}” has an invalid MRP.`);
+    }
+    const names = rows.map((row) => String(row.variant_name).trim().toLowerCase());
+    if (new Set(names).size !== names.length) throw bad('Two variants have the same name.');
+    const stockRows = (rows.length ? rows : [data]).map(openingStockOf);
+    if (stockRows.some((row) => row.stock > 0)) {
+      const stockAuth = await requireAuth(request, { roles: ['admin', 'cashier'], permission: 'retail_inventory.adjust' });
+      if (stockAuth.error) return stockAuth.error;
+      const costAuth = await requireAuth(request, { roles: ['admin', 'cashier'], permission: 'retail_inventory.view_cost' });
+      if (costAuth.error) for (const row of stockRows) row.cost = null;
+    }
     const db = Database.getInstance();
     await ensureProductVariantsSchema(db);
     await ensureProductCatalogSchema(db);
+    await ensureRetailInventoryAdjustmentsSchema(db);
     const id = await db.transaction(async (tx) => {
       await lockCatalogWrite(tx);
       // No barcode typed = the shop's own number code, so stickers can be printed at once.
-      const barcode = String(data.barcode || '').trim() || internalCatalogBarcode();
-      if (await findBarcodeConflict(tx, [barcode])) throw bad('Barcode already belongs to a product.', 409);
+      const barcodes = (rows.length ? rows : [data]).map((row) => String(row.barcode || '').trim() || internalCatalogBarcode());
+      if (new Set(barcodes).size !== barcodes.length) throw bad('Two variants have the same barcode.', 409);
+      const conflict = await findBarcodeConflict(tx, barcodes);
+      if (conflict) throw bad(`Barcode ${conflict} already belongs to a product.`, 409);
       let categoryId = data.category_id;
       if (categoryId) {
         const selected = await tx.get('SELECT id FROM product_categories WHERE id=?', [Number(categoryId)]);
@@ -65,11 +101,32 @@ export async function POST(request) {
         categoryId = category?.id || (await tx.run("INSERT INTO product_categories(name,online_enabled) VALUES ('Uncategorized',1)")).lastInsertRowid;
       }
       const mrp = data.mrp === '' || data.mrp == null ? null : Number(data.mrp);
-      if (mrp != null && (!Number.isFinite(mrp) || mrp < 0)) throw bad('MRP must be a non-negative number.');
-      const result = await tx.run('INSERT INTO products(name,base_price,barcode,is_available,online_enabled,category_id,brand,image_url,description) VALUES (?,?,?,1,1,?,?,?,?)', [name, price, barcode, categoryId, String(data.brand || '').trim() || null, String(data.image_url || '').trim() || null, String(data.description || '').trim() || null]);
-      await ensureStandardVariant(tx, result.lastInsertRowid, { price });
-      await tx.run('UPDATE product_variants SET barcode=?,mrp=? WHERE product_id=?', [barcode, mrp, result.lastInsertRowid]);
-      return result.lastInsertRowid;
+      if (!rows.length && mrp != null && (!Number.isFinite(mrp) || mrp < 0)) throw bad('MRP must be a non-negative number.');
+      const result = await tx.run('INSERT INTO products(name,base_price,barcode,is_available,online_enabled,category_id,brand,image_url,description) VALUES (?,?,?,1,1,?,?,?,?)', [name, price, rows.length ? null : barcodes[0], categoryId, String(data.brand || '').trim() || null, String(data.image_url || '').trim() || null, String(data.description || '').trim() || null]);
+      const productId = result.lastInsertRowid;
+      let variantIds;
+      if (!rows.length) {
+        const [standard] = await ensureStandardVariant(tx, productId, { price });
+        await tx.run('UPDATE product_variants SET barcode=?,mrp=? WHERE product_id=?', [barcodes[0], mrp, productId]);
+        variantIds = [standard.id];
+      } else {
+        variantIds = [];
+        for (const [index, row] of rows.entries()) {
+          const created = await tx.run(
+            'INSERT INTO product_variants(product_id,variant_name,price,price_modifier,is_default,barcode,mrp,tracking_mode) VALUES (?,?,?,0,?,?,?,?)',
+            [productId, String(row.variant_name).trim(), Number(row.price), index === 0 ? 1 : 0, barcodes[index], row.mrp === '' || row.mrp == null ? null : Number(row.mrp), 'none']
+          );
+          variantIds.push(created.lastInsertRowid);
+        }
+      }
+      for (const [index, row] of stockRows.entries()) {
+        if (!row.stock) continue;
+        await applyManualAdjustment(tx, {
+          variantId: variantIds[index], quantity: row.stock, reason: 'OPENING_STOCK', unitCost: row.cost,
+          notes: 'Opening stock entered with the new product', createdBy: auth.user.id,
+        });
+      }
+      return productId;
     });
     return NextResponse.json({ id }, { status: 201 });
   } catch (error) { return handleRouteError(error, 'Could not create product.'); }

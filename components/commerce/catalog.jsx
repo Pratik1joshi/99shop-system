@@ -81,7 +81,7 @@ export default function Catalog() {
         actions={<>
           <Link href="/admin/products/labels" className={secondaryButton}><Printer className="h-4 w-4" aria-hidden /> Print labels</Link>
           {canEdit && <button type="button" className={secondaryButton} onClick={() => { setImporting(true); setProduct(null); setCreate(null); }}><Upload className="h-4 w-4" aria-hidden /> Bulk upload</button>}
-          {canEdit && <button type="button" className={primaryButton} onClick={() => { setCreate({ name: '', category_id: '', brand: '', description: '', price: '', mrp: '', barcode: newCode(), image_url: '', stock: '', cost: '' }); setProduct(null); setError(''); }}><Plus className="h-4 w-4" aria-hidden /> Add product</button>}
+          {canEdit && <button type="button" className={primaryButton} onClick={() => { setCreate({ name: '', category_id: '', brand: '', description: '', price: '', mrp: '', barcode: newCode(), image_url: '', stock: '', cost: '', variants: [] }); setProduct(null); setError(''); }}><Plus className="h-4 w-4" aria-hidden /> Add product</button>}
         </>} />
       <datalist id="brand-options">{lists.brands.map((b) => <option key={b.id} value={b.name} />)}</datalist>
       <Page>
@@ -146,7 +146,7 @@ export default function Catalog() {
         )}
       </Page>
 
-      <ActionDrawer extraWide open={!!create} onOpenChange={(value) => { if (!value) setCreate(null); }} title="Add product" description="Set up the product, its category and description. Next, add variants with their own prices.">
+      <ActionDrawer extraWide open={!!create} onOpenChange={(value) => { if (!value) setCreate(null); }} title="Add product" description="Name, price and the stock you have now. Add variants for sizes or colours, each with its own price, barcode and stock.">
         {create && <NewProduct draft={create} setDraft={setCreate} categories={categories} onCategoryCreated={(category) => { setCategories((current) => [...current, category].sort((a, b) => a.name.localeCompare(b.name))); }} canAdjust={can('retail_inventory.adjust')} canCost={can('retail_inventory.view_cost')} onCancel={() => setCreate(null)} onCreated={async (id, problem) => { setRefresh((v) => v + 1); await open(id, 'Product added. Its barcode is ready — press “Print labels” below, or add colours and sizes.', problem); }} />}
       </ActionDrawer>
 
@@ -167,16 +167,15 @@ function NewProduct({ draft, setDraft, categories, onCategoryCreated, onCreated,
   const [categoryBusy, setCategoryBusy] = useState(false);
   const set = (patch) => setDraft((d) => ({ ...d, ...patch }));
   const ownCode = isShopBarcode(draft.barcode);
+  const hasVariants = (draft.variants || []).length > 0;
   async function save(event) {
     event.preventDefault(); setBusy(true); setError('');
     try {
-      const result = await apiJson('/api/admin/commerce/products', { method: 'POST', body: JSON.stringify(draft) });
-      let problems = [];
-      if (canAdjust && Number(draft.stock) > 0) {
-        const fresh = (await apiJson(`/api/admin/commerce/products?id=${result.id}`)).product.variants;
-        problems = await applyStockCounts([{ id: fresh[0].id, set_stock: draft.stock, set_cost: draft.cost }], fresh);
-      }
-      await onCreated(result.id, problems.length ? `Product added, but its stock was not set — ${problems.join('; ')}` : '');
+      const variants = (draft.variants || []).filter((v) => v.variant_name.trim());
+      const body = { ...draft, variants, stock: canAdjust ? draft.stock : '', cost: canAdjust && canCost ? draft.cost : '' };
+      if (!canAdjust) body.variants = variants.map((v) => ({ ...v, stock: '', cost: '' }));
+      const result = await apiJson('/api/admin/commerce/products', { method: 'POST', body: JSON.stringify(body) });
+      await onCreated(result.id, '');
     }
     catch (e) { setError(e.error || 'Could not add the product.'); } finally { setBusy(false); }
   }
@@ -208,12 +207,14 @@ function NewProduct({ draft, setDraft, categories, onCategoryCreated, onCreated,
           <Field label="Name" className="sm:col-span-2"><input autoFocus required className={`${inputClass} h-11 text-base`} value={draft.name} onChange={(e) => set({ name: e.target.value })} placeholder="e.g. Bunny hair clip" /></Field>
           <div className="space-y-2"><Field label="Category"><select className={inputClass} value={draft.category_id} onChange={(e) => set({ category_id: e.target.value })}><option value="">No category</option>{categories.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}</select></Field><button type="button" className="text-sm font-semibold text-blue-700 hover:underline" onClick={() => setAddingCategory((value) => !value)}>+ New category</button>{addingCategory && <div className="flex flex-wrap gap-2 rounded-xl border border-blue-100 bg-blue-50 p-3"><input aria-label="New category name" className={`${inputClass} min-w-36 flex-1`} value={categoryName} onChange={(e) => setCategoryName(e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); saveCategory(e); } }} placeholder="Category name" /><button type="button" className={secondaryButton} disabled={categoryBusy || !categoryName.trim()} onClick={saveCategory}>{categoryBusy ? 'Adding…' : 'Add category'}</button></div>}</div>
           <Field label="Brand (optional)"><input list="brand-options" className={inputClass} value={draft.brand} onChange={(e) => set({ brand: e.target.value })} placeholder="e.g. Kawaii" /></Field>
-          <Field label="Selling price (Rs)"><input required type="number" min="0" step="0.01" className={inputClass} value={draft.price} onChange={(e) => set({ price: e.target.value })} /></Field>
-          <Field label="MRP (optional)" hint="Printed on the label when higher than the price."><input type="number" min="0" step="0.01" className={inputClass} value={draft.mrp} onChange={(e) => set({ mrp: e.target.value })} /></Field>
-          {canAdjust && <Field label="Stock now (optional)" hint="How many you have on the shelf."><input type="number" min="0" step="1" className={inputClass} value={draft.stock} onChange={(e) => set({ stock: e.target.value })} placeholder="0" /></Field>}
-          {canAdjust && canCost && Number(draft.stock) > 0 && <Field label="Cost each (optional)" hint="What one piece cost you, for profit reports."><input type="number" min="0" step="0.01" className={inputClass} value={draft.cost} onChange={(e) => set({ cost: e.target.value })} /></Field>}
+          {!hasVariants && <>
+            <Field label="Selling price (Rs)"><input required type="number" min="0" step="0.01" className={inputClass} value={draft.price} onChange={(e) => set({ price: e.target.value })} /></Field>
+            <Field label="MRP (optional)" hint="Printed on the label when higher than the price."><input type="number" min="0" step="0.01" className={inputClass} value={draft.mrp} onChange={(e) => set({ mrp: e.target.value })} /></Field>
+            {canAdjust && <Field label="Opening stock (optional)" hint="How many you have on the shelf right now."><input type="number" min="0" step="1" className={inputClass} value={draft.stock} onChange={(e) => set({ stock: e.target.value })} placeholder="0" /></Field>}
+            {canAdjust && canCost && Number(draft.stock) > 0 && <Field label="Cost each (optional)" hint="What one piece cost you, for profit reports."><input type="number" min="0" step="0.01" className={inputClass} value={draft.cost} onChange={(e) => set({ cost: e.target.value })} /></Field>}
+          </>}
           <Field label="Description (optional)" hint="Shown on the product page in the online store." className="sm:col-span-2"><textarea rows={5} className={textareaClass} value={draft.description} onChange={(e) => set({ description: e.target.value })} placeholder="What should customers know about this product?" /></Field>
-          <div className="rounded-xl border border-gray-200 bg-gray-50 p-4 sm:col-span-2">
+          {!hasVariants && <div className="rounded-xl border border-gray-200 bg-gray-50 p-4 sm:col-span-2">
             <div className="flex flex-wrap items-end gap-2">
               <Field label="Barcode" className="min-w-0 flex-1">
                 {/* Selecting on focus lets a scanner replace the created code instead of appending to it; Enter from the scanner must not submit. */}
@@ -222,15 +223,76 @@ function NewProduct({ draft, setDraft, categories, onCategoryCreated, onCreated,
               <button type="button" className={secondaryButton} onClick={() => set({ barcode: newCode() })}><RefreshCw className="h-4 w-4" aria-hidden /> New code</button>
             </div>
             <p className="mt-2 flex items-start gap-2 text-xs text-gray-600"><Barcode className="mt-0.5 h-3.5 w-3.5 shrink-0" aria-hidden />{ownCode ? 'Created for you and ready to print on stickers. If the item already has a barcode on its pack, click the box and scan it.' : draft.barcode ? 'Using the barcode from the pack.' : 'Empty: a code will be created when you add the product.'}</p>
-          </div>
+          </div>}
         </div>
       </div>
-      <p className="rounded-xl border border-blue-100 bg-blue-50 px-4 py-3 text-sm text-blue-900">Have multiple sizes or colours? After saving, this product opens so you can add variants. Each variant gets its own selling price, barcode and stock.</p>
+      <NewVariants rows={draft.variants || []} onChange={(variants) => set({ variants })} canAdjust={canAdjust} canCost={canCost} defaultPrice={draft.price} />
       <div className="flex justify-end gap-2 border-t border-gray-200 pt-4">
         <button type="button" className={secondaryButton} onClick={onCancel}>Cancel</button>
         <button type="submit" disabled={busy} className={`${primaryButton} min-w-40`}>{busy ? 'Adding…' : 'Add product'}</button>
       </div>
     </form>
+  );
+}
+
+const blankVariant = (price = '') => ({ key: Math.random().toString(36).slice(2), variant_name: '', price, mrp: '', barcode: newCode(), stock: '', cost: '' });
+
+/**
+ * Sizes or colours entered with the product: each row is its own SKU with a
+ * price, barcode and the stock on the shelf now.
+ */
+function NewVariants({ rows, onChange, canAdjust, canCost, defaultPrice }) {
+  const update = (key, patch) => onChange(rows.map((row) => (row.key === key ? { ...row, ...patch } : row)));
+  const remove = (key) => onChange(rows.filter((row) => row.key !== key));
+  const add = () => onChange([...rows, blankVariant(rows.at(-1)?.price ?? defaultPrice)]);
+  const totalStock = rows.reduce((sum, row) => sum + (Number(row.stock) || 0), 0);
+  if (!rows.length) {
+    return (
+      <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-dashed border-gray-300 px-4 py-3">
+        <p className="text-sm text-gray-600">Comes in sizes or colours? Add each one with its own price, barcode and stock.</p>
+        <button type="button" className={secondaryButton} onClick={() => onChange([blankVariant(defaultPrice), blankVariant(defaultPrice)])}><Layers className="h-4 w-4" aria-hidden /> Add variants</button>
+      </div>
+    );
+  }
+  return (
+    <section className="space-y-3 rounded-xl border border-gray-200 p-4">
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <div>
+          <h3 className="text-sm font-semibold text-gray-900">Variants</h3>
+          <p className="text-xs text-gray-500">{rows.length} variant{rows.length === 1 ? '' : 's'}{canAdjust ? ` · ${totalStock} in stock` : ''}. Rows without a name are skipped.</p>
+        </div>
+        <button type="button" className="text-sm font-semibold text-gray-600 hover:underline" onClick={() => onChange([])}>Use one price instead</button>
+      </div>
+      <div className="overflow-x-auto">
+        <table className="w-full min-w-[640px] text-sm">
+          <thead className="text-left text-xs text-gray-500">
+            <tr>
+              <th className="pb-2 pr-2 font-medium">Size / colour</th>
+              <th className="pb-2 pr-2 font-medium">Price (Rs)</th>
+              <th className="pb-2 pr-2 font-medium">MRP</th>
+              <th className="pb-2 pr-2 font-medium">Barcode</th>
+              {canAdjust && <th className="pb-2 pr-2 font-medium">Opening stock</th>}
+              {canAdjust && canCost && <th className="pb-2 pr-2 font-medium">Cost each</th>}
+              <th className="pb-2" />
+            </tr>
+          </thead>
+          <tbody>
+            {rows.map((row, index) => (
+              <tr key={row.key} className="align-top">
+                <td className="py-1 pr-2"><input aria-label={`Variant ${index + 1} name`} className={inputClass} value={row.variant_name} onChange={(e) => update(row.key, { variant_name: e.target.value })} placeholder={index === 0 ? 'e.g. Pink' : 'e.g. Blue'} /></td>
+                <td className="py-1 pr-2"><input aria-label={`Variant ${index + 1} price`} required={!!row.variant_name.trim()} type="number" min="0" step="0.01" className={`${inputClass} w-28`} value={row.price} onChange={(e) => update(row.key, { price: e.target.value })} /></td>
+                <td className="py-1 pr-2"><input aria-label={`Variant ${index + 1} MRP`} type="number" min="0" step="0.01" className={`${inputClass} w-24`} value={row.mrp} onChange={(e) => update(row.key, { mrp: e.target.value })} /></td>
+                <td className="py-1 pr-2"><input aria-label={`Variant ${index + 1} barcode`} className={`${inputClass} w-44 font-mono text-xs`} value={row.barcode} onFocus={(e) => e.target.select()} onKeyDown={(e) => { if (e.key === 'Enter') e.preventDefault(); }} onChange={(e) => update(row.key, { barcode: e.target.value.trim() })} placeholder="Scan or leave for a new code" /></td>
+                {canAdjust && <td className="py-1 pr-2"><input aria-label={`Variant ${index + 1} opening stock`} type="number" min="0" step="1" inputMode="numeric" className={`${inputClass} w-24 text-right tabular-nums`} value={row.stock} onChange={(e) => update(row.key, { stock: e.target.value })} placeholder="0" /></td>}
+                {canAdjust && canCost && <td className="py-1 pr-2"><input aria-label={`Variant ${index + 1} cost each`} type="number" min="0" step="0.01" disabled={!(Number(row.stock) > 0)} className={`${inputClass} w-24 text-right`} value={row.cost} onChange={(e) => update(row.key, { cost: e.target.value })} /></td>}
+                <td className="py-1"><button type="button" aria-label={`Remove variant ${index + 1}`} onClick={() => remove(row.key)} className="rounded-lg p-2 text-gray-400 hover:bg-gray-100 hover:text-gray-700"><X className="h-4 w-4" aria-hidden /></button></td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+      <button type="button" className={smallButton} onClick={add}><Plus className="h-3.5 w-3.5" aria-hidden /> Add another</button>
+    </section>
   );
 }
 
@@ -649,7 +711,7 @@ async function applyStockCounts(edits, freshVariants, defaultCost = null) {
     if (!delta) continue;
     try {
       await apiJson('/api/admin/retail-inventory-adjustments', { method: 'POST', body: JSON.stringify({
-        type: 'MANUAL', variant_id: saved.id, quantity: delta, reason: 'COUNT_VARIANCE', notes: 'Stock set on the product screen',
+        type: 'MANUAL', variant_id: saved.id, quantity: delta, reason: edit.id ? 'COUNT_VARIANCE' : 'OPENING_STOCK', notes: 'Stock set on the product screen',
         unit_cost: delta > 0 ? (edit.set_cost !== '' && edit.set_cost != null ? Number(edit.set_cost) : defaultCost ?? undefined) : undefined,
         idempotency_key: `product-stock-${saved.id}-${Date.now()}`,
       }) });

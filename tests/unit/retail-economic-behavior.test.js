@@ -719,3 +719,19 @@ test('bulk product upload makes products with versions and barcodes, all or noth
   await assert.rejects(importProducts(db, broken), /Row 3: price is empty/);
   assert.ok(!(await db.get('SELECT id FROM products WHERE name=?', [`Pen ${tag}`])), 'a bad row stops the whole upload');
 });
+
+test('opening stock books Opening Balance Equity, never an inventory gain', async () => {
+  const item = await product({ price: 99, cost: 0, stock: 0 });
+  const equityBefore = await accountBalance(db, '3020');
+  const gainBefore = await accountBalance(db, '5042');
+  const inventoryBefore = await accountBalance(db, '1210');
+  const adjustment = await recordManualAdjustment(db, { variantId: item.variantId, quantity: 12, reason: 'OPENING_STOCK', unitCost: 30, createdBy: actor.id });
+  assert.equal(Number(adjustment.total_value), 360);
+  assert.equal(await getAvailableStock(db, item.variantId, { locationId: location.id }), 12);
+  const movement = await db.get(`SELECT movement_type FROM inventory_movements WHERE reference_type='retail_inventory_adjustment' AND reference_id=?`, [adjustment.id]);
+  assert.equal(movement.movement_type, 'OPENING_STOCK');
+  assert.equal(Math.round((await accountBalance(db, '1210') - inventoryBefore) * 100), 36000);
+  assert.equal(Math.round((equityBefore - await accountBalance(db, '3020')) * 100), 36000);
+  assert.equal(await accountBalance(db, '5042'), gainBefore);
+  await assert.rejects(recordManualAdjustment(db, { variantId: item.variantId, quantity: -1, reason: 'OPENING_STOCK', createdBy: actor.id }), /positive/);
+});
