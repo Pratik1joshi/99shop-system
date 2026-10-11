@@ -16,7 +16,7 @@ BEGIN;
 DO $$
 BEGIN
   IF NOT EXISTS (
-    SELECT 1 FROM schema_migrations WHERE version = '114_category_images'
+    SELECT 1 FROM schema_migrations WHERE version = '001_retail_schema'
   ) THEN
     RAISE EXCEPTION 'Run npm run db:migrate before this catalog import';
   END IF;
@@ -143,10 +143,10 @@ BEGIN
 END $$;
 
 INSERT INTO products
-  (name, category_id, base_price, unit, is_available, stock_usage,
+  (name, category_id, base_price, unit, is_available,
    display_order, online_title, online_slug, online_enabled,
    merchandising_type)
-SELECT s.name, c.id, s.base_price, 'pcs', 1, 1,
+SELECT s.name, c.id, s.base_price, 'pcs', 1,
        s.display_order, s.name, s.slug, 0,
        CASE WHEN s.has_variants THEN 'variant' ELSE 'simple' END
 FROM photo_products s
