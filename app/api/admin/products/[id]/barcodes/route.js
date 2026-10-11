@@ -10,7 +10,7 @@ async function ownedVariant(db, productId, variantId) {
 }
 
 // Extra barcodes (manufacturer/supplier/alternate) beyond the one primary
-// code products/product_variants already carry — see migration 074.
+// code products/product_variants already carry — see the schema migration.
 
 export async function GET(request, context) {
   try {

@@ -1,5 +1,5 @@
 -- Catalog transcribed from "WhatsApp Image 2026-10-03 at 3.53.11 PM.jpeg".
--- PostgreSQL; run after migrations through 114_category_images.
+-- PostgreSQL; run after migrations/001_retail_schema.sql.
 -- Prices are in Nepalese rupees. No stock, purchase cost, barcode, or product
 -- photos were supplied, so this creates catalog records and variants plus
 -- category covers from public/storefront/catalog/categories/.
@@ -18,7 +18,7 @@ BEGIN
   IF NOT EXISTS (
     SELECT 1 FROM schema_migrations WHERE version = '114_category_images'
   ) THEN
-    RAISE EXCEPTION 'Run migrations through 114_category_images before this catalog import';
+    RAISE EXCEPTION 'Run npm run db:migrate before this catalog import';
   END IF;
 END $$;
 

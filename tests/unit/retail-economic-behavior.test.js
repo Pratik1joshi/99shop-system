@@ -648,7 +648,7 @@ test('a bundle promotion sells real component lines: stock, COGS and journal sta
 });
 
 test('catalog, pricing and online-store schema and search work on local SQLite', async (t) => {
-  if (usePostgres) return t.skip('PostgreSQL gets this schema from migrations 104-107');
+  if (usePostgres) return t.skip('PostgreSQL gets this schema from the schema migration');
   await ensureRetailCommerceSchema(db);
   const settings = await db.get('SELECT * FROM retail_online_settings WHERE id=1');
   assert.equal(settings.brand_color, '#20372e');

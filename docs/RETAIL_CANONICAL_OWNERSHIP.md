@@ -36,6 +36,6 @@ Sales, returns, GRNs, purchase returns, adjustments, counts, transfers, damage, 
 
 ## Deployment and reconciliation
 
-Migrations under `migrations/` are the ordered source of truth for fresh and upgraded PostgreSQL databases. SQLite development retains guarded `ensure*Schema` support for local/test compatibility. Catalog, pricing and online-store tables from migrations 104–107 are mirrored for SQLite by `lib/retail-commerce-schema.js`. Runtime schema guards do not replace production migrations.
+Migrations under `migrations/` are the ordered source of truth for fresh and upgraded PostgreSQL databases. SQLite development retains guarded `ensure*Schema` support for local/test compatibility. Catalog, pricing and online-store tables from the schema migration are mirrored for SQLite by `lib/retail-commerce-schema.js`. Runtime schema guards do not replace production migrations.
 
 `runRetailReconciliation()` in `lib/retail-reconciliation.js` checks movement projection, inventory valuation/asset, retail sale journals, AR/AP tagged subledgers and store-credit ledger/projection/liability. The admin endpoint is read-only and returns explicit expected, actual and difference values. It never changes data.

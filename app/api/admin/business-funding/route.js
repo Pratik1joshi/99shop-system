@@ -34,7 +34,7 @@ export async function GET(request) {
 
     return NextResponse.json(await businessFundingProfile(db));
   } catch (error) {
-    return handleRouteError(error, 'Could not load Business Funding. Run migration 057 first.');
+    return handleRouteError(error, 'Could not load Business Funding. Run npm run db:migrate first.');
   }
 }
 

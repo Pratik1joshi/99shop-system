@@ -1,5 +1,5 @@
 -- 99 Shop by Shahana: initial production storefront catalog.
--- Apply after migrations through 118, db:seed, basic_shop_seed.sql, and
+-- Apply after migrations/001_retail_schema.sql, db:seed, basic_shop_seed.sql, and
 -- copying public/storefront/catalog/.
 -- Prices are Rs 99 and opening stock is 10 units per variant, as requested.
 -- Opening stock has zero cost because no purchase costs were supplied. Record
