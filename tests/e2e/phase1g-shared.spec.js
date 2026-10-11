@@ -40,7 +40,7 @@ test('Owner inspects customer master evidence and filters the cross-module explo
   await expect(page.locator('tbody tr').first()).toBeVisible();
   await page.getByLabel('Name for the current filters',{exact:true}).fill('Received documents');
   await page.getByRole('button',{name:'Save',exact:true}).click();
-  const saved=await page.evaluate(()=>Object.entries(localStorage).filter(([key])=>key.startsWith('aadhar:views:')).map(([,v])=>JSON.parse(v)));
+  const saved=await page.evaluate(()=>Object.entries(localStorage).filter(([key])=>key.startsWith('shop99:views:')).map(([,v])=>JSON.parse(v)));
   expect(saved.flat().find(v=>v.name==='Received documents').filters.type).toBe('goods_receipt');
   expect(saved.flat().every(v=>Object.keys(v).every(k=>['name','filters'].includes(k)))).toBe(true);
   expect(await page.evaluate(()=>document.documentElement.scrollWidth<=window.innerWidth+1)).toBe(true);

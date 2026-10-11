@@ -32,7 +32,7 @@ CREATE TABLE IF NOT EXISTS retail_public_limits (
  bucket TEXT PRIMARY KEY,window_start BIGINT NOT NULL,hits INTEGER NOT NULL
 );
 CREATE TABLE IF NOT EXISTS retail_online_settings (
- id INTEGER PRIMARY KEY CHECK(id=1),enabled INTEGER NOT NULL DEFAULT 0,store_name TEXT NOT NULL DEFAULT 'Aadhar Store',
+ id INTEGER PRIMARY KEY CHECK(id=1),enabled INTEGER NOT NULL DEFAULT 0,store_name TEXT NOT NULL DEFAULT '99 Shop by Shahana',
  pickup_instructions TEXT NOT NULL DEFAULT 'Collect from our store after your order is ready.',
  delivery_enabled INTEGER NOT NULL DEFAULT 0,delivery_fee NUMERIC(14,2) NOT NULL DEFAULT 0,
  free_delivery_threshold NUMERIC(14,2),reservation_minutes INTEGER NOT NULL DEFAULT 120,

@@ -1,4 +1,4 @@
-# Aadhar Retail ERP — Product & UX Master Specification
+# 99 Shop Retail ERP — Product & UX Master Specification
 
 **Phase:** 1A — Product architecture and UX specification  
 **Status:** Design authority for later implementation; no redesign is implemented by this document  
@@ -366,7 +366,7 @@ The bell groups by workstream and shows only new/changed items. Counts deduplica
 - Radius: 4 px controls/table cells, 8 px popovers/cards, 12 px drawers/dialogs. Pills only for statuses/tags.
 - Borders/elevation: 1 px neutral borders establish most hierarchy. Shadow only for floating surfaces; no card field of floating tiles.
 - Surfaces: canvas, primary surface, inset/secondary surface, floating surface. Never encode workspace identity with unrelated bright tints.
-- Color: one Aadhar primary action color; neutral canvas; semantic red/amber/green/blue reserved for meaning. Status always includes text/icon, never color alone.
+- Color: one primary action color; neutral canvas; semantic red/amber/green/blue reserved for meaning. Status always includes text/icon, never color alone.
 
 ### Interaction states
 

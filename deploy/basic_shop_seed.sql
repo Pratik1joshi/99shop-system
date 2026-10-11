@@ -123,7 +123,7 @@ WHERE NOT EXISTS (
 UPDATE retail_online_settings
 SET enabled = 1, store_name = '99 Shop by Shahana',
     guest_enabled = 1, brand_color = '#D6316F'
-WHERE id = 1 AND store_name = 'Aadhar Store';
+WHERE id = 1 AND enabled = 0;
 
 INSERT INTO site_content (content_key, content_value)
 VALUES

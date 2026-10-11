@@ -5,7 +5,7 @@ import { ensureSqliteTable } from '@/lib/db/ensure-sqlite-table.js';
 import { setCashClosingConfig } from '@/lib/cash-closing-policy.js';
 
 async function ensureSystemSettingsTable(db) {
-  // Postgres: table comes from migrations/001_init.sql — never run SQLite DDL.
+  // Postgres: table comes from the migrations — never run SQLite DDL.
   await ensureSqliteTable(
     db,
     `
@@ -24,54 +24,20 @@ async function seedMissingDefaults(db) {
   // Insert missing keys as well as initializing a blank install. This matters
   // when a new setting is added after a shop is already in production.
 
-  // 99 Shop deployment identity — used only when no settings exist yet.
-  // All values remain editable in Settings; nothing here is hard-coded at billing time.
-  let shopInfo = {
-    name: '99 Shop by Shahana',
-    address: 'Surkhet, Nepal',
-    phone: '+977 976-7896814',
-    email: '',
-  };
-  let ownerName = '';
-  try {
-    const licenseInfo = await db.get(`
-      SELECT shop_name, shop_address, shop_phone, shop_email, owner_name
-      FROM license_info ORDER BY id DESC LIMIT 1
-    `);
-    if (licenseInfo) {
-      shopInfo = {
-        name: licenseInfo.shop_name || shopInfo.name,
-        address: licenseInfo.shop_address || shopInfo.address,
-        phone: licenseInfo.shop_phone || shopInfo.phone,
-        email: licenseInfo.shop_email || shopInfo.email,
-      };
-      ownerName = licenseInfo.owner_name || '';
-    }
-  } catch {
-    // license_info may be missing; use empty defaults
-  }
-
+  // Shop identity — used only when no settings exist yet. All values remain
+  // editable in Settings; nothing here is hard-coded at billing time.
   const defaults = [
-    // Tax/service default to 0% and are editable in Settings — no rate is assumed.
+    // Tax defaults to 0% and is editable in Settings — no rate is assumed.
     { key: 'vat_percentage', value: '0' },
-    { key: 'service_charge_percentage', value: '0' },
-    { key: 'shop_name', value: shopInfo.name },
-    { key: 'shop_address', value: shopInfo.address },
-    { key: 'shop_phone', value: shopInfo.phone },
-    { key: 'shop_email', value: shopInfo.email },
-    { key: 'owner_name', value: ownerName },
+    { key: 'shop_name', value: '99 Shop by Shahana' },
+    { key: 'shop_address', value: 'Surkhet, Nepal' },
+    { key: 'shop_phone', value: '+977 976-7896814' },
+    { key: 'shop_email', value: '' },
+    { key: 'owner_name', value: '' },
     { key: 'vat_number', value: '' },
     { key: 'pan_number', value: '' },
     { key: 'bank_qr_image', value: '' },
     { key: 'esewa_qr_image', value: '' },
-    { key: 'delivery_pricing_enabled', value: 'false' },
-    { key: 'delivery_pricing_mode', value: 'fixed' },
-    { key: 'delivery_fixed_fee', value: '0' },
-    { key: 'delivery_distance_bands', value: '[]' },
-    { key: 'delivery_per_km_rate', value: '0' },
-    { key: 'delivery_minimum_fee', value: '0' },
-    { key: 'delivery_max_distance_km', value: '0' },
-    { key: 'online_order_minimum_amount', value: '500' },
     { key: 'calendar_system', value: 'BS' },
     { key: 'cashier_expected_cash_schedule_enabled', value: 'true' },
     { key: 'cashier_expected_cash_reveal_time', value: '20:30' },
@@ -107,16 +73,7 @@ export async function GET(request) {
       const key = row.setting_key;
       let value = row.setting_value;
 
-      if (
-        key === 'vat_percentage' ||
-        key === 'service_charge_percentage' ||
-        key === 'delivery_fixed_fee' ||
-        key === 'delivery_per_km_rate' ||
-        key === 'delivery_minimum_fee' ||
-        key === 'delivery_max_distance_km' ||
-        key === 'online_order_minimum_amount' ||
-        key.startsWith('reservation_')
-      ) {
+      if (key === 'vat_percentage') {
         value = parseFloat(value) || 0;
       }
 

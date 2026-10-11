@@ -2,7 +2,7 @@
 
 **PHASE 1 ACCEPTANCE = FAIL**
 
-**IS AADHAR RETAIL A COHERENT PRODUCTION-GRADE RETAIL ERP? NO**
+**IS 99 SHOP RETAIL A COHERENT PRODUCTION-GRADE RETAIL ERP? NO**
 
 This pass restored isolated PostgreSQL verification and implemented a bounded set of changes. It did **not** finish the full 55-part Phase 1F request. The workspace acceptance table below uses BLOCKED where required implementation or acceptance evidence remains absent; it does not mean every existing operation in that workspace fails.
 

@@ -21,7 +21,7 @@ It already had real routes: `/`, `/shop/<category>`, `/about`. Before this work:
 - `metadataBase` fell back to the placeholder `https://pos.example.com`; the root
   share image pointed at a null logo.
 - Fonts loaded through a CSS `@import` (render-blocking chain); the three kitty PNGs weighed 395 KB.
-- `/store` was indexable with the leftover title "Shop · Aadhar".
+- `/store` was indexable with the leftover title "Shop · (old name)".
 - Staff pages relied on robots.txt only; any `/api/` block would also have hidden
   product photos served from `/api/media/`.
 - Phone gutters were missing on product grids (`.shop-section` padding shorthand).

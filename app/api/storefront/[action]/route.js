@@ -12,7 +12,7 @@ export async function GET(request,context){
     const identity=await storeIdentity(db,request);
     if(action==='catalog')return reply(await publicCatalog(db,Object.fromEntries(params),identity));
     if(action==='product')return reply(await publicProduct(db,params.get('slug'),{page:params.get('page'),customerId:identity.customerId}));
-    if(action==='session'){const response=reply({customer:identity.account});if(!identity.ownerHash)response.cookies.set('aadhar_guest',newSecret(),{...cookieOptions,maxAge:30*86400});return response;}
+    if(action==='session'){const response=reply({customer:identity.account});if(!identity.ownerHash)response.cookies.set('shop99_guest',newSecret(),{...cookieOptions,maxAge:30*86400});return response;}
     if(action==='order')return reply(await publicOrder(db,params.get('id'),identity));
     if(action==='history'){
       if(!identity.customerId)throw commerceError('Sign in to see account history.',401);
@@ -32,8 +32,8 @@ export async function POST(request,context){
   try{
     const {action}=await context.params,db=Database.getInstance(),body=await publicBody(request);
     await rateLimitStore(db,'public-write:'+action,action==='account'?60:300);
-    if(action==='account'){const token=await customerSession(db,body),response=reply({ok:true});response.cookies.set('aadhar_customer',token,{...cookieOptions,maxAge:7*86400});return response;}
-    if(action==='logout'){const token=cookieValue(request,'aadhar_customer');if(token)await db.run('DELETE FROM retail_customer_sessions WHERE token_hash=?',[hashToken(token)]);const response=reply({ok:true});response.cookies.set('aadhar_customer','',{...cookieOptions,maxAge:0});return response;}
+    if(action==='account'){const token=await customerSession(db,body),response=reply({ok:true});response.cookies.set('shop99_customer',token,{...cookieOptions,maxAge:7*86400});return response;}
+    if(action==='logout'){const token=cookieValue(request,'shop99_customer');if(token)await db.run('DELETE FROM retail_customer_sessions WHERE token_hash=?',[hashToken(token)]);const response=reply({ok:true});response.cookies.set('shop99_customer','',{...cookieOptions,maxAge:0});return response;}
     const identity=await storeIdentity(db,request);
     if(!identity.ownerHash)throw commerceError('Refresh this page to start a secure shopping session.',401);
     await rateLimitStore(db,'owner:'+identity.ownerHash+':'+action,action==='orders'?5:60);

@@ -8,7 +8,7 @@ const allowed=new Set(['q','type','entity','action','product','serial','batch','
 export default function SavedEvidenceViews({scope,filters,onSelect}) {
   const {user}=useAuth();
   const [views,setViews]=useState([]),[name,setName]=useState(''),[error,setError]=useState('');
-  const key=user?.id?`aadhar:views:${user.id}:${scope}`:null;
+  const key=user?.id?`shop99:views:${user.id}:${scope}`:null;
   useEffect(()=>{
     if(!key)return;
     const frame=requestAnimationFrame(()=>{

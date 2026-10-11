@@ -51,13 +51,11 @@ export default function SettingsPage() {
     shop_name: '', legal_name: '', owner_name: '', shop_phone: '', shop_email: '',
     calendar_system: 'BS',
     website: '', vat_number: '', pan_number: '', registration_number: '', shop_address: '',
-    vat_percentage: 13, service_charge_percentage: 10,
-    receipt_footer: '', receipt_paper_size: '80', qr_ordering_enabled: true, online_order_minimum_amount: 500,
+    vat_percentage: 13,
+    receipt_footer: '', receipt_paper_size: '80',
     cashier_expected_cash_schedule_enabled: true, cashier_expected_cash_reveal_time: '20:30',
     cashier_cash_count_schedule_enabled: false, cashier_cash_count_time: '14:00',
     sale_void_window_minutes: 30,
-    delivery_pricing_enabled: false, delivery_pricing_mode: 'fixed', delivery_fixed_fee: 0,
-    delivery_distance_bands: [], delivery_per_km_rate: 0, delivery_minimum_fee: 0, delivery_max_distance_km: 0,
     bank_qr_image: '', esewa_qr_image: '',
   });
   const set = (patch) => setS((prev) => ({ ...prev, ...patch }));
@@ -80,30 +78,20 @@ export default function SettingsPage() {
         const res = await fetch('/api/admin/settings', { headers: { Authorization: `Bearer ${token}` } });
         if (res.ok) {
           const d = (await res.json()).settings || {};
-          let deliveryBands = [];
-          try { deliveryBands = JSON.parse(d.delivery_distance_bands || '[]'); } catch { deliveryBands = []; }
           set({
             shop_name: d.shop_name || '', legal_name: d.legal_name || '', owner_name: d.owner_name || '',
             shop_phone: d.shop_phone || '', shop_email: d.shop_email || '', website: d.website || '',
             vat_number: d.vat_number || '', pan_number: d.pan_number || '', registration_number: d.registration_number || '',
             shop_address: d.shop_address || '',
             calendar_system: String(d.calendar_system || 'BS').toUpperCase() === 'AD' ? 'AD' : 'BS',
-            vat_percentage: Number(d.vat_percentage ?? 13), service_charge_percentage: Number(d.service_charge_percentage ?? 10),
-            receipt_footer: d.receipt_footer || '', receipt_paper_size: d.receipt_paper_size || '80', qr_ordering_enabled: String(d.qr_ordering_enabled ?? 'true') !== 'false',
-            online_order_minimum_amount: Number(d.online_order_minimum_amount ?? 500),
+            vat_percentage: Number(d.vat_percentage ?? 13),
+            receipt_footer: d.receipt_footer || '', receipt_paper_size: d.receipt_paper_size || '80',
             cashier_expected_cash_schedule_enabled: String(d.cashier_expected_cash_schedule_enabled ?? 'true') !== 'false',
             cashier_expected_cash_reveal_time: /^(?:[01]\d|2[0-3]):[0-5]\d$/.test(String(d.cashier_expected_cash_reveal_time || '')) ? d.cashier_expected_cash_reveal_time : '20:30',
             cashier_cash_count_schedule_enabled: String(d.cashier_cash_count_schedule_enabled ?? 'false') === 'true',
             cashier_cash_count_time: /^(?:[01]\d|2[0-3]):[0-5]\d$/.test(String(d.cashier_cash_count_time || '')) ? d.cashier_cash_count_time : '14:00',
             sale_void_window_minutes: d.sale_void_window_minutes === undefined || d.sale_void_window_minutes === '' ? 30 : Number(d.sale_void_window_minutes),
             bank_qr_image: d.bank_qr_image || '', esewa_qr_image: d.esewa_qr_image || '',
-            delivery_pricing_enabled: String(d.delivery_pricing_enabled ?? 'false') === 'true',
-            delivery_pricing_mode: d.delivery_pricing_mode || 'fixed',
-            delivery_fixed_fee: Number(d.delivery_fixed_fee || 0),
-            delivery_distance_bands: Array.isArray(deliveryBands) ? deliveryBands : [],
-            delivery_per_km_rate: Number(d.delivery_per_km_rate || 0),
-            delivery_minimum_fee: Number(d.delivery_minimum_fee || 0),
-            delivery_max_distance_km: Number(d.delivery_max_distance_km || 0),
           });
         }
       } catch { setMessage({ type: 'error', text: 'Failed to load settings' }); }
@@ -143,11 +131,6 @@ export default function SettingsPage() {
             cashier_cash_count_time: undefined,
           }),
           vat_percentage: Number(s.vat_percentage) || 0,
-          service_charge_percentage: Number(s.service_charge_percentage) || 0,
-          qr_ordering_enabled: s.qr_ordering_enabled ? 'true' : 'false',
-          delivery_pricing_enabled: s.delivery_pricing_enabled ? 'true' : 'false',
-          online_order_minimum_amount: Math.max(0, Number(s.online_order_minimum_amount) || 0),
-          delivery_distance_bands: JSON.stringify(s.delivery_distance_bands || []),
         }),
       });
       if (res.ok) { setCalendarSystem(s.calendar_system); setMessage({ type: 'success', text: 'Settings saved.' }); setTimeout(() => setMessage({ type: '', text: '' }), 2500); }
@@ -239,10 +222,9 @@ export default function SettingsPage() {
             )}
 
             {tab === 'billing' && (
-              <Panel title="Billing & tax" hint="Applied to every bill total (exclusive tax + service charge).">
+              <Panel title="Billing & tax" hint="Applied to every sale total as exclusive tax.">
                 <Grid>
                   <Field label="VAT rate (%)"><input type="number" step="any" value={s.vat_percentage} onChange={(e) => set({ vat_percentage: e.target.value })} className={INPUT} /></Field>
-                  <Field label="Service charge (%)"><input type="number" step="any" value={s.service_charge_percentage} onChange={(e) => set({ service_charge_percentage: e.target.value })} className={INPUT} /></Field>
                 </Grid>
                 <Field label="Quick void window (minutes)">
                   <input type="number" min="0" max="1440" step="1" disabled={currentUser?.role !== 'admin'} value={s.sale_void_window_minutes} onChange={(e) => set({ sale_void_window_minutes: e.target.value })} className={INPUT} />
@@ -280,40 +262,6 @@ export default function SettingsPage() {
                   </Field>
                   <p className="mt-2 text-xs text-gray-500">The cashier never sees expected cash on this form. Administrators see expected, counted, variance, denominations, and the complete calculation under Scheduled Cash Counts.</p>
                 </div>
-              </Panel>
-            )}
-
-            {tab === 'delivery' && (
-              <Panel title="Delivery pricing" hint="Shown at website checkout and saved on the order and bill. Pickup remains free.">
-                <label className="flex items-center justify-between rounded-lg border border-gray-200 p-4">
-                  <span><span className="block text-sm font-medium text-gray-800">Charge for delivery</span><span className="mt-0.5 block text-xs text-gray-500">Turn off to show delivery as free.</span></span>
-                  <input type="checkbox" checked={s.delivery_pricing_enabled} onChange={(e) => set({ delivery_pricing_enabled: e.target.checked })} className="h-5 w-5 rounded border-gray-300" />
-                </label>
-                {s.delivery_pricing_enabled && <>
-                  <Field label="How is the fee calculated?">
-                    <select value={s.delivery_pricing_mode} onChange={(e) => set({ delivery_pricing_mode: e.target.value })} className={INPUT}>
-                      <option value="fixed">One fixed fee</option>
-                      <option value="distance_bands">Fee by distance range</option>
-                      <option value="per_km">Price per kilometre</option>
-                    </select>
-                  </Field>
-                  {s.delivery_pricing_mode === 'fixed' && <Field label="Fixed delivery fee (Rs)"><input type="number" min="0" step="0.01" value={s.delivery_fixed_fee} onChange={(e) => set({ delivery_fixed_fee: e.target.value })} className={INPUT} /></Field>}
-                  {s.delivery_pricing_mode === 'distance_bands' && <div className="space-y-3">
-                    <div className="flex items-center justify-between gap-3"><div><p className="text-sm font-medium text-gray-800">Distance ranges</p><p className="text-xs text-gray-500">Customers choose the range that contains their address.</p></div><button type="button" onClick={() => set({ delivery_distance_bands: [...s.delivery_distance_bands, { id: globalThis.crypto?.randomUUID?.() || `band-${Date.now()}`, maxKm: '', fee: '' }] })} className="inline-flex h-10 items-center gap-2 rounded-lg border border-gray-300 px-3 text-sm font-medium text-gray-700 active:scale-[0.97]"><Plus className="h-4 w-4" />Add range</button></div>
-                    {s.delivery_distance_bands.map((band, index) => <div key={band.id || index} className="grid grid-cols-[1fr_1fr_auto] gap-2 rounded-lg border border-gray-200 bg-gray-50 p-3">
-                      <Field label="Up to (km)"><input type="number" min="0.1" step="0.1" value={band.maxKm ?? band.max_km ?? ''} onChange={(e) => set({ delivery_distance_bands: s.delivery_distance_bands.map((row, i) => i === index ? { ...row, maxKm: e.target.value } : row) })} className={INPUT} /></Field>
-                      <Field label="Fee (Rs)"><input type="number" min="0" step="0.01" value={band.fee ?? ''} onChange={(e) => set({ delivery_distance_bands: s.delivery_distance_bands.map((row, i) => i === index ? { ...row, fee: e.target.value } : row) })} className={INPUT} /></Field>
-                      <button type="button" aria-label="Remove range" onClick={() => set({ delivery_distance_bands: s.delivery_distance_bands.filter((_, i) => i !== index) })} className="mt-6 flex h-11 w-11 items-center justify-center rounded-lg text-rose-600 hover:bg-rose-50 active:scale-[0.97]"><Trash2 className="h-4 w-4" /></button>
-                    </div>)}
-                    {!s.delivery_distance_bands.length && <p className="rounded-lg border border-dashed border-gray-300 p-4 text-sm text-gray-500">Add at least one distance range before using this mode.</p>}
-                  </div>}
-                  {s.delivery_pricing_mode === 'per_km' && <Grid>
-                    <Field label="Price per km (Rs)"><input type="number" min="0" step="0.01" value={s.delivery_per_km_rate} onChange={(e) => set({ delivery_per_km_rate: e.target.value })} className={INPUT} /></Field>
-                    <Field label="Minimum fee (Rs)"><input type="number" min="0" step="0.01" value={s.delivery_minimum_fee} onChange={(e) => set({ delivery_minimum_fee: e.target.value })} className={INPUT} /></Field>
-                    <Field label="Maximum delivery distance (km)"><input type="number" min="0" step="0.1" value={s.delivery_max_distance_km} onChange={(e) => set({ delivery_max_distance_km: e.target.value })} className={INPUT} /></Field>
-                  </Grid>}
-                  <p className="rounded-lg bg-amber-50 px-3 py-2 text-xs text-amber-800">Distance is entered or selected by the customer and should be confirmed against the address before accepting the order.</p>
-                </>}
               </Panel>
             )}
 

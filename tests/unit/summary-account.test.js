@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 
 import {
   recordedCashMovements,
-  summarizeBillComposition,
+  summarizeSaleComposition,
   summaryAccountRows,
 } from '../../lib/summary-account.js';
 
@@ -59,37 +59,33 @@ test('an unfamiliar journal source cannot silently disappear from account reconc
 });
 
 test('pre-discount category value reconciles visibly to finalized sales', () => {
-  assert.deepEqual(summarizeBillComposition({
+  assert.deepEqual(summarizeSaleComposition({
     subtotal: 12915,
     discounts: 5,
     tax: 0,
-    service_charge: 0,
     finalized_total: 12910,
   }, 12910), {
     subtotal: 12915,
     discounts: 5,
     tax: 0,
-    service_charge: 0,
-    other_bill_adjustments: 0,
-    finalized_bill_total: 12910,
-    ledger_bill_difference: 0,
+    other_adjustments: 0,
+    finalized_total: 12910,
+    ledger_difference: 0,
   });
 });
 
 test('delivery, rounding, and ledger posting differences are never hidden', () => {
-  assert.deepEqual(summarizeBillComposition({
+  assert.deepEqual(summarizeSaleComposition({
     subtotal: 100,
     discounts: 10,
     tax: 5,
-    service_charge: 5,
     finalized_total: 107,
   }, 105), {
     subtotal: 100,
     discounts: 10,
     tax: 5,
-    service_charge: 5,
-    other_bill_adjustments: 7,
-    finalized_bill_total: 107,
-    ledger_bill_difference: -2,
+    other_adjustments: 12,
+    finalized_total: 107,
+    ledger_difference: -2,
   });
 });
