@@ -9,7 +9,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
-  Banknote, Building2, Camera, CheckCircle2, CreditCard, Delete, Gift, Keyboard, LayoutGrid, Loader2, MessageCircle,
+  Banknote, Building2, Camera, CheckCircle2, CreditCard, Gift, Keyboard, LayoutGrid, Loader2, MessageCircle,
   Minus, Package, PauseCircle, PencilLine, PlayCircle, Plus, Printer, QrCode, ScanLine, ScanSearch, Search,
   SlidersHorizontal, Sparkles, Split, Tag, TicketPercent, Trash2, User, Wallet, X,
 } from 'lucide-react';
@@ -66,7 +66,6 @@ export default function RetailPos() {
   const [priceResult, setPriceResult] = useState(null);
   const [holdOpen, setHoldOpen] = useState(false);
   const [flashId, setFlashId] = useState(null);
-  const [cashTyped, setCashTyped] = useState(null);
 
   const [selectedLine, setSelectedLine] = useState(0);
   const [lineEdit, setLineEdit] = useState(null);
@@ -90,6 +89,13 @@ export default function RetailPos() {
   const [discountAmount, setDiscountAmount] = useState(0);
   const [discountReason, setDiscountReason] = useState('');
   const [couponCode, setCouponCode] = useState('');
+  // Payment window: what the cashier is typing before Apply, and how the sale discount is entered.
+  const [couponInput, setCouponInput] = useState('');
+  const [couponError, setCouponError] = useState('');
+  const [couponBusy, setCouponBusy] = useState(false);
+  const [customerMode, setCustomerMode] = useState(false);
+  const [discountUnit, setDiscountUnit] = useState('rs');
+  const [discountPercent, setDiscountPercent] = useState('');
   const [promoPreview, setPromoPreview] = useState({ applied_promotions: [], total_discount: 0, line_discounts: [] });
   const [redeemPoints, setRedeemPoints] = useState(0);
   const [loyaltyPreview, setLoyaltyPreview] = useState({ balance: 0, estimated_points_to_earn: 0, redemption: { points: 0, value: 0 } });
@@ -277,6 +283,9 @@ export default function RetailPos() {
     setDiscountReason('');
     setCouponCode('');
     setRedeemPoints(0);
+    setDiscountUnit('rs');
+    setDiscountPercent('');
+    setCouponInput('');
     setHoldLabel('');
     setActiveSaleId(null);
     checkoutKeyRef.current = uid();
@@ -388,8 +397,10 @@ export default function RetailPos() {
   const openPayment = () => {
     if (!cart.length || !quoteReady) return;
     setPayments([{ method: 'cash', amount: totals.total, cash_tendered: totals.total }]);
-    setCashTyped(null);
     setCreditOverrideReason('');
+    setCustomerMode(!!customer);
+    setCouponInput(couponCode);
+    setCouponError('');
     setCheckoutError('');
     setShowPayment(true);
   };
@@ -401,7 +412,6 @@ export default function RetailPos() {
   }, [showPayment, quoteReady, totals.total]);
   const paymentMode = payments.length > 1 ? 'split' : payments[0]?.method;
   const choosePaymentMode = (id) => {
-    setCashTyped(null);
     if (id === 'split') return setPayments([{ method: 'cash', amount: totals.total, cash_tendered: totals.total }, { method: 'online', amount: 0, cash_tendered: 0 }]);
     const balance = Number(customer?.store_credit_balance) || 0;
     // Not enough store credit for the whole bill: use it all and take the rest in cash.
@@ -411,12 +421,40 @@ export default function RetailPos() {
     }
     setPayments([{ method: id, amount: totals.total, cash_tendered: id === 'cash' ? totals.total : 0 }]);
   };
-  // On-screen keypad for touch tills: the first key replaces the pre-filled exact amount.
-  const pressCashKey = (key) => {
-    const next = key === 'back' ? (cashTyped ?? '').slice(0, -1) : `${cashTyped ?? ''}${key}`.replace(/^0+(?=\d)/, '').slice(0, 7);
-    setCashTyped(next);
-    setPayments((prev) => [{ ...prev[0], cash_tendered: Number(next) || 0 }]);
+  // A percentage discount follows the sale: it is turned into rupees on the current subtotal.
+  useEffect(() => {
+    if (discountUnit !== 'pct' || !quoteReady) return;
+    const pct = Math.min(100, Math.max(0, Number(discountPercent) || 0));
+    const amount = Math.round(totals.subtotal * pct) / 100;
+    if (Math.abs(amount - discountAmount) > 0.004) setDiscountAmount(amount);
+  }, [discountUnit, discountPercent, totals.subtotal, quoteReady, discountAmount]);
+  // A coupon is checked before it is used, so a mistyped code never blocks the sale.
+  const applyCoupon = async () => {
+    const code = couponInput.trim().toUpperCase();
+    setCouponError('');
+    if (!code) { setCouponCode(''); return; }
+    setCouponBusy(true);
+    try {
+      const data = await apiJson('/api/admin/retail-promotions/preview', {
+        method: 'POST',
+        body: JSON.stringify({ lines: cart.map((l) => ({ variant_id: l.variant_id, quantity: l.quantity })), customer_id: customer?.id || null, coupon_code: code }),
+      });
+      if (!(data.applied_promotions || []).some((promo) => String(promo.code || '').toUpperCase() === code)) throw { error: 'This code gives no discount on these items.' };
+      setCouponCode(code);
+    } catch (error) {
+      setCouponError(error.error || error.message || 'This coupon code is not valid.');
+    } finally {
+      setCouponBusy(false);
+    }
   };
+  const removeCoupon = () => { setCouponCode(''); setCouponInput(''); setCouponError(''); };
+  const chooseWalkIn = () => {
+    setCustomerMode(false);
+    setCustomer(null);
+    setRedeemPoints(0);
+    if (payments.some((p) => p.method === 'credit' || p.method === 'store_credit')) choosePaymentMode('cash');
+  };
+  const chooseCustomerMode = () => { setCustomerMode(true); setTimeout(() => document.querySelector('[data-customer-search]')?.focus(), 30); };
 
   const paymentSum = useMemo(() => payments.reduce((s, p) => s + (Number(p.amount) || 0), 0), [payments]);
   const paymentBreakdown = paymentSummary(totals.total, payments);
@@ -428,6 +466,8 @@ export default function RetailPos() {
   const paymentValid = Math.abs(Math.round((paymentSum - totals.total) * 100)) <= 1 && payments.every((p) =>
     Number(p.amount) >= 0 && (p.method !== 'cash' || Number(p.cash_tendered) >= Number(p.amount)) &&
     (p.method !== 'store_credit' || (!!customer && Number(p.amount) <= Number(customer.store_credit_balance || 0))));
+
+  const payDisabled = !paymentValid || busy || !quoteReady || (paymentMode === 'credit' && !customer) || (creditOverLimit && (!canOverrideCredit || creditOverrideReason.trim().length < 8));
 
   const checkoutBusy = useRef(false);
   const completeSale = useCallback(async () => {
@@ -489,7 +529,7 @@ export default function RetailPos() {
 
   useShortcut('f3', () => { setItemsOpen(false); searchRef.current?.focus(); }, { allowInField: true });
   const openPaymentAt = (selector) => { openPayment(); setTimeout(() => document.querySelector(selector)?.focus(), 80); };
-  useShortcut('f2', () => openPaymentAt('[data-customer-search]'), { allowInField: true });
+  useShortcut('f2', () => { openPayment(); setCustomerMode(true); setTimeout(() => document.querySelector('[data-customer-search]')?.focus(), 80); }, { allowInField: true });
   useShortcut('f5', () => setItemsOpen((open) => !open), { allowInField: true });
   useShortcut('f8', () => cart.length && !busy && setHoldOpen(true), { allowInField: true });
   useShortcut('mod+f8', () => setShowHeld(true), { allowInField: true });
@@ -535,54 +575,37 @@ export default function RetailPos() {
   const actionButton = 'flex h-10 items-center gap-2 rounded-xl border border-gray-200 bg-white px-3 text-left text-[13px] font-semibold text-gray-700 transition hover:border-pink-300 hover:bg-pink-50 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-40';
   const Kbd = ({ children }) => <kbd className="rounded border border-gray-300 bg-gray-50 px-1 text-[10px] font-semibold text-gray-500">{children}</kbd>;
 
-  const customerSection = (
-  <section aria-label="Customer" className="rounded-2xl border border-gray-200 bg-white p-3">
-    <div className="mb-2 flex items-center justify-between"><p className="text-xs font-bold uppercase tracking-widest text-gray-500">Customer</p><span className="text-xs text-gray-400">Optional · F2</span></div>
-    {customer ? (
-      <div>
-        <div className="flex items-start justify-between gap-2">
-          <div className="flex min-w-0 items-center gap-2.5"><span className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-pink-100 text-pink-700"><User className="h-4 w-4" aria-hidden /></span><div className="min-w-0"><p className="truncate text-sm font-bold text-gray-900">{customer.name || `Customer #${customer.id}`}</p>{customer.phone && <p className="text-xs text-gray-500">{customer.phone}</p>}</div></div>
-          <button type="button" aria-label="Remove customer" onClick={() => { setCustomer(null); setRedeemPoints(0); }} className="rounded-lg p-2 text-gray-400 hover:bg-gray-100 hover:text-gray-700"><X className="h-4 w-4" aria-hidden /></button>
-        </div>
-        <div className="mt-2.5 flex flex-wrap gap-1.5 text-xs font-bold">
-          <span className="rounded-full bg-amber-50 px-2 py-1 text-amber-800">{loyaltyPreview.balance} pts{loyaltyPreview.estimated_points_to_earn > 0 ? ` · +${loyaltyPreview.estimated_points_to_earn} today` : ''}</span>
-          {Number(customer.current_credit) > 0 && <span className="rounded-full bg-red-50 px-2 py-1 text-red-700">Owes {formatCurrency(customer.current_credit)}</span>}
-          {Number(customer.store_credit_balance) > 0 && <span className="rounded-full bg-emerald-50 px-2 py-1 text-emerald-700">Store credit {formatCurrency(customer.store_credit_balance)}</span>}
-          {creditLimit > 0 && <span className="rounded-full bg-gray-100 px-2 py-1 text-gray-600">Limit {formatCurrency(creditLimit)}</span>}
-          {customer.is_blacklisted ? <span className="rounded-full bg-red-100 px-2 py-1 text-red-800">Credit blocked</span> : null}
-        </div>
-        {loyaltyPreview.balance > 0 && <label className="mt-2.5 flex items-center gap-2 text-sm text-gray-600">Use points
-          <input type="number" min="0" max={loyaltyPreview.balance} value={redeemPoints || ''} onChange={(e) => setRedeemPoints(Math.max(0, Math.min(loyaltyPreview.balance, Number(e.target.value) || 0)))} placeholder="0" className="h-10 w-24 rounded-xl border border-gray-300 px-2 text-right tabular-nums" />
-          {loyaltyPreview.redemption?.value > 0 && <span className="font-bold text-amber-700">−{formatCurrency(loyaltyPreview.redemption.value)}</span>}
-        </label>}
+  const customerCard = customer && (
+    <div className="rounded-xl border border-gray-200 bg-white p-3">
+      <div className="flex items-start justify-between gap-2">
+        <div className="flex min-w-0 items-center gap-2.5"><span className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-pink-100 text-pink-700"><User className="h-4 w-4" aria-hidden /></span><div className="min-w-0"><p className="truncate text-sm font-bold text-gray-900">{customer.name || `Customer #${customer.id}`}</p>{customer.phone && <p className="text-xs text-gray-500">{customer.phone}</p>}</div></div>
+        <button type="button" onClick={() => { setCustomer(null); setRedeemPoints(0); setTimeout(() => document.querySelector('[data-customer-search]')?.focus(), 30); }} className="rounded-lg px-2 py-1.5 text-xs font-bold text-pink-700 hover:bg-pink-50">Change</button>
       </div>
-    ) : (
-      <div className="relative">
-        <input type="text" data-customer-search placeholder="Customer name/phone (optional)" value={customerQuery} onChange={(e) => setCustomerQuery(e.target.value)} className="h-10 w-full rounded-xl border border-gray-300 bg-white px-3 text-sm placeholder:text-gray-400 focus:border-pink-400 focus:outline-none focus:ring-2 focus:ring-pink-100" />
-        {customerResults.length > 0 && (
-          <div className="absolute z-20 mt-1 max-h-56 w-full overflow-y-auto rounded-xl border border-gray-200 bg-white p-1 shadow-xl">
-            {customerResults.map((c) => <button key={c.id} type="button" onClick={() => { setCustomer(c); setCustomerQuery(''); }} className="flex w-full items-center justify-between gap-2 rounded-lg px-3 py-2.5 text-left text-sm hover:bg-pink-50"><span className="font-semibold text-gray-900">{c.name}</span>{c.phone ? <span className="text-gray-500">{c.phone}</span> : null}</button>)}
-          </div>
-        )}
-        <div className="mt-2 flex items-center justify-between text-xs text-gray-500"><span>Walk-in customer</span><button type="button" className="font-bold text-pink-700 hover:underline" onClick={() => { setNewCustomer({ name: '', phone: customerQuery.replace(/\D/g, '') }); setCustomerCreateError(''); setShowCustomerCreate(true); }}>New customer</button></div>
+      <div className="mt-2.5 flex flex-wrap gap-1.5 text-xs font-bold">
+        <span className="rounded-full bg-amber-50 px-2 py-1 text-amber-800">{loyaltyPreview.balance} pts{loyaltyPreview.estimated_points_to_earn > 0 ? ` · +${loyaltyPreview.estimated_points_to_earn} today` : ''}</span>
+        {Number(customer.current_credit) > 0 && <span className="rounded-full bg-red-50 px-2 py-1 text-red-700">Owes {formatCurrency(customer.current_credit)}</span>}
+        {Number(customer.store_credit_balance) > 0 && <span className="rounded-full bg-emerald-50 px-2 py-1 text-emerald-700">Store credit {formatCurrency(customer.store_credit_balance)}</span>}
+        {creditLimit > 0 && <span className="rounded-full bg-gray-100 px-2 py-1 text-gray-600">Limit {formatCurrency(creditLimit)}</span>}
+        {customer.is_blacklisted ? <span className="rounded-full bg-red-100 px-2 py-1 text-red-800">Credit blocked</span> : null}
       </div>
-    )}
-  </section>
+      {loyaltyPreview.balance > 0 && <label className="mt-2.5 flex items-center gap-2 text-sm text-gray-600">Use points
+        <input type="number" min="0" max={loyaltyPreview.balance} value={redeemPoints || ''} onChange={(e) => setRedeemPoints(Math.max(0, Math.min(loyaltyPreview.balance, Number(e.target.value) || 0)))} placeholder="0" className="h-10 w-24 rounded-xl border border-gray-300 px-2 text-right tabular-nums" />
+        {loyaltyPreview.redemption?.value > 0 && <span className="font-bold text-amber-700">−{formatCurrency(loyaltyPreview.redemption.value)}</span>}
+      </label>}
+    </div>
   );
 
-  const discountSection = (
-    <section aria-label="Discount and coupon" className="space-y-3 rounded-2xl border border-gray-200 bg-white p-3">
-      <p className="text-xs font-bold uppercase tracking-widest text-gray-500">Discount &amp; coupon</p>
-      <div className="grid gap-3 sm:grid-cols-2">
-        {can('retail_sale.discount') && <>
-          <label className="block text-sm font-semibold text-gray-700">Sale discount (Rs)<input data-sale-discount type="number" min="0" step="0.01" inputMode="decimal" value={discountAmount || ''} onChange={(e) => setDiscountAmount(Math.max(0, Number(e.target.value) || 0))} placeholder="0" className="mt-1 h-11 w-full rounded-xl border border-gray-300 px-3 text-right text-base font-semibold tabular-nums focus:border-pink-400 focus:outline-none focus:ring-2 focus:ring-pink-100" /></label>
-          <label className="block text-sm font-semibold text-gray-700">Reason{discountAmount > 0 ? '' : ' (optional)'}<input value={discountReason} onChange={(e) => setDiscountReason(e.target.value)} maxLength={120} placeholder="e.g. Regular customer" className="mt-1 h-11 w-full rounded-xl border border-gray-300 px-3 text-sm focus:border-pink-400 focus:outline-none focus:ring-2 focus:ring-pink-100" /></label>
-        </>}
-        <label className="block text-sm font-semibold text-gray-700 sm:col-span-2">Coupon code<input aria-label="Coupon code" value={couponCode} onChange={(e) => setCouponCode(e.target.value.toUpperCase())} placeholder="Only for coupon offers" className="mt-1 h-11 w-full rounded-xl border border-gray-300 px-3 text-base font-semibold uppercase tracking-widest placeholder:normal-case placeholder:tracking-normal placeholder:font-normal focus:border-pink-400 focus:outline-none focus:ring-2 focus:ring-pink-100" /></label>
-      </div>
-      {promoPreview.applied_promotions.length > 0 && <ul className="space-y-1 text-sm">{promoPreview.applied_promotions.map((p) => <li key={p.id} className="flex justify-between font-bold text-rose-700"><span>{p.name}{p.code ? ` (${p.code})` : ''}</span><span>−{formatCurrency(p.discount)}</span></li>)}</ul>}
-      {!quoteReady && <p className="text-xs text-gray-500">Updating the total…</p>}
-    </section>
+  const customerPicker = (
+    <div className="relative">
+      <Search className="pointer-events-none absolute left-3 top-[1.375rem] h-4 w-4 -translate-y-1/2 text-gray-400" aria-hidden />
+      <input type="text" data-customer-search aria-label="Find customer" placeholder="Search name or phone" value={customerQuery} onChange={(e) => setCustomerQuery(e.target.value)} className="h-11 w-full rounded-xl border border-gray-300 bg-white pr-3 text-sm placeholder:text-gray-400 focus:border-pink-400 focus:outline-none focus:ring-2 focus:ring-pink-100" style={{ paddingLeft: '2.25rem' }} />
+      {customerResults.length > 0 && (
+        <div className="absolute z-20 mt-1 max-h-56 w-full overflow-y-auto rounded-xl border border-gray-200 bg-white p-1 shadow-xl">
+          {customerResults.map((c) => <button key={c.id} type="button" onClick={() => { setCustomer(c); setCustomerQuery(''); }} className="flex w-full items-center justify-between gap-2 rounded-lg px-3 py-2.5 text-left text-sm hover:bg-pink-50"><span className="font-semibold text-gray-900">{c.name}</span>{c.phone ? <span className="text-gray-500">{c.phone}</span> : null}</button>)}
+        </div>
+      )}
+      <button type="button" className="mt-2 text-xs font-bold text-pink-700 hover:underline" onClick={() => { setNewCustomer({ name: '', phone: customerQuery.replace(/\D/g, '') }); setCustomerCreateError(''); setShowCustomerCreate(true); }}>+ New customer</button>
+    </div>
   );
 
   const controlPanel = (
@@ -878,139 +901,172 @@ export default function RetailPos() {
         <Dialog.Root open={showPayment} onOpenChange={(open) => { if (!busy) setShowPayment(open); }}>
           <Dialog.Portal>
             <Dialog.Overlay className="fixed inset-0 z-[80] bg-gray-950/55" />
-            <Dialog.Content aria-describedby={undefined} className="commerce-payment fixed inset-0 z-[81] flex flex-col overflow-hidden bg-white sm:inset-4 sm:rounded-3xl lg:inset-y-6 lg:left-1/2 lg:right-auto lg:w-[min(58rem,calc(100vw-3rem))] lg:-translate-x-1/2">
+            <Dialog.Content aria-describedby={undefined} className="commerce-payment fixed inset-0 z-[81] flex flex-col overflow-hidden bg-white sm:inset-auto sm:left-1/2 sm:top-1/2 sm:max-h-[calc(100dvh-2rem)] sm:w-[min(34rem,calc(100vw-2rem))] sm:-translate-x-1/2 sm:-translate-y-1/2 sm:rounded-3xl sm:shadow-2xl">
               <div className="flex shrink-0 items-center justify-between border-b border-gray-200 px-5 py-3.5">
-                <div className="flex items-center gap-3"><span className="grid h-9 w-9 place-items-center rounded-xl bg-pink-100 text-pink-700"><Wallet className="h-5 w-5" aria-hidden /></span><div><Dialog.Title className="text-lg font-bold text-gray-900">Checkout payment</Dialog.Title><p className="text-sm text-gray-500">{cartCount} pcs{customer ? ` · ${customer.name}` : ' · Walk-in'}</p></div></div>
+                <div className="flex items-center gap-3"><span className="grid h-9 w-9 place-items-center rounded-xl bg-pink-100 text-pink-700"><Wallet className="h-5 w-5" aria-hidden /></span><div><Dialog.Title className="text-lg font-bold text-gray-900">Bill payment</Dialog.Title><p className="text-sm text-gray-500">{cartCount} pcs · {cart.length} {cart.length === 1 ? 'item' : 'items'}</p></div></div>
                 <button type="button" aria-label="Close payment" onClick={() => !busy && setShowPayment(false)} className="grid h-10 w-10 place-items-center rounded-xl text-gray-500 hover:bg-gray-100"><X className="h-5 w-5" aria-hidden /></button>
               </div>
 
-              <div className="grid min-h-0 flex-1 overflow-y-auto lg:grid-cols-[minmax(0,1fr)_22rem] lg:overflow-hidden">
-                <div className="space-y-4 p-4 sm:p-5 lg:overflow-y-auto">
-                  <div className="flex items-end justify-between gap-3 rounded-2xl bg-gray-800 px-5 py-4 text-white">
-                    <p className="text-xs font-bold uppercase tracking-widest opacity-70">To collect</p>
-                    <p className="text-4xl font-bold tabular-nums">{formatCurrency(totals.total)}</p>
+              <div className="min-h-0 flex-1 space-y-4 overflow-y-auto p-4 sm:p-5">
+                {/* Who is buying */}
+                <section aria-label="Customer" className="space-y-2.5">
+                  <div className="grid grid-cols-2 gap-1 rounded-xl bg-gray-100 p-1" role="group" aria-label="Customer type">
+                    {[['walkin', 'Walk-in', chooseWalkIn], ['customer', 'Customer', chooseCustomerMode]].map(([id, label, onClick]) => {
+                      const active = (id === 'customer') === (customerMode || !!customer);
+                      return <button key={id} type="button" aria-pressed={active} onClick={onClick} className={`h-10 rounded-lg text-sm font-bold transition ${active ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-600 hover:text-gray-900'}`}>{label}{id === 'customer' && <span className="ml-1.5 text-xs font-semibold text-gray-400">F2</span>}</button>;
+                    })}
                   </div>
+                  {customer ? customerCard : customerMode ? customerPicker : null}
+                </section>
 
-                  {customerSection}
-                  {discountSection}
-
-                  <div>
-                    <p className="mb-2 text-xs font-bold uppercase tracking-widest text-gray-500">How is the customer paying?</p>
-                    <div className="flex flex-wrap gap-2">
-                      {[
-                        { id: 'cash', label: 'Cash', Icon: Banknote },
-                        { id: 'online', label: 'Online / QR', Icon: QrCode },
-                        ...(can('retail_sale.credit') ? [{ id: 'credit', label: 'Credit', Icon: Building2 }] : []),
-                        ...(customer && Number(customer.store_credit_balance) > 0 ? [{ id: 'store_credit', label: 'Store credit', Icon: Gift }] : []),
-                        { id: 'split', label: 'Split', Icon: Split },
-                      ].map(({ id, label, Icon }) => {
-                        const active = id === paymentMode;
-                        return <button key={id} type="button" aria-pressed={active} onClick={() => choosePaymentMode(id)}
-                          className={`flex h-12 min-w-[7.5rem] flex-1 items-center justify-center gap-2 whitespace-nowrap rounded-xl border px-4 text-sm font-semibold transition active:scale-[0.98] sm:flex-none ${active ? 'border-transparent bg-gray-900 text-white shadow-md' : 'border-gray-200 bg-white text-gray-800 hover:border-pink-300'}`}>
-                          <Icon className="h-4 w-4" aria-hidden />{label}
-                        </button>;
-                      })}
+                {/* Offer / coupon */}
+                <section aria-label="Offer or coupon">
+                  <p className="mb-1.5 text-xs font-bold uppercase tracking-widest text-gray-500">Offer / coupon</p>
+                  {couponCode ? (
+                    <div className="flex items-center justify-between gap-2 rounded-xl border border-rose-200 bg-rose-50 px-3 py-2.5">
+                      <span className="inline-flex items-center gap-2 text-sm font-bold text-rose-800"><TicketPercent className="h-4 w-4" aria-hidden />{couponCode} applied</span>
+                      <button type="button" onClick={removeCoupon} className="text-xs font-bold text-rose-700 hover:underline">Remove</button>
                     </div>
+                  ) : (
+                    <form className="flex gap-2" onSubmit={(e) => { e.preventDefault(); applyCoupon(); }}>
+                      <input aria-label="Coupon code" value={couponInput} onChange={(e) => { setCouponInput(e.target.value.toUpperCase()); setCouponError(''); }} placeholder="Enter coupon code" className="h-11 min-w-0 flex-1 rounded-xl border border-gray-300 px-3 text-sm font-semibold uppercase tracking-widest placeholder:font-normal placeholder:normal-case placeholder:tracking-normal focus:border-pink-400 focus:outline-none focus:ring-2 focus:ring-pink-100" />
+                      <button type="submit" disabled={!couponInput.trim() || couponBusy} className="inline-flex h-11 shrink-0 items-center gap-1.5 rounded-xl bg-gray-900 px-4 text-sm font-bold text-white hover:bg-gray-800 disabled:opacity-40">{couponBusy && <Loader2 className="h-4 w-4 animate-spin" aria-hidden />}Apply</button>
+                    </form>
+                  )}
+                  {couponError && <p role="alert" className="mt-1.5 text-xs font-semibold text-red-600">{couponError}</p>}
+                  {promoPreview.applied_promotions.length > 0 && <ul className="mt-2 space-y-1 text-sm">{promoPreview.applied_promotions.map((p) => <li key={p.id} className="flex justify-between font-semibold text-rose-700"><span className="inline-flex items-center gap-1.5"><Sparkles className="h-3.5 w-3.5" aria-hidden />{p.name}{p.code ? ` (${p.code})` : ''}</span><span className="tabular-nums">−{formatCurrency(p.discount)}</span></li>)}</ul>}
+                </section>
+
+                {/* Manual discount */}
+                {can('retail_sale.discount') && <section aria-label="Discount">
+                  <p className="mb-1.5 text-xs font-bold uppercase tracking-widest text-gray-500">Discount</p>
+                  <div className="flex gap-2">
+                    <div className="grid shrink-0 grid-cols-2 gap-1 rounded-xl bg-gray-100 p-1" role="group" aria-label="Discount type">
+                      {[['pct', '%'], ['rs', 'Rs']].map(([id, label]) => <button key={id} type="button" aria-pressed={discountUnit === id} onClick={() => { setDiscountUnit(id); if (id === 'pct') setDiscountPercent(totals.subtotal > 0 && discountAmount > 0 ? String(Math.round((discountAmount / totals.subtotal) * 10000) / 100) : ''); }} className={`h-9 w-11 rounded-lg text-sm font-bold ${discountUnit === id ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-600'}`}>{label}</button>)}
+                    </div>
+                    {discountUnit === 'pct'
+                      ? <input data-sale-discount aria-label="Discount percent" type="number" min="0" max="100" step="0.5" inputMode="decimal" value={discountPercent} onChange={(e) => { setDiscountPercent(e.target.value); if (!(Number(e.target.value) > 0)) setDiscountAmount(0); }} placeholder="0" className="h-11 min-w-0 flex-1 rounded-xl border border-gray-300 px-3 text-right text-base font-semibold tabular-nums focus:border-pink-400 focus:outline-none focus:ring-2 focus:ring-pink-100" />
+                      : <input data-sale-discount aria-label="Discount amount" type="number" min="0" step="0.01" inputMode="decimal" value={discountAmount || ''} onChange={(e) => setDiscountAmount(Math.min(totals.subtotal, Math.max(0, Number(e.target.value) || 0)))} placeholder="0" className="h-11 min-w-0 flex-1 rounded-xl border border-gray-300 px-3 text-right text-base font-semibold tabular-nums focus:border-pink-400 focus:outline-none focus:ring-2 focus:ring-pink-100" />}
                   </div>
+                  {discountAmount > 0 && <input aria-label="Discount reason" value={discountReason} onChange={(e) => setDiscountReason(e.target.value)} maxLength={120} placeholder="Reason, e.g. regular customer" className="mt-2 h-10 w-full rounded-xl border border-gray-300 px-3 text-sm focus:border-pink-400 focus:outline-none focus:ring-2 focus:ring-pink-100" />}
+                </section>}
 
-                  {paymentMode === 'cash' && (
-                    <div className="grid gap-4 md:grid-cols-[minmax(0,1fr)_13rem]">
-                      <div className="space-y-3">
-                        <label className="block text-xs font-bold uppercase tracking-widest text-gray-500">Cash received
-                          <input aria-label="Cash received" type="number" min="0" step="0.01" inputMode="decimal" value={payments[0]?.cash_tendered ?? ''}
-                            onChange={(e) => { setCashTyped(null); setPayments([{ ...payments[0], cash_tendered: Number(e.target.value) || 0 }]); }}
-                            onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); completeSale(); } }}
-                            className="mt-1.5 h-14 w-full rounded-xl border-2 border-gray-300 px-4 text-right text-3xl font-bold tabular-nums text-gray-900 focus:border-pink-400 focus:outline-none focus:ring-4 focus:ring-pink-100" />
-                        </label>
-                        <div className="flex flex-wrap gap-2">
-                          {[totals.total, 100, 500, 1000, 2000, 5000].filter((v, i, a) => a.indexOf(v) === i && (i === 0 || v >= totals.total)).map((amt) => (
-                            <button key={amt} type="button" onClick={() => { setCashTyped(null); setPayments([{ ...payments[0], cash_tendered: amt }]); }}
-                              className={`h-10 min-w-[4.5rem] rounded-lg border px-3 text-sm font-semibold ${Number(payments[0]?.cash_tendered) === amt ? 'border-pink-600 bg-pink-50 text-pink-800' : 'border-gray-200 bg-white text-gray-800 hover:border-pink-300'}`}>
-                              {amt === totals.total ? 'Exact' : formatCurrency(amt).replace('.00', '')}
-                            </button>
-                          ))}
-                        </div>
-                      </div>
-                      <div className="grid grid-cols-3 gap-1.5" aria-label="Cash keypad">
-                        {['7', '8', '9', '4', '5', '6', '1', '2', '3', '00', '0', 'back'].map((key) => (
-                          <button key={key} type="button" onClick={() => pressCashKey(key)} aria-label={key === 'back' ? 'Delete last digit' : `Key ${key}`}
-                            className="grid h-11 place-items-center rounded-lg border border-gray-200 bg-gray-50 text-lg font-semibold text-gray-800 hover:bg-gray-100 active:scale-95">{key === 'back' ? <Delete className="h-5 w-5" aria-hidden /> : key}</button>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-                  {paymentMode === 'online' && <p className="rounded-xl bg-sky-50 p-3.5 text-sm text-sky-900">Ask the customer to pay {formatCurrency(totals.total)} by QR, wallet or card, and check it arrived before completing.</p>}
-                  {paymentMode === 'credit' && <p className="rounded-xl bg-amber-50 p-3.5 text-sm text-amber-900">{customer ? <>{formatCurrency(totals.total)} goes on <strong>{customer.name}</strong>&apos;s account to pay later.</> : 'Pick a customer first. A credit sale needs a name to collect from.'}</p>}
-                  {paymentMode === 'store_credit' && <p className="rounded-xl bg-emerald-50 p-3.5 text-sm text-emerald-900">Paid from store credit. Balance {formatCurrency(customer?.store_credit_balance)}.</p>}
-
-                  {paymentMode === 'split' && (
-                    <div className="space-y-2.5">
-                      {payments.map((p, i) => (
-                        <div key={i} className="flex flex-wrap items-end gap-2 rounded-xl border border-gray-200 bg-gray-50 p-3">
-                          <label className="min-w-[9rem] flex-1 text-xs font-bold uppercase tracking-wide text-gray-500">Method
-                            <select value={p.method} onChange={(e) => setPayments((prev) => prev.map((row, idx) => idx === i ? { ...row, method: e.target.value, cash_tendered: e.target.value === 'cash' ? Number(row.amount) || 0 : 0 } : row))}
-                              className="mt-1 h-10 w-full rounded-lg border border-gray-300 bg-white px-3 text-sm font-semibold normal-case tracking-normal text-gray-900">
-                              <option value="cash">Cash</option>
-                              <option value="online">Digital / QR / Card</option>
-                              {can('retail_sale.credit') && <option value="credit">Credit</option>}
-                              {customer && Number(customer.store_credit_balance) > 0 && <option value="store_credit">Store Credit ({formatCurrency(customer.store_credit_balance)} avail.)</option>}
-                            </select>
-                          </label>
-                          <label className="min-w-[8rem] flex-1 text-xs font-bold uppercase tracking-wide text-gray-500">Amount
-                            <input type="number" min="0" step="0.01" value={p.amount}
-                              onChange={(e) => setPayments((prev) => prev.map((row, idx) => idx === i ? { ...row, amount: Number(e.target.value) || 0, cash_tendered: row.method === 'cash' ? Number(e.target.value) || 0 : row.cash_tendered } : row))}
-                              className="mt-1 h-10 w-full rounded-lg border border-gray-300 bg-white px-3 text-right text-base font-semibold tabular-nums text-gray-900" />
-                          </label>
-                          {p.method === 'cash' && <label className="min-w-[8rem] flex-1 text-xs font-bold uppercase tracking-wide text-gray-500">Cash received
-                            <input aria-label={`Cash tendered ${i + 1}`} type="number" min="0" step="0.01" value={p.cash_tendered ?? ''} onChange={(e) => setPayments((prev) => prev.map((row, idx) => idx === i ? { ...row, cash_tendered: Number(e.target.value) || 0 } : row))}
-                              className="mt-1 h-10 w-full rounded-lg border border-gray-300 bg-white px-3 text-right text-base font-semibold tabular-nums text-gray-900" />
-                          </label>}
-                          {payments.length > 1 && <button type="button" aria-label={`Remove payment ${i + 1}`} onClick={() => setPayments((prev) => prev.filter((_, idx) => idx !== i))} className="grid h-10 w-10 place-items-center rounded-lg text-gray-500 hover:bg-white hover:text-red-600"><X className="h-4 w-4" aria-hidden /></button>}
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                  <button type="button" className="text-sm font-bold text-pink-700 hover:underline" onClick={() => setPayments((prev) => [...prev, { method: prev.some((row) => row.method === 'online') ? 'cash' : 'online', amount: 0, cash_tendered: 0 }])}>+ Split payment</button>
-
-                  {creditOverLimit && <div role="alert" className="rounded-2xl border border-amber-300 bg-amber-50 p-4 text-sm text-amber-900">
-                    <p>Credit would reach {formatCurrency(creditExposure + creditAmount)}, above the {formatCurrency(creditLimit)} limit.</p>
-                    {canOverrideCredit ? <label className="mt-2 block font-semibold">Manager or Owner override reason<input value={creditOverrideReason} onChange={(event) => setCreditOverrideReason(event.target.value)} maxLength={500} className="mt-1 block h-11 w-full rounded-xl border border-amber-400 px-3 font-normal" placeholder="Why is this credit approved?" /></label> : <p className="mt-1">Ask a Manager or Owner to complete this sale.</p>}
-                  </div>}
-                </div>
-
-                <div className="flex flex-col border-t border-gray-200 bg-gray-50 p-4 sm:p-5 lg:border-l lg:border-t-0">
-                  <dl className="space-y-1.5 text-sm" aria-label="Sale summary">
-                    <div className="flex justify-between"><dt className="text-gray-600">Items</dt><dd className="font-semibold">{cartCount}</dd></div>
-                    <div className="flex justify-between"><dt className="text-gray-600">Subtotal</dt><dd className="font-semibold tabular-nums">{formatCurrency(totals.subtotal)}</dd></div>
-                    {totals.discount > 0 && <div className="flex justify-between text-emerald-700"><dt>Discounts</dt><dd className="font-semibold tabular-nums">−{formatCurrency(totals.discount)}</dd></div>}
+                {/* Totals */}
+                <section aria-label="Sale summary" className="rounded-2xl bg-gray-50 p-4">
+                  <dl className="space-y-1.5 text-sm">
+                    <div className="flex justify-between"><dt className="text-gray-600">Subtotal</dt><dd className="font-semibold tabular-nums">{formatCurrency(totals.subtotal + totals.promoDiscount + (totals.lineDiscount || 0))}</dd></div>
+                    {totals.promoDiscount > 0 && <div className="flex justify-between text-rose-700"><dt>Offers</dt><dd className="font-semibold tabular-nums">−{formatCurrency(totals.promoDiscount)}</dd></div>}
+                    {totals.lineDiscount > 0 && <div className="flex justify-between text-emerald-700"><dt>Item discounts</dt><dd className="font-semibold tabular-nums">−{formatCurrency(totals.lineDiscount)}</dd></div>}
+                    {totals.discount - (totals.loyaltyDiscount || 0) > 0 && <div className="flex justify-between text-emerald-700"><dt>Discount{discountUnit === 'pct' && Number(discountPercent) > 0 ? ` (${Number(discountPercent)}%)` : ''}</dt><dd className="font-semibold tabular-nums">−{formatCurrency(totals.discount - (totals.loyaltyDiscount || 0))}</dd></div>}
+                    {totals.loyaltyDiscount > 0 && <div className="flex justify-between text-amber-700"><dt>Loyalty points</dt><dd className="font-semibold tabular-nums">−{formatCurrency(totals.loyaltyDiscount)}</dd></div>}
                     {totals.tax > 0 && <div className="flex justify-between"><dt className="text-gray-600">VAT</dt><dd className="font-semibold tabular-nums">{formatCurrency(totals.tax)}</dd></div>}
                   </dl>
-                  <dl className="mt-4 space-y-1.5 border-t border-gray-200 pt-4 text-sm" aria-label="Payment breakdown">
-                    <div className="flex justify-between"><dt className="text-gray-600">Amount due</dt><dd className="font-semibold tabular-nums">{formatCurrency(paymentBreakdown.amountDue)}</dd></div>
-                    <div className="flex justify-between"><dt className="text-gray-600">Cash allocated</dt><dd className="tabular-nums">{formatCurrency(paymentBreakdown.cashAllocated)}</dd></div>
-                    <div className="flex justify-between"><dt className="text-gray-600">Cash tendered</dt><dd className="tabular-nums">{formatCurrency(paymentBreakdown.cashTendered)}</dd></div>
-                    <div className="flex justify-between"><dt className="text-gray-600">Other tender allocations</dt><dd className="tabular-nums">{formatCurrency(paymentBreakdown.otherAllocated)}</dd></div>
-                    <div className="flex justify-between"><dt className="text-gray-600">Remaining</dt><dd className={`font-semibold tabular-nums ${paymentBreakdown.remaining > 0.005 ? 'text-red-600' : ''}`}>{formatCurrency(paymentBreakdown.remaining)}</dd></div>
-                    <div className="mt-3 flex items-center justify-between rounded-xl bg-emerald-600 px-4 py-2.5 text-white"><dt className="text-sm font-bold uppercase tracking-wide">Change</dt><dd className="text-2xl font-bold tabular-nums">{formatCurrency(paymentBreakdown.change)}</dd></div>
-                  </dl>
-                  <p role="status" className={`mt-3 text-sm font-semibold ${paymentValid ? 'text-emerald-700' : 'text-red-600'}`}>Allocated {formatCurrency(paymentSum)} of {formatCurrency(totals.total)}{paymentSum > totals.total + 0.005 ? ` · ${formatCurrency(paymentSum - totals.total)} too much` : ''}</p>
-                  {checkoutError && <div role="alert" className="mt-3 rounded-2xl border border-red-200 bg-red-50 p-3 text-sm text-red-800">{checkoutError}</div>}
-                  <div className="mt-auto hidden pt-4 lg:block">
-                    <button type="button" onClick={completeSale} disabled={!paymentValid || busy || !quoteReady || (creditOverLimit && (!canOverrideCredit || creditOverrideReason.trim().length < 8))}
-                      className="flex h-14 w-full items-center justify-center gap-2 rounded-xl bg-gray-900 text-lg font-bold text-white shadow-md hover:bg-gray-800 active:scale-[0.99] disabled:opacity-40">
-                      {busy ? <Loader2 className="h-5 w-5 animate-spin" aria-hidden /> : <CheckCircle2 className="h-5 w-5" aria-hidden />}
-                      Complete Sale
-                    </button>
-                    <p className="mt-2 text-center text-xs text-gray-500">Enter or F9 completes · Esc goes back</p>
+                  <div className="mt-3 flex items-end justify-between border-t border-dashed border-gray-300 pt-3">
+                    <span className="text-sm font-bold uppercase tracking-widest text-gray-500">Total</span>
+                    <span className="text-3xl font-bold tabular-nums text-gray-900" aria-live="polite">{quoteReady ? formatCurrency(totals.total) : <Loader2 className="h-6 w-6 animate-spin text-gray-400" aria-label="Updating total" />}</span>
                   </div>
-                </div>
+                </section>
+
+                {/* Payment method */}
+                <section aria-label="Payment method">
+                  <p className="mb-1.5 text-xs font-bold uppercase tracking-widest text-gray-500">Payment method</p>
+                  <div className="flex flex-wrap gap-2">
+                    {[
+                      { id: 'cash', label: 'Cash', Icon: Banknote },
+                      { id: 'online', label: 'Online', Icon: QrCode },
+                      ...(can('retail_sale.credit') ? [{ id: 'credit', label: 'Credit', Icon: Building2 }] : []),
+                      ...(customer && Number(customer.store_credit_balance) > 0 ? [{ id: 'store_credit', label: 'Store credit', Icon: Gift }] : []),
+                      { id: 'split', label: 'Split', Icon: Split },
+                    ].map(({ id, label, Icon }) => {
+                      const active = id === paymentMode;
+                      return <button key={id} type="button" aria-pressed={active} onClick={() => choosePaymentMode(id)}
+                        className={`flex h-16 min-w-[5.5rem] flex-1 flex-col items-center justify-center gap-1 rounded-xl border-2 text-sm font-bold transition active:scale-[0.98] ${active ? 'border-pink-500 bg-pink-50 text-pink-800' : 'border-gray-200 bg-white text-gray-700 hover:border-pink-300'}`}>
+                        <Icon className="h-5 w-5" aria-hidden />{label}
+                      </button>;
+                    })}
+                  </div>
+                </section>
+
+                {paymentMode === 'cash' && (() => {
+                  const received = Number(payments[0]?.cash_tendered) || 0;
+                  const short = received + 0.005 < totals.total;
+                  return <section aria-label="Cash" className="space-y-3">
+                    <div className="grid grid-cols-2 gap-3">
+                      <div className="rounded-xl bg-gray-50 px-3 py-2"><p className="text-xs font-bold uppercase tracking-wide text-gray-500">Amount due</p><p className="text-xl font-bold tabular-nums text-gray-900">{formatCurrency(totals.total)}</p></div>
+                      <label className="block rounded-xl border-2 border-gray-300 px-3 py-1.5 focus-within:border-pink-400 focus-within:ring-4 focus-within:ring-pink-100"><span className="text-xs font-bold uppercase tracking-wide text-gray-500">Amount received</span>
+                        <input aria-label="Cash received" type="number" min="0" step="0.01" inputMode="decimal" autoFocus value={payments[0]?.cash_tendered || ''}
+                          onFocus={(e) => e.target.select()}
+                          onChange={(e) => setPayments([{ ...payments[0], cash_tendered: Number(e.target.value) || 0 }])}
+                          onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); completeSale(); } }}
+                          className="block w-full bg-transparent text-right text-xl font-bold tabular-nums text-gray-900 focus:outline-none" />
+                      </label>
+                    </div>
+                    <div className="flex flex-wrap gap-2">
+                      {quickCashAmounts(totals.total).map((amt, index) => (
+                        <button key={amt} type="button" onClick={() => setPayments([{ ...payments[0], cash_tendered: amt }])}
+                          className={`h-10 min-w-[4.5rem] flex-1 rounded-lg border px-3 text-sm font-semibold tabular-nums ${received === amt ? 'border-pink-500 bg-pink-50 text-pink-800' : 'border-gray-200 bg-white text-gray-800 hover:border-pink-300'}`}>
+                          {index === 0 ? 'Exact' : formatCurrency(amt).replace('.00', '')}
+                        </button>
+                      ))}
+                    </div>
+                    <div className={`flex items-center justify-between rounded-xl px-4 py-3 ${short ? 'bg-red-50 text-red-800' : 'bg-emerald-600 text-white'}`}>
+                      <span className="text-sm font-bold uppercase tracking-wide">{short ? 'Still to collect' : 'Change to give'}</span>
+                      <span className="text-2xl font-bold tabular-nums">{formatCurrency(short ? totals.total - received : paymentBreakdown.change)}</span>
+                    </div>
+                  </section>;
+                })()}
+                {paymentMode === 'online' && <p className="rounded-xl bg-sky-50 p-3.5 text-sm text-sky-900">Ask the customer to pay {formatCurrency(totals.total)} by QR, wallet or card. Check that it arrived, then press Pay.</p>}
+                {paymentMode === 'credit' && <p className="rounded-xl bg-amber-50 p-3.5 text-sm text-amber-900">{customer ? <>{formatCurrency(totals.total)} goes on <strong>{customer.name}</strong>&apos;s account to pay later.</> : <>Choose <strong>Customer</strong> above first. A credit sale needs a name to collect from.</>}</p>}
+                {paymentMode === 'store_credit' && <p className="rounded-xl bg-emerald-50 p-3.5 text-sm text-emerald-900">Paid from store credit. Balance {formatCurrency(customer?.store_credit_balance)}.</p>}
+
+                {paymentMode === 'split' && (
+                  <section aria-label="Split payment" className="space-y-2">
+                    {payments.map((p, i) => (
+                      <div key={i} className="flex flex-wrap items-end gap-2 rounded-xl border border-gray-200 bg-gray-50 p-3">
+                        <label className="min-w-[8rem] flex-1 text-xs font-bold uppercase tracking-wide text-gray-500">Method
+                          <select value={p.method} onChange={(e) => setPayments((prev) => prev.map((row, idx) => idx === i ? { ...row, method: e.target.value, cash_tendered: e.target.value === 'cash' ? Number(row.amount) || 0 : 0 } : row))}
+                            className="mt-1 h-10 w-full rounded-lg border border-gray-300 bg-white px-3 text-sm font-semibold normal-case tracking-normal text-gray-900">
+                            <option value="cash">Cash</option>
+                            <option value="online">Online / QR / Card</option>
+                            {can('retail_sale.credit') && <option value="credit">Credit</option>}
+                            {customer && Number(customer.store_credit_balance) > 0 && <option value="store_credit">Store credit ({formatCurrency(customer.store_credit_balance)})</option>}
+                          </select>
+                        </label>
+                        <label className="min-w-[7rem] flex-1 text-xs font-bold uppercase tracking-wide text-gray-500">Amount
+                          <input aria-label={`Amount ${i + 1}`} type="number" min="0" step="0.01" value={p.amount}
+                            onChange={(e) => setPayments((prev) => prev.map((row, idx) => idx === i ? { ...row, amount: Number(e.target.value) || 0, cash_tendered: row.method === 'cash' ? Number(e.target.value) || 0 : row.cash_tendered } : row))}
+                            className="mt-1 h-10 w-full rounded-lg border border-gray-300 bg-white px-3 text-right text-base font-semibold tabular-nums text-gray-900" />
+                        </label>
+                        {p.method === 'cash' && <label className="min-w-[7rem] flex-1 text-xs font-bold uppercase tracking-wide text-gray-500">Received
+                          <input aria-label={`Cash tendered ${i + 1}`} type="number" min="0" step="0.01" value={p.cash_tendered ?? ''} onChange={(e) => setPayments((prev) => prev.map((row, idx) => idx === i ? { ...row, cash_tendered: Number(e.target.value) || 0 } : row))}
+                            className="mt-1 h-10 w-full rounded-lg border border-gray-300 bg-white px-3 text-right text-base font-semibold tabular-nums text-gray-900" />
+                        </label>}
+                        {payments.length > 2 && <button type="button" aria-label={`Remove payment ${i + 1}`} onClick={() => setPayments((prev) => prev.filter((_, idx) => idx !== i))} className="grid h-10 w-10 place-items-center rounded-lg text-gray-500 hover:bg-white hover:text-red-600"><X className="h-4 w-4" aria-hidden /></button>}
+                      </div>
+                    ))}
+                    <div className="flex flex-wrap items-center justify-between gap-2 text-sm">
+                      <button type="button" className="font-bold text-pink-700 hover:underline" onClick={() => setPayments((prev) => [...prev, { method: 'online', amount: Math.max(0, Math.round((totals.total - paymentSum) * 100) / 100), cash_tendered: 0 }])}>+ Add another payment</button>
+                      <span className={`font-semibold tabular-nums ${paymentBreakdown.remaining > 0.005 || paymentSum > totals.total + 0.005 ? 'text-red-600' : 'text-emerald-700'}`}>{paymentSum > totals.total + 0.005 ? `${formatCurrency(paymentSum - totals.total)} too much` : paymentBreakdown.remaining > 0.005 ? `${formatCurrency(paymentBreakdown.remaining)} left` : 'Adds up'}</span>
+                    </div>
+                    {paymentBreakdown.change > 0.005 && <p className="rounded-xl bg-emerald-600 px-4 py-2.5 text-sm font-bold text-white">Change to give {formatCurrency(paymentBreakdown.change)}</p>}
+                  </section>
+                )}
+
+                {creditOverLimit && <div role="alert" className="rounded-2xl border border-amber-300 bg-amber-50 p-4 text-sm text-amber-900">
+                  <p>Credit would reach {formatCurrency(creditExposure + creditAmount)}, above the {formatCurrency(creditLimit)} limit.</p>
+                  {canOverrideCredit ? <label className="mt-2 block font-semibold">Manager or Owner override reason<input value={creditOverrideReason} onChange={(event) => setCreditOverrideReason(event.target.value)} maxLength={500} className="mt-1 block h-11 w-full rounded-xl border border-amber-400 px-3 font-normal" placeholder="Why is this credit approved?" /></label> : <p className="mt-1">Ask a Manager or Owner to complete this sale.</p>}
+                </div>}
+                {statusMessage}
+                {checkoutError && <div role="alert" className="rounded-2xl border border-red-200 bg-red-50 p-3 text-sm text-red-800">{checkoutError}</div>}
               </div>
-              <div className="flex shrink-0 items-center gap-3 border-t border-gray-200 bg-white p-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] lg:hidden">
-                <p className="text-xs font-bold text-gray-600">Give back<span className="block text-xl font-bold tabular-nums text-emerald-700">{formatCurrency(paymentBreakdown.change)}</span></p>
-                <button type="button" onClick={completeSale} disabled={!paymentValid || busy || !quoteReady || (creditOverLimit && (!canOverrideCredit || creditOverrideReason.trim().length < 8))}
-                  className="flex h-12 flex-1 items-center justify-center gap-2 rounded-xl bg-gray-900 text-base font-bold text-white disabled:opacity-40">
+
+              <div className="grid shrink-0 grid-cols-[auto_1fr] gap-2 border-t border-gray-200 bg-white p-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] sm:p-4">
+                <button type="button" onClick={() => !busy && setShowPayment(false)} className="h-12 rounded-xl border border-gray-300 px-5 text-sm font-bold text-gray-700 hover:bg-gray-50">Cancel</button>
+                <button type="button" onClick={completeSale} disabled={payDisabled}
+                  className="flex h-12 items-center justify-center gap-2 rounded-xl bg-emerald-600 text-base font-bold text-white shadow-md hover:bg-emerald-700 active:scale-[0.99] disabled:opacity-40">
                   {busy ? <Loader2 className="h-5 w-5 animate-spin" aria-hidden /> : <CheckCircle2 className="h-5 w-5" aria-hidden />}
-                  Complete Sale
+                  {paymentMode === 'credit' ? `Put ${formatCurrency(totals.total)} on credit` : `Pay ${formatCurrency(totals.total)}`}
+                  <span className="hidden rounded bg-white/20 px-1.5 text-[10px] font-semibold sm:inline">F9</span>
                 </button>
               </div>
             </Dialog.Content>
@@ -1085,6 +1141,14 @@ export default function RetailPos() {
       )}
     </div>
   );
+}
+
+/** Exact amount, then the next round amounts a customer is likely to hand over. */
+function quickCashAmounts(total) {
+  const due = Math.round(Number(total) * 100) / 100;
+  const ups = [100, 500, 1000].map((step) => Math.ceil(due / step) * step);
+  const notes = [500, 1000, 2000, 5000];
+  return [due, ...[...ups, ...notes].filter((v) => v > due).sort((a, b) => a - b)].filter((v, i, a) => a.indexOf(v) === i).slice(0, 5);
 }
 
 function heldLabel(sale) {

@@ -52,7 +52,6 @@ export default function SettingsPage() {
     calendar_system: 'BS',
     website: '', vat_number: '', pan_number: '', registration_number: '', shop_address: '',
     vat_percentage: 13,
-    receipt_footer: '', receipt_paper_size: '80',
     cashier_expected_cash_schedule_enabled: true, cashier_expected_cash_reveal_time: '20:30',
     cashier_cash_count_schedule_enabled: false, cashier_cash_count_time: '14:00',
     sale_void_window_minutes: 30,
@@ -85,7 +84,6 @@ export default function SettingsPage() {
             shop_address: d.shop_address || '',
             calendar_system: String(d.calendar_system || 'BS').toUpperCase() === 'AD' ? 'AD' : 'BS',
             vat_percentage: Number(d.vat_percentage ?? 13),
-            receipt_footer: d.receipt_footer || '', receipt_paper_size: d.receipt_paper_size || '80',
             cashier_expected_cash_schedule_enabled: String(d.cashier_expected_cash_schedule_enabled ?? 'true') !== 'false',
             cashier_expected_cash_reveal_time: /^(?:[01]\d|2[0-3]):[0-5]\d$/.test(String(d.cashier_expected_cash_reveal_time || '')) ? d.cashier_expected_cash_reveal_time : '20:30',
             cashier_cash_count_schedule_enabled: String(d.cashier_cash_count_schedule_enabled ?? 'false') === 'true',
@@ -266,20 +264,13 @@ export default function SettingsPage() {
             )}
 
             {tab === 'receipt' && (
-              <Panel title="Receipt" hint="Business name, VAT/PAN, website and this footer all print on the customer receipt.">
-                <Grid>
-                  <Field label="Thermal paper size">
-                    <select value={s.receipt_paper_size} onChange={(e) => set({ receipt_paper_size: e.target.value })} className={INPUT}>
-                      <option value="80">80mm (standard)</option>
-                      <option value="58">58mm (compact)</option>
-                    </select>
-                  </Field>
-                  <Field label="Receipt footer message"><input value={s.receipt_footer} onChange={(e) => set({ receipt_footer: e.target.value })} className={INPUT} placeholder="Thank you for your visit!" /></Field>
-                </Grid>
-                <p className="text-xs text-gray-400">Receipts print through the shared thermal system and re-format automatically for the selected width.</p>
+              <Panel title="Receipt" hint="Paper size, receipt wording, columns, footer and which details print are all set on the Printer page, with a live preview.">
+                <div className="flex flex-wrap gap-2">
+                  <Shortcut href={`${panelPrefix}/printer`} label="Open Printer settings" />
+                </div>
+                <p className="text-xs text-gray-400">The business name, address, phone, VAT and PAN on the Business tab print at the top of every receipt.</p>
               </Panel>
             )}
-
 
             {tab === 'payments' && (
               <Panel title="Online payment code" hint="One optional payment code shown to customers when they choose Online.">

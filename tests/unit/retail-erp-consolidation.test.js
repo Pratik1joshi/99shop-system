@@ -52,7 +52,7 @@ test('collapsing multiple real variants is rejected instead of deleting linked h
 
 test('Billing opens the whole catalog in the Items browser without a search', () => {
   const billing = source('components/pos/retail-pos.jsx');
-  assert.match(billing, /useCommerceSearch\(browserTerm, \{ group: 'products', limit: 60, categoryId, refreshKey: refresh, enabled: itemsOpen \}\)/);
+  assert.match(billing, /useCommerceSearch\(browserTerm, \{ group: 'catalog_products', limit: 40, categoryId, refreshKey: refresh, enabled: itemsOpen \}\)/);
   assert.doesNotMatch(billing, /api\/admin\/products\?channel=pos/);
   assert.doesNotMatch(billing, /!searchTerm \? \(/);
 });

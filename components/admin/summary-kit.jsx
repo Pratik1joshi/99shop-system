@@ -454,3 +454,19 @@ export function ReportHeader({ shopName, title, rangeText, generatedText }) {
     </div>
   );
 }
+
+function PositionRow({ label, value, tone, strong = false, note }) {
+  return (
+    <div className={`flex items-baseline justify-between gap-4 px-4 py-2 text-sm ${strong ? 'font-bold text-gray-950' : ''}`}>
+      <span className={strong ? '' : 'text-gray-600'}>
+        {label}
+        {note ? <span className="ml-1 text-xs font-normal text-gray-400">{note}</span> : null}
+      </span>
+      <span className={`tabular-nums ${strong ? '' : 'font-medium'} ${
+        tone === 'out' ? 'text-rose-700' : tone === 'in' ? 'text-emerald-700' : 'text-gray-800'
+      }`}>
+        {tone === 'out' ? '- ' : tone === 'in' ? '+ ' : ''}{money(value)}
+      </span>
+    </div>
+  );
+}

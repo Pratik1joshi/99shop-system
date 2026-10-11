@@ -8,7 +8,7 @@ import {
   Activity, ArrowLeftRight, ArrowRightLeft, Award, BadgePercent, BarChart3, Banknote, Bell, BellRing,
   BookOpen, Boxes, Building2, CalendarCheck2, CalendarClock, CalendarHeart, ChevronDown, ClipboardCheck, ClipboardList,
   Coins, Command, Contact, FileSearch, FileText, FolderOpen, Gauge, Globe, Inbox, Landmark, LayoutDashboard,
-  Menu, MessageCircle, Package, PackageCheck, PackagePlus, PiggyBank, Plus, Receipt, ReceiptText, Scale, ScanBarcode, ScrollText,
+  Menu, MessageCircle, Package, PackageCheck, PackagePlus, PiggyBank, Plus, Printer, Receipt, ReceiptText, Scale, ScanBarcode, ScrollText,
   Search, Settings, ShieldCheck, Store, ShoppingCart, SlidersHorizontal, Tag, TrendingUp, Undo2,
   Users, Wallet, WalletCards, Wrench, X,
 } from 'lucide-react';
@@ -123,6 +123,7 @@ const adminNav = [
   { name: 'Online store', href: '/admin/products/storefront', icon: Store, color: 'text-teal-600', advanced: true },
   { name: 'Audit', href: '/admin/retail-audit', icon: FileSearch, color: 'text-slate-600', advanced: true },
   { name: 'Staff permissions', href: '/admin/permissions', icon: ShieldCheck, color: 'text-red-600', advanced: true },
+  { name: 'Printer', href: '/admin/printer', icon: Printer, color: 'text-pink-600' },
   { name: 'Settings', href: '/admin/settings', icon: Settings, color: 'text-gray-600' },
 ];
 
@@ -171,6 +172,7 @@ const cashierNav = [
     { name: 'Payroll', href: '/cashier/payroll', icon: WalletCards, color: 'text-emerald-700', permission: 'payroll.view', advanced: true },
     { name: 'Staff performance', href: '/cashier/employee-performance', icon: TrendingUp, color: 'text-lime-600', permission: 'employee_performance.view', advanced: true },
   ] },
+  { name: 'Printer', href: '/cashier/printer', icon: Printer, color: 'text-pink-600', permission: 'settings.manage' },
 ];
 
 const specialistPagePermissions = {
